@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>예약</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="reservation-window" aria-label="예약 팝업 예시">
+      <header class="titlebar">
+        <strong>예약</strong>
+        <div class="window-controls" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </header>
+
+      <section class="dialog-body">
+        <div class="layout" id="reservationLayout">
+          <aside class="panel left-panel" id="leftPane" aria-label="캘린더 및 의사 목록">
+            <section class="calendar-card" aria-label="월간 달력">
+              <div class="month-toolbar">
+                <div>
+                  <strong>2026.05</strong>
+                  <button type="button" class="today-link">오늘</button>
+                </div>
+                <div class="icon-group" aria-label="월 이동">
+                  <button type="button" aria-label="이전 달">‹</button>
+                  <button type="button" aria-label="다음 달">›</button>
+                </div>
+              </div>
+              <div class="mini-calendar" aria-label="2026년 5월">
+                <span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                <button type="button" class="muted sun">26</button><button type="button" class="muted">27</button><button type="button" class="muted">28</button><button type="button" class="muted">29</button><button type="button" class="muted">30</button><button type="button" class="sun">1</button><button type="button">2</button>
+                <button type="button" class="sun">3</button><button type="button">4</button><button type="button" class="sun">5</button><button type="button">6</button><button type="button">7</button><button type="button">8</button><button type="button">9</button>
+                <button type="button" class="sun">10</button><button type="button">11</button><button type="button">12</button><button type="button">13</button><button type="button">14</button><button type="button">15</button><button type="button">16</button>
+                <button type="button" class="sun">17</button><button type="button">18</button><button type="button">19</button><button type="button">20</button><button type="button">21</button><button type="button">22</button><button type="button">23</button>
+                <button type="button" class="sun">24</button><button type="button" class="sun">25</button><button type="button">26</button><button type="button">27</button><button type="button" class="selected">28</button><button type="button">29</button><button type="button">30</button>
+                <button type="button" class="sun">31</button><button type="button" class="muted">1</button><button type="button" class="muted">2</button><button type="button" class="muted">3</button><button type="button" class="muted">4</button><button type="button" class="muted">5</button><button type="button" class="muted sun">6</button>
+              </div>
+              <div class="month-divider"></div>
+              <div class="month-toolbar compact">
+                <div>
+                  <strong>2026.06</strong>
+                  <button type="button" class="today-link">오늘</button>
+                </div>
+              </div>
+              <div class="mini-calendar" aria-label="2026년 6월">
+                <span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                <button type="button" class="muted sun">31</button><button type="button">1</button><button type="button">2</button><button type="button" class="sun">3</button><button type="button">4</button><button type="button">5</button><button type="button" class="sun">6</button>
+                <button type="button" class="sun">7</button><button type="button">8</button><button type="button">9</button><button type="button">10</button><button type="button">11</button><button type="button">12</button><button type="button">13</button>
+                <button type="button" class="sun">14</button><button type="button">15</button><button type="button">16</button><button type="button">17</button><button type="button">18</button><button type="button">19</button><button type="button">20</button>
+                <button type="button" class="sun">21</button><button type="button">22</button><button type="button">23</button><button type="button">24</button><button type="button">25</button><button type="button">26</button><button type="button">27</button>
+                <button type="button" class="sun">28</button><button type="button">29</button><button type="button">30</button><button type="button" class="muted">1</button><button type="button" class="muted">2</button><button type="button" class="muted">3</button><button type="button" class="muted">4</button>
+                <button type="button" class="muted sun">5</button><button type="button" class="muted">6</button><button type="button" class="muted">7</button><button type="button" class="muted">8</button><button type="button" class="muted">9</button><button type="button" class="muted">10</button><button type="button" class="muted">11</button>
+              </div>
+            </section>
+
+            <section class="calendar-list-card" aria-label="캘린더 설정">
+              <div class="section-title-row">
+                <strong>캘린더 설정</strong>
+                <div>
+                  <button type="button" class="outline small">추가</button>
+                  <button type="button" class="kebab" aria-label="캘린더 설정 더보기">⋮</button>
+                </div>
+              </div>
+              <div class="doctor-list" id="doctorList"></div>
+            </section>
+
+            <div class="left-actions">
+              <button type="button">예약 미확정 환자(1)</button>
+              <button type="button">취소/부도내역</button>
+            </div>
+          </aside>
+
+          <button
+            type="button"
+            class="resize-handle resize-left"
+            data-resize-handle="left"
+            aria-label="왼쪽 캘린더 영역 크기 조절"
+            aria-orientation="vertical"
+            role="separator"
+            tabindex="0"
+          ></button>
+
+          <section class="panel scheduler-panel" id="schedulerPane" aria-label="예약 일정표">
+            <header class="scheduler-toolbar">
+              <div class="toolbar-left">
+                <div class="segmented" aria-label="보기 방식">
+                  <button type="button" class="active">일간</button>
+                  <button type="button">주간</button>
+                  <button type="button">월간</button>
+                </div>
+                <span class="stat"><b id="visibleDoctorCount">2건</b> / 일 전체 <b id="totalDoctorCount">9건</b></span>
+              </div>
+              <div class="date-control" aria-label="선택 날짜">
+                <button type="button" aria-label="이전 날짜">‹</button>
+                <button type="button" class="today-link">오늘</button>
+                <strong>2026.05.28 목요일</strong>
+                <button type="button" aria-label="달력 열기">▣</button>
+                <button type="button" aria-label="다음 날짜">›</button>
+              </div>
+              <div class="toolbar-right">
+                <select aria-label="예약 상태">
+                  <option>예약상태(4)</option>
+                  <option>확정</option>
+                  <option>대기</option>
+                  <option>취소</option>
+                </select>
+                <button type="button" class="primary-outline">새 예약</button>
+                <button type="button" class="icon-button" aria-label="설정">⚙</button>
+                <div class="sort-menu" id="sortMenu">
+                  <button
+                    type="button"
+                    class="outline dark"
+                    id="sortButton"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-controls="sortPopover"
+                  >
+                    정렬
+                  </button>
+                  <div class="sort-popover" id="sortPopover" role="menu" aria-label="캘린더 정렬 보기" hidden>
+                    <button type="button" role="menuitem" data-view-mode="default">캘린더 기본 보기</button>
+                    <button type="button" role="menuitem" data-view-mode="single">캘린더 하나 보기</button>
+                    <button type="button" role="menuitem" data-view-mode="max">캘린더 최대 보기</button>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <div class="schedule-scroll" id="scheduleScroll">
+              <div class="schedule-board">
+                <div class="time-axis" id="timeAxis" aria-hidden="true"></div>
+                <div class="provider-columns" id="providerColumns"></div>
+              </div>
+            </div>
+
+            <footer class="pagination" aria-label="예약 캘린더 페이지 이동">
+              <button type="button" id="prevPage" aria-label="이전 의사 그룹">‹</button>
+              <span id="pageIndicator">2 / 16</span>
+              <button type="button" id="nextPage" aria-label="다음 의사 그룹">›</button>
+            </footer>
+          </section>
+
+          <button
+            type="button"
+            class="resize-handle resize-right"
+            data-resize-handle="right"
+            aria-label="오른쪽 예약 정보 영역 크기 조절"
+            aria-orientation="vertical"
+            role="separator"
+            tabindex="0"
+          ></button>
+
+          <aside class="panel info-panel" id="infoPane" aria-label="예약 정보">
+            <header class="info-header">
+              <strong>예약 정보</strong>
+              <label class="switch-label">
+                <span>간편예약</span>
+                <input type="checkbox" />
+                <i aria-hidden="true"></i>
+              </label>
+            </header>
+
+            <div class="info-content">
+              <label class="search-field">
+                <span aria-hidden="true">⌕</span>
+                <input type="search" placeholder="환자검색(이름/환자등록번호/생년월일/휴대폰번호)" />
+              </label>
+              <p class="empty-patient">환자가 선택되지 않았습니다.</p>
+
+              <section class="history-section">
+                <h2>예약 내역</h2>
+                <div class="history-table" role="table" aria-label="예약 내역">
+                  <div role="rowgroup" class="table-head">
+                    <span role="columnheader">상태</span>
+                    <span role="columnheader">예약날짜</span>
+                    <span role="columnheader">캘린더명</span>
+                    <span role="columnheader">예약유형</span>
+                    <span role="columnheader">담당의</span>
+                  </div>
+                  <div class="empty-history">표시할 예약 내역이 없습니다.</div>
+                </div>
+              </section>
+
+              <section class="detail-section">
+                <div class="detail-title-row">
+                  <h2>예약 상세</h2>
+                  <div>
+                    <button type="button" class="link-button">건강검진 대상(0)</button>
+                    <button type="button" class="primary-outline">추가 예약</button>
+                  </div>
+                </div>
+
+                <form class="reservation-form">
+                  <label>
+                    <span>캘린더<b>*</b></span>
+                    <select>
+                      <option>선택</option>
+                      <option>김성진(이비인후과)</option>
+                      <option>김영진(내과)</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>예약날짜<b>*</b></span>
+                    <div class="input-with-icon">
+                      <input value="2026.05.28" />
+                      <button type="button" aria-label="달력 선택">▣</button>
+                    </div>
+                  </label>
+                  <div class="quick-dates" aria-label="빠른 날짜 선택">
+                    <button type="button">1일</button>
+                    <button type="button">3일</button>
+                    <button type="button">6일</button>
+                    <button type="button">1주</button>
+                    <button type="button">4주</button>
+                    <button type="button">12개월</button>
+                    <button type="button">1개월</button>
+                    <button type="button">3개월</button>
+                    <button type="button">...</button>
+                  </div>
+                  <label>
+                    <span>예약시간<b>*</b></span>
+                    <div class="time-range">
+                      <select>
+                        <option>오후 06:00</option>
+                        <option>오후 06:10</option>
+                      </select>
+                      <i aria-hidden="true">-</i>
+                      <select>
+                        <option>오후 06:10</option>
+                        <option>오후 06:20</option>
+                      </select>
+                    </div>
+                  </label>
+                  <label>
+                    <span>예약유형</span>
+                    <select>
+                      <option>(예약유형)</option>
+                      <option>초진</option>
+                      <option>재진</option>
+                    </select>
+                  </label>
+                  <label class="memo-label">
+                    <span>예약 참고사항</span>
+                    <div class="memo-box">
+                      <div class="memo-toolbar">
+                        <button type="button" aria-label="상용구 설정">⚙</button>
+                        <button type="button">상용구</button>
+                      </div>
+                      <textarea placeholder="상용구를 선택하거나 내용을 입력해주세요."></textarea>
+                    </div>
+                  </label>
+                </form>
+              </section>
+            </div>
+
+            <footer class="info-actions">
+              <button type="button" class="ghost">예약 취소</button>
+              <button type="button" class="primary">예약(F8)</button>
+            </footer>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
