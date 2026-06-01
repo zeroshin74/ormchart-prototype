@@ -125,17 +125,39 @@
                   <div class="sort-popover" id="sortPopover" role="menu" aria-label="캘린더 정렬 보기" hidden>
                     <button type="button" role="menuitem" data-view-mode="default">캘린더 기본 보기</button>
                     <button type="button" role="menuitem" data-view-mode="single">캘린더 하나 보기</button>
-                    <button type="button" role="menuitem" data-view-mode="max">캘린더 최대 보기</button>
+                    <button type="button" role="menuitem" data-view-mode="max">캘린더 모두 보기</button>
                   </div>
                 </div>
               </div>
             </header>
 
-            <div class="schedule-scroll" id="scheduleScroll">
-              <div class="schedule-board">
-                <div class="time-axis" id="timeAxis" aria-hidden="true"></div>
-                <div class="provider-columns" id="providerColumns"></div>
+            <div class="schedule-header-row" id="scheduleHeaderRow">
+              <div class="time-header-spacer" aria-hidden="true"></div>
+              <div class="provider-header-viewport">
+                <div class="provider-header-columns" id="providerHeaderColumns"></div>
               </div>
+              <div class="header-scroll-gutter" aria-hidden="true"></div>
+            </div>
+
+            <div class="schedule-body-row">
+              <div class="schedule-scroll" id="scheduleScroll">
+                <div class="schedule-board">
+                  <div class="time-axis" id="timeAxis" aria-hidden="true"></div>
+                  <div class="provider-scroll" id="providerViewport">
+                    <div class="provider-columns" id="providerColumns"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="schedule-vertical-scroll" id="scheduleVerticalScroll" aria-label="예약 일정 세로 스크롤" tabindex="0">
+                <div class="schedule-vertical-spacer" id="scheduleVerticalSpacer"></div>
+              </div>
+            </div>
+            <div class="schedule-horizontal-bar" id="scheduleHorizontalBar" hidden>
+              <div aria-hidden="true"></div>
+              <div class="provider-bottom-scroll" id="providerBottomScroll" aria-label="캘린더 가로 스크롤" tabindex="0">
+                <div class="provider-bottom-spacer" id="providerBottomSpacer"></div>
+              </div>
+              <div class="horizontal-scroll-gutter" aria-hidden="true"></div>
             </div>
 
             <footer class="pagination" aria-label="예약 캘린더 페이지 이동">
