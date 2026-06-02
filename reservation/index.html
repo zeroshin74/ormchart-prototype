@@ -40,22 +40,6 @@
                 <button type="button" class="sun">24</button><button type="button" class="sun">25</button><button type="button">26</button><button type="button">27</button><button type="button" class="selected">28</button><button type="button">29</button><button type="button">30</button>
                 <button type="button" class="sun">31</button><button type="button" class="muted">1</button><button type="button" class="muted">2</button><button type="button" class="muted">3</button><button type="button" class="muted">4</button><button type="button" class="muted">5</button><button type="button" class="muted sun">6</button>
               </div>
-              <div class="month-divider"></div>
-              <div class="month-toolbar compact">
-                <div>
-                  <strong>2026.06</strong>
-                  <button type="button" class="today-link">오늘</button>
-                </div>
-              </div>
-              <div class="mini-calendar" aria-label="2026년 6월">
-                <span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-                <button type="button" class="muted sun">31</button><button type="button">1</button><button type="button">2</button><button type="button" class="sun">3</button><button type="button">4</button><button type="button">5</button><button type="button" class="sun">6</button>
-                <button type="button" class="sun">7</button><button type="button">8</button><button type="button">9</button><button type="button">10</button><button type="button">11</button><button type="button">12</button><button type="button">13</button>
-                <button type="button" class="sun">14</button><button type="button">15</button><button type="button">16</button><button type="button">17</button><button type="button">18</button><button type="button">19</button><button type="button">20</button>
-                <button type="button" class="sun">21</button><button type="button">22</button><button type="button">23</button><button type="button">24</button><button type="button">25</button><button type="button">26</button><button type="button">27</button>
-                <button type="button" class="sun">28</button><button type="button">29</button><button type="button">30</button><button type="button" class="muted">1</button><button type="button" class="muted">2</button><button type="button" class="muted">3</button><button type="button" class="muted">4</button>
-                <button type="button" class="muted sun">5</button><button type="button" class="muted">6</button><button type="button" class="muted">7</button><button type="button" class="muted">8</button><button type="button" class="muted">9</button><button type="button" class="muted">10</button><button type="button" class="muted">11</button>
-              </div>
             </section>
 
             <section class="calendar-list-card" aria-label="캘린더 설정">
@@ -103,14 +87,14 @@
                 <button type="button" aria-label="다음 날짜">›</button>
               </div>
               <div class="toolbar-right">
-                <select aria-label="예약 상태">
+                <select class="edit-hidden-control" aria-label="예약 상태">
                   <option>예약상태(4)</option>
                   <option>확정</option>
                   <option>대기</option>
                   <option>취소</option>
                 </select>
-                <button type="button" class="primary-outline">새 예약</button>
-                <button type="button" class="icon-button" aria-label="설정">⚙</button>
+                <button type="button" class="primary-outline edit-hidden-control">새 예약</button>
+                <button type="button" class="icon-button edit-hidden-control" aria-label="설정">⚙</button>
                 <div class="sort-menu" id="sortMenu">
                   <button
                     type="button"
@@ -126,7 +110,12 @@
                     <button type="button" role="menuitem" data-view-mode="default">캘린더 기본 보기</button>
                     <button type="button" role="menuitem" data-view-mode="single">캘린더 하나 보기</button>
                     <button type="button" role="menuitem" data-view-mode="max">캘린더 모두 보기</button>
+                    <button type="button" role="menuitem" data-page-edit>페이지 구성 편집</button>
                   </div>
+                </div>
+                <div class="page-edit-actions" id="pageEditActions" hidden>
+                  <button type="button" class="ghost" id="pageEditCancel">취소</button>
+                  <button type="button" class="primary" id="pageEditSave">저장</button>
                 </div>
               </div>
             </header>

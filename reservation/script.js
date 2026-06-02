@@ -20,8 +20,14 @@ const timeSelects = document.querySelectorAll(".time-range select");
 const calendarSelect = document.querySelector(".reservation-form label select");
 const sortButton = document.querySelector("#sortButton");
 const sortPopover = document.querySelector("#sortPopover");
+const pageEditActions = document.querySelector("#pageEditActions");
+const pageEditCancel = document.querySelector("#pageEditCancel");
+const pageEditSave = document.querySelector("#pageEditSave");
 
 const storageKey = "reservation-popup-pane-widths";
+const cardWidthStorageKey = "reservation-popup-card-width-preferences";
+const pageLayoutStorageKey = "reservation-popup-page-layouts";
+const defaultPageSize = 4;
 const paneDefaults = { left: 360, right: 510 };
 const paneLimits = {
   leftMin: 240,
@@ -66,13 +72,10 @@ const doctorSeed = [
   "문재영(소아청소년과)",
   "김유선(내과)",
   "김정민(내과)",
-  "박병철(내과)",
-  "박지은(정형외과)",
 ];
 
-const providers = Array.from({ length: 64 }, (_, index) => {
-  const name = doctorSeed[index % doctorSeed.length];
-  const count = index === 7 || index === 23 ? 1 : 0;
+const providers = doctorSeed.map((name, index) => {
+  const count = index === 7 ? 1 : 0;
   return {
     id: index + 1,
     name,
@@ -82,7 +85,7 @@ const providers = Array.from({ length: 64 }, (_, index) => {
 });
 
 const times = buildTimes();
-const defaultStartIndex = providers.findIndex((provider) => provider.name === "김태석(내과)");
+const defaultStartIndex = 0;
 const cardViewModes = {
   default: { label: "캘린더 기본 보기", maxColumns: 4, targetWidth: 245 },
   single: { label: "캘린더 하나 보기", maxColumns: 1, targetWidth: 245 },
@@ -100,20 +103,35 @@ let selectedSlot = 19;
 let selectionEndSlot = 19;
 let selectedProviderId = null;
 let columnWeights = [];
+let columnWeightKeys = [];
+let itemWidthWeights = readStoredCardWeights();
 let calendarOrder = providers.map((provider) => provider.id);
+let pageLayouts = readStoredPageLayouts();
+let currentPageIndex = getInitialPageIndex();
 let calendarGroups = [];
 let groupIdSequence = 1;
 let activeGroupProviderIds = new Map();
 let activeActionMenu = null;
+let activePageContextMenu = null;
 let draggedTabProviderId = null;
 let currentVisibleItems = [];
 let tabClickTimer = null;
 let draggedCardProviderId = null;
+let draggedPageIndex = null;
+let lastCardDragClientX = null;
+let lastCardDragClientY = null;
+let cardDragEdgeTimer = null;
+let cardDragEdgeDirection = 0;
 let toastTimer = null;
 let mergeFocusTimer = null;
 let resizeLimitFeedbackTimer = null;
 let lastResizeLimitToastAt = 0;
 let isSyncingVerticalScroll = false;
+let isPageEditMode = false;
+let pageWidthEditVersions = new Map();
+let hiddenWidthStates = new Map();
+let autoFitPageIndexes = new Set();
+let pageEditSnapshot = null;
 
 function buildTimes() {
   const result = [];
@@ -152,8 +170,101 @@ function readStoredWidths() {
   }
 }
 
+function readStoredCardWeights() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(cardWidthStorageKey));
+    if (!parsed || typeof parsed !== "object") return new Map();
+
+    return new Map(
+      Object.entries(parsed).filter(([, value]) => Number.isFinite(value) && value > 0),
+    );
+  } catch {
+    return new Map();
+  }
+}
+
+function buildDefaultPageLayouts(providerIds = providers.map((provider) => provider.id)) {
+  const pages = [];
+  for (let index = 0; index < providerIds.length; index += defaultPageSize) {
+    pages.push(providerIds.slice(index, index + defaultPageSize));
+  }
+
+  return pages.length ? pages : [[]];
+}
+
+function normalizePageLayouts(layouts) {
+  const validIds = new Set(providers.map((provider) => provider.id));
+  const seenIds = new Set();
+  const pages = [];
+
+  if (Array.isArray(layouts)) {
+    layouts.forEach((page) => {
+      if (!Array.isArray(page)) return;
+      const nextPage = [];
+      page.forEach((providerId) => {
+        const id = Number(providerId);
+        if (!validIds.has(id) || seenIds.has(id)) return;
+        seenIds.add(id);
+        nextPage.push(id);
+      });
+      pages.push(nextPage);
+    });
+  }
+
+  const missingIds = providers.map((provider) => provider.id).filter((providerId) => !seenIds.has(providerId));
+  for (let index = 0; index < missingIds.length; index += defaultPageSize) {
+    pages.push(missingIds.slice(index, index + defaultPageSize));
+  }
+
+  return pages.length ? pages : [[]];
+}
+
+function readStoredPageLayouts() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(pageLayoutStorageKey));
+    return normalizePageLayouts(Array.isArray(parsed) ? parsed : buildDefaultPageLayouts());
+  } catch {
+    return normalizePageLayouts(buildDefaultPageLayouts());
+  }
+}
+
 function storeWidths(widths) {
   localStorage.setItem(storageKey, JSON.stringify(widths));
+}
+
+function storeCardWeights() {
+  localStorage.setItem(cardWidthStorageKey, JSON.stringify(Object.fromEntries(itemWidthWeights)));
+}
+
+function storePageLayouts() {
+  localStorage.setItem(pageLayoutStorageKey, JSON.stringify(pageLayouts));
+}
+
+function getInitialPageIndex() {
+  const targetProviderId = providers[defaultStartIndex]?.id || providers[0]?.id;
+  const pageIndex = pageLayouts.findIndex((page) => page.includes(targetProviderId));
+  return pageIndex >= 0 ? pageIndex : 0;
+}
+
+function compactPageLayouts() {
+  pageLayouts = normalizePageLayouts(pageLayouts);
+  if (!pageLayouts.length) {
+    pageLayouts = [[]];
+  }
+  currentPageIndex = clamp(currentPageIndex, 0, pageLayouts.length - 1);
+}
+
+function syncCalendarOrderFromPageLayouts() {
+  compactPageLayouts();
+  calendarOrder = pageLayouts.flat();
+}
+
+function getProviderIdsInPageOrder() {
+  const orderedIds = pageLayouts.flat().filter((providerId, index, ids) => ids.indexOf(providerId) === index);
+  const missingIds = providers
+    .map((provider) => provider.id)
+    .filter((providerId) => !orderedIds.includes(providerId));
+  return [...orderedIds, ...missingIds];
 }
 
 function normalizeWidths(left, right, priority = "center") {
@@ -286,7 +397,10 @@ function attachResizeHandles() {
 
 function renderDoctorList() {
   doctorList.innerHTML = "";
-  providers.forEach((provider, index) => {
+  getProviderIdsInPageOrder().forEach((providerId) => {
+    const provider = getProviderById(providerId);
+    if (!provider) return;
+
     const label = document.createElement("label");
     label.className = "doctor-row";
 
@@ -303,14 +417,18 @@ function renderDoctorList() {
     dot.setAttribute("aria-hidden", "true");
 
     checkbox.addEventListener("change", () => {
+      const affectedPageIndex = getProviderPageIndex(provider.id);
       if (checkbox.checked) {
+        applyReturningProviderWidthPolicy(provider.id, affectedPageIndex);
         activeProviderIds.add(provider.id);
+        currentPageIndex = affectedPageIndex;
       } else {
+        captureHiddenProviderWidthState(provider.id, affectedPageIndex);
         activeProviderIds.delete(provider.id);
+        autoFitPageIndexes.add(affectedPageIndex);
       }
       label.style.opacity = checkbox.checked ? "1" : "0.45";
       syncSelectedProvider();
-      firstVisibleIndex = clamp(firstVisibleIndex, 0, Math.max(0, getActiveProviders().length - visibleCount));
       renderScheduler({ resetWeights: true });
     });
 
@@ -459,6 +577,227 @@ function getItemProviderIds(item) {
   return item.type === "group" ? item.providers.map((provider) => provider.id) : [item.provider.id];
 }
 
+function usesManualPages() {
+  return viewMode === "default" || isPageEditMode;
+}
+
+function getProviderPageIndex(providerId) {
+  const pageIndex = pageLayouts.findIndex((page) => page.includes(providerId));
+  return pageIndex >= 0 ? pageIndex : 0;
+}
+
+function getPageActiveProviderIds(pageIndex) {
+  return (pageLayouts[pageIndex] || []).filter((providerId) => activeProviderIds.has(providerId));
+}
+
+function getPageDisplayItems(pageIndex, allItems = getDisplayItems()) {
+  const pageProviderIds = new Set(getPageActiveProviderIds(pageIndex));
+  return allItems.filter((item) => getItemProviderIds(item).some((providerId) => pageProviderIds.has(providerId)));
+}
+
+function getPageItemCount(pageIndex, allItems = getDisplayItems()) {
+  return getPageDisplayItems(pageIndex, allItems).length;
+}
+
+function ensurePageIndex(pageIndex) {
+  while (pageIndex >= pageLayouts.length) {
+    pageLayouts.push([]);
+  }
+
+  return clamp(pageIndex, 0, pageLayouts.length - 1);
+}
+
+function getMovablePageProviderIds(providerId) {
+  const id = Number(providerId);
+  const group = findGroupByProvider(id);
+  if (group) return [...group.providerIds];
+
+  return [id];
+}
+
+function moveProvidersToPage(providerIds, targetPageIndex, beforeProviderId = null, options = {}) {
+  const movingIds = providerIds
+    .map(Number)
+    .filter((providerId, index, ids) => providers.some((provider) => provider.id === providerId) && ids.indexOf(providerId) === index);
+  if (!movingIds.length) return false;
+
+  closeCalendarActionMenu();
+
+  targetPageIndex = Math.max(0, targetPageIndex);
+  const primaryId = movingIds[0];
+  const previousPageIndex = getProviderPageIndex(primaryId);
+  const previousCurrentPage = currentPageIndex;
+  const targetIndex = ensurePageIndex(targetPageIndex);
+  const movingSet = new Set(movingIds);
+
+  pageLayouts = pageLayouts.map((page) => page.filter((itemId) => !movingSet.has(itemId)));
+  const targetPage = pageLayouts[targetIndex] || [];
+  const insertIndex = beforeProviderId ? targetPage.indexOf(beforeProviderId) : -1;
+  targetPage.splice(insertIndex >= 0 ? insertIndex : targetPage.length, 0, ...movingIds);
+  pageLayouts[targetIndex] = targetPage;
+
+  if (!pageLayouts.length) {
+    pageLayouts = [movingIds];
+  }
+
+  const nextPageIndex = getProviderPageIndex(primaryId);
+  currentPageIndex = options.stayOnCurrentPage
+    ? clamp(previousCurrentPage, 0, pageLayouts.length - 1)
+    : nextPageIndex;
+  syncCalendarOrderFromPageLayouts();
+  if (previousPageIndex !== nextPageIndex) {
+    resetProviderWidthPreferences(movingIds);
+    autoFitPageIndexes.add(previousPageIndex);
+  }
+  storePageLayouts();
+  draggedCardProviderId = null;
+  draggedTabProviderId = null;
+  providerColumns.classList.remove("is-dragging-cards", "is-dragging-tabs");
+  renderScheduler({ resetWeights: true });
+  renderDoctorList();
+
+  if (!options.silent) {
+    const provider = getProviderById(primaryId);
+    const targetLabel = `${nextPageIndex + 1}페이지`;
+    const message =
+      options.message ||
+      (movingIds.length > 1
+        ? `묶인 캘린더 카드를 ${targetLabel}로 이동했습니다`
+        : `${provider?.name || "캘린더"}를 ${targetLabel}로 이동했습니다`);
+    showToast(message);
+  }
+
+  return previousPageIndex !== nextPageIndex || previousCurrentPage !== currentPageIndex;
+}
+
+function moveProviderToPage(providerId, targetPageIndex, beforeProviderId = null, options = {}) {
+  return moveProvidersToPage([providerId], targetPageIndex, beforeProviderId, options);
+}
+
+function moveCalendarUnitToPage(providerId, targetPageIndex, beforeProviderId = null, options = {}) {
+  return moveProvidersToPage(getMovablePageProviderIds(providerId), targetPageIndex, beforeProviderId, options);
+}
+
+function moveProviderToRelativePage(providerId, direction) {
+  const sourcePageIndex = getProviderPageIndex(providerId);
+  const targetPageIndex = clamp(sourcePageIndex + direction, 0, pageLayouts.length - 1);
+  if (targetPageIndex === sourcePageIndex) {
+    showToast(direction < 0 ? "이미 첫 페이지입니다" : "이미 마지막 페이지입니다");
+    return;
+  }
+
+  moveCalendarUnitToPage(providerId, targetPageIndex);
+}
+
+function moveProviderToNewPage(providerId) {
+  moveCalendarUnitToPage(providerId, pageLayouts.length);
+}
+
+function moveProviderToFirstPage(providerId) {
+  if (getProviderPageIndex(providerId) === 0) {
+    showToast("이미 첫 페이지입니다");
+    return;
+  }
+
+  moveCalendarUnitToPage(providerId, 0);
+}
+
+function moveProviderToLastPage(providerId) {
+  const lastPageIndex = Math.max(0, pageLayouts.length - 1);
+  if (getProviderPageIndex(providerId) === lastPageIndex) {
+    showToast("이미 마지막 페이지입니다");
+    return;
+  }
+
+  moveCalendarUnitToPage(providerId, lastPageIndex);
+}
+
+function reorderPageLayout(sourceIndex, targetIndex) {
+  if (sourceIndex === null || sourceIndex === targetIndex) return;
+  if (!pageLayouts[sourceIndex] || !pageLayouts[targetIndex]) return;
+
+  const nextLayouts = [...pageLayouts];
+  const [movedPage] = nextLayouts.splice(sourceIndex, 1);
+  nextLayouts.splice(targetIndex, 0, movedPage);
+  pageLayouts = nextLayouts;
+  currentPageIndex = targetIndex;
+  syncCalendarOrderFromPageLayouts();
+  storePageLayouts();
+  renderScheduler({ resetWeights: true });
+  renderDoctorList();
+  showToast("페이지 순서를 변경했습니다");
+}
+
+function placeProvidersOnAnchorPage(providerIds, anchorProviderId) {
+  const anchorPageIndex = getProviderPageIndex(anchorProviderId);
+  const anchorPage = pageLayouts[anchorPageIndex] || [];
+  const anchorIndex = Math.max(0, anchorPage.indexOf(anchorProviderId));
+  const movingIds = providerIds.map(Number);
+  const movingSet = new Set(movingIds);
+
+  pageLayouts = pageLayouts.map((page) => page.filter((providerId) => !movingSet.has(providerId)));
+  const nextAnchorPage = pageLayouts[anchorPageIndex] || [];
+  nextAnchorPage.splice(Math.min(anchorIndex, nextAnchorPage.length), 0, ...movingIds);
+  pageLayouts[anchorPageIndex] = nextAnchorPage;
+  currentPageIndex = anchorPageIndex;
+  syncCalendarOrderFromPageLayouts();
+  resetPageItemWeights(anchorPageIndex);
+  storePageLayouts();
+  renderDoctorList();
+}
+
+function getDisplayItemByProviderId(displayItems, providerId) {
+  return displayItems.find((item) => itemContainsProvider(item, providerId)) || null;
+}
+
+function moveProviderIdsToPageLayout(providerIds, targetPageIndex) {
+  const movingIds = providerIds.map(Number).filter((providerId, index, ids) => ids.indexOf(providerId) === index);
+  if (!movingIds.length) return false;
+
+  const movingSet = new Set(movingIds);
+  const targetIndex = ensurePageIndex(targetPageIndex);
+  pageLayouts = pageLayouts.map((page) => page.filter((providerId) => !movingSet.has(providerId)));
+  pageLayouts[targetIndex] = [...(pageLayouts[targetIndex] || []), ...movingIds];
+  resetProviderWidthPreferences(movingIds);
+  return true;
+}
+
+function fillManualPageFromFollowing(pageIndex, desiredItemCount) {
+  if (!usesManualPages() || desiredItemCount <= 0) return;
+
+  let displayItems = getDisplayItems();
+  let guard = providers.length;
+  while (getPageItemCount(pageIndex, displayItems) < desiredItemCount && guard > 0) {
+    guard -= 1;
+    const targetPageIds = new Set(pageLayouts[pageIndex] || []);
+    let candidateIds = null;
+
+    for (let nextPageIndex = pageIndex + 1; nextPageIndex < pageLayouts.length; nextPageIndex += 1) {
+      const nextPage = pageLayouts[nextPageIndex] || [];
+      for (const providerId of nextPage) {
+        if (!activeProviderIds.has(providerId)) continue;
+
+        const item = getDisplayItemByProviderId(displayItems, providerId);
+        const itemIds = getItemProviderIds(item);
+        if (itemIds.length && !itemIds.some((id) => targetPageIds.has(id))) {
+          candidateIds = itemIds;
+          break;
+        }
+      }
+      if (candidateIds) break;
+    }
+
+    if (!candidateIds) break;
+    moveProviderIdsToPageLayout(candidateIds, pageIndex);
+    displayItems = getDisplayItems();
+  }
+
+  syncCalendarOrderFromPageLayouts();
+  resetPageItemWeights(pageIndex);
+  storePageLayouts();
+  renderDoctorList();
+}
+
 function getPrimaryProviderIdFromItem(item) {
   if (!item) return null;
   if (item.type === "provider") return item.provider.id;
@@ -479,6 +818,30 @@ function getDisplayItemOrderIndex(item, fallbackProviderId, order = calendarOrde
   return Math.max(0, order.indexOf(fallbackProviderId));
 }
 
+function getActiveProviderIdsInOrder() {
+  const activeIds = providers.filter((provider) => activeProviderIds.has(provider.id)).map((provider) => provider.id);
+  const orderedIds = calendarOrder.filter((providerId) => activeProviderIds.has(providerId));
+  return [...orderedIds, ...activeIds.filter((providerId) => !orderedIds.includes(providerId))];
+}
+
+function preparePageEditModeForCurrentView() {
+  if (viewMode === "max") {
+    const activeIds = getActiveProviderIdsInOrder();
+    pageLayouts = [activeIds];
+    currentPageIndex = 0;
+    syncCalendarOrderFromPageLayouts();
+    storePageLayouts();
+    return;
+  }
+
+  if (viewMode === "single") {
+    const displayItems = getDisplayItems();
+    const focusItem = displayItems[getPreferredSingleIndex(displayItems)] || displayItems[0];
+    const focusProviderId = selectedProviderId || getPrimaryProviderIdFromItem(focusItem);
+    currentPageIndex = getProviderPageIndex(focusProviderId);
+  }
+}
+
 function syncSelectedProvider() {
   syncCalendarGroups();
   const activeProviders = getActiveProviders();
@@ -497,9 +860,171 @@ function getSelectedDisplayIndex(displayItems = getDisplayItems()) {
   return displayItems.findIndex((item) => itemContainsProvider(item, selectedProviderId));
 }
 
-function ensureColumnWeights(count, reset = false) {
-  if (reset || columnWeights.length !== count) {
+function getItemWidthKey(item) {
+  if (!item) return "";
+  if (item.type === "group") return `${viewMode}:group:${item.groupId}`;
+
+  return `${viewMode}:provider:${item.provider.id}`;
+}
+
+function getCurrentColumnWeightKeys(count = visibleCount) {
+  return currentVisibleItems.slice(0, count).map((item) => getItemWidthKey(item));
+}
+
+function getStoredItemWeight(item) {
+  const value = itemWidthWeights.get(getItemWidthKey(item));
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function getProviderWidthKey(providerId, mode = viewMode) {
+  return `${mode}:provider:${providerId}`;
+}
+
+function getPageWidthEditVersion(pageIndex) {
+  return pageWidthEditVersions.get(pageIndex) || 0;
+}
+
+function markCurrentPageWidthsTouched() {
+  if (!usesManualPages()) return;
+
+  pageWidthEditVersions.set(currentPageIndex, getPageWidthEditVersion(currentPageIndex) + 1);
+  autoFitPageIndexes.delete(currentPageIndex);
+}
+
+function getCurrentProviderWeight(providerId) {
+  const visibleIndex = currentVisibleItems.findIndex((item) => itemContainsProvider(item, providerId));
+  const visibleWeight = columnWeights[visibleIndex];
+  if (Number.isFinite(visibleWeight) && visibleWeight > 0) return visibleWeight;
+
+  const storedWeight = itemWidthWeights.get(getProviderWidthKey(providerId));
+  return Number.isFinite(storedWeight) && storedWeight > 0 ? storedWeight : null;
+}
+
+function captureHiddenProviderWidthState(providerId, pageIndex) {
+  hiddenWidthStates.set(providerId, {
+    mode: viewMode,
+    pageIndex,
+    version: getPageWidthEditVersion(pageIndex),
+    weight: getCurrentProviderWeight(providerId),
+  });
+}
+
+function applyReturningProviderWidthPolicy(providerId, pageIndex) {
+  const state = hiddenWidthStates.get(providerId);
+  if (!state) return;
+
+  const key = getProviderWidthKey(providerId);
+  const pageWasManuallyEdited = state.version !== getPageWidthEditVersion(state.pageIndex);
+
+  if (state.mode === viewMode && !pageWasManuallyEdited && Number.isFinite(state.weight) && state.weight > 0) {
+    itemWidthWeights.set(key, state.weight);
+  } else if (pageWasManuallyEdited) {
+    itemWidthWeights.set(key, getCollapsedWeight());
+  }
+
+  autoFitPageIndexes.delete(pageIndex);
+  hiddenWidthStates.delete(providerId);
+  storeCardWeights();
+}
+
+function resetItemWeight(item) {
+  const key = getItemWidthKey(item);
+  if (key) {
+    itemWidthWeights.delete(key);
+  }
+}
+
+function resetPageItemWeights(pageIndex) {
+  if (!usesManualPages()) return;
+  getPageDisplayItems(pageIndex, getDisplayItems()).forEach(resetItemWeight);
+  storeCardWeights();
+}
+
+function resetPagesItemWeights(pageIndexes) {
+  Array.from(new Set(pageIndexes))
+    .filter((pageIndex) => Number.isInteger(pageIndex) && pageIndex >= 0)
+    .forEach(resetPageItemWeights);
+}
+
+function resetProviderWidthPreferences(providerIds) {
+  const movingIds = new Set(providerIds.map(Number));
+  if (!movingIds.size) return;
+
+  Array.from(itemWidthWeights.keys()).forEach((key) => {
+    const providerMatch = key.match(/:provider:(\d+)$/);
+    if (providerMatch && movingIds.has(Number(providerMatch[1]))) {
+      itemWidthWeights.delete(key);
+      return;
+    }
+
+    const groupMatch = key.match(/:group:(.+)$/);
+    if (!groupMatch) return;
+
+    const group = calendarGroups.find((item) => item.id === groupMatch[1]);
+    if (group?.providerIds.some((providerId) => movingIds.has(providerId))) {
+      itemWidthWeights.delete(key);
+    }
+  });
+
+  storeCardWeights();
+}
+
+function haveColumnKeysChanged(nextKeys) {
+  return nextKeys.length !== columnWeightKeys.length || nextKeys.some((key, index) => key !== columnWeightKeys[index]);
+}
+
+function ensureColumnWeights(count, reset = false, forceUniform = false) {
+  const nextKeys = getCurrentColumnWeightKeys(count);
+  if (forceUniform) {
+    columnWeightKeys = nextKeys;
     columnWeights = Array.from({ length: count }, () => 1);
+    return;
+  }
+
+  if (reset || columnWeights.length !== count || haveColumnKeysChanged(nextKeys)) {
+    columnWeightKeys = nextKeys;
+    columnWeights = currentVisibleItems.slice(0, count).map((item) => getStoredItemWeight(item));
+  }
+}
+
+function rememberVisibleColumnWeights(options = {}) {
+  columnWeightKeys = getCurrentColumnWeightKeys(visibleCount);
+  currentVisibleItems.slice(0, visibleCount).forEach((item, index) => {
+    const weight = columnWeights[index];
+    if (Number.isFinite(weight) && weight > 0) {
+      itemWidthWeights.set(getItemWidthKey(item), weight);
+    }
+  });
+
+  if (options.persist !== false) {
+    storeCardWeights();
+  }
+}
+
+function resetVisibleColumnWeights() {
+  getCurrentColumnWeightKeys(visibleCount).forEach((key) => itemWidthWeights.delete(key));
+  columnWeights = Array.from({ length: visibleCount }, () => 1);
+  columnWeightKeys = getCurrentColumnWeightKeys(visibleCount);
+  storeCardWeights();
+}
+
+function seedGroupWidthFromAnchor(groupId, anchorProviderId) {
+  const groupKey = `${viewMode}:group:${groupId}`;
+  if (itemWidthWeights.has(groupKey)) return;
+
+  const anchorProviderKey = `${viewMode}:provider:${anchorProviderId}`;
+  const storedProviderWeight = itemWidthWeights.get(anchorProviderKey);
+  if (Number.isFinite(storedProviderWeight) && storedProviderWeight > 0) {
+    itemWidthWeights.set(groupKey, storedProviderWeight);
+    storeCardWeights();
+    return;
+  }
+
+  const anchorIndex = currentVisibleItems.findIndex((item) => itemContainsProvider(item, anchorProviderId));
+  const visibleWeight = columnWeights[anchorIndex];
+  if (Number.isFinite(visibleWeight) && visibleWeight > 0) {
+    itemWidthWeights.set(groupKey, visibleWeight);
+    storeCardWeights();
   }
 }
 
@@ -584,12 +1109,200 @@ function renderProviderHeaders() {
   });
 }
 
+function getDraggedPageIndex(event) {
+  if (draggedPageIndex !== null) return draggedPageIndex;
+
+  const raw = event.dataTransfer?.getData("text/plain") || "";
+  if (!raw.startsWith("page:")) return null;
+
+  const pageIndex = Number(raw.slice(5));
+  return Number.isInteger(pageIndex) ? pageIndex : null;
+}
+
+function clearPageDropTargets() {
+  pageIndicator.querySelectorAll(".page-chip.drop-target").forEach((chip) => {
+    chip.classList.remove("drop-target");
+  });
+}
+
+function closePageContextMenu() {
+  if (activePageContextMenu) {
+    activePageContextMenu.remove();
+    activePageContextMenu = null;
+  }
+}
+
+function deleteEmptyPage(pageIndex) {
+  if ((pageLayouts[pageIndex] || []).length > 0) {
+    showToast("캘린더가 있는 페이지는 삭제할 수 없습니다");
+    return;
+  }
+
+  if (pageLayouts.length <= 1) {
+    showToast("마지막 페이지는 삭제할 수 없습니다");
+    return;
+  }
+
+  pageLayouts.splice(pageIndex, 1);
+  currentPageIndex = clamp(currentPageIndex > pageIndex ? currentPageIndex - 1 : currentPageIndex, 0, pageLayouts.length - 1);
+  syncCalendarOrderFromPageLayouts();
+  storePageLayouts();
+  closePageContextMenu();
+  renderScheduler({ resetWeights: true });
+  renderDoctorList();
+  showToast(`${pageIndex + 1}페이지를 삭제했습니다`);
+}
+
+function openPageContextMenu(event, pageIndex) {
+  closePageContextMenu();
+
+  if ((pageLayouts[pageIndex] || []).length > 0) {
+    openPageCalendarDialog(pageIndex);
+    return;
+  }
+
+  const menu = document.createElement("div");
+  menu.className = "page-context-menu";
+  menu.setAttribute("role", "menu");
+  menu.setAttribute("aria-label", `${pageIndex + 1}페이지 메뉴`);
+
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.textContent = "캘린더 추가하기";
+  addButton.addEventListener("click", () => {
+    closePageContextMenu();
+    openPageCalendarDialog(pageIndex);
+  });
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "danger";
+  deleteButton.textContent = "페이지 삭제";
+  deleteButton.addEventListener("click", () => deleteEmptyPage(pageIndex));
+
+  menu.append(addButton, deleteButton);
+  document.body.append(menu);
+  const menuRect = menu.getBoundingClientRect();
+  menu.style.left = `${Math.min(event.clientX, window.innerWidth - menuRect.width - 12)}px`;
+  menu.style.top = `${Math.min(event.clientY, window.innerHeight - menuRect.height - 12)}px`;
+  activePageContextMenu = menu;
+}
+
+function renderPageControls(allItems = getDisplayItems()) {
+  pageIndicator.innerHTML = "";
+
+  if (!usesManualPages()) {
+    const totalPages = visibleCount > 0 ? Math.ceil(allItems.length / visibleCount) : 0;
+    const page = totalPages > 0 ? Math.floor(firstVisibleIndex / visibleCount) + 1 : 0;
+    pageIndicator.textContent = `${page} / ${totalPages}`;
+    return { page, totalPages };
+  }
+
+  const page = pageLayouts.length ? currentPageIndex + 1 : 0;
+  const totalPages = pageLayouts.length;
+  if (!isPageEditMode) {
+    pageIndicator.textContent = `${page} / ${totalPages}`;
+    return { page, totalPages };
+  }
+
+  const tray = document.createElement("div");
+  tray.className = "page-tray";
+
+  pageLayouts.forEach((page, index) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "page-chip";
+    chip.draggable = true;
+    chip.classList.toggle("active", index === currentPageIndex);
+    chip.textContent = `${index + 1}`;
+    chip.setAttribute("aria-label", `${index + 1}페이지`);
+    chip.title = "클릭하면 페이지 이동, 드래그하면 페이지 순서 변경, 우클릭하면 캘린더 추가";
+    chip.addEventListener("click", () => {
+      currentPageIndex = index;
+      renderScheduler({ resetWeights: true });
+    });
+    chip.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      openPageContextMenu(event, index);
+    });
+    chip.addEventListener("dragstart", (event) => {
+      event.stopPropagation();
+      draggedPageIndex = index;
+      draggedCardProviderId = null;
+      chip.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", `page:${index}`);
+    });
+    chip.addEventListener("dragend", () => {
+      draggedPageIndex = null;
+      chip.classList.remove("dragging");
+      clearPageDropTargets();
+    });
+    chip.addEventListener("dragover", (event) => {
+      const pageDragIndex = getDraggedPageIndex(event);
+      if (!draggedCardProviderId && pageDragIndex === null) return;
+      event.preventDefault();
+      chip.classList.add("drop-target");
+      event.dataTransfer.dropEffect = "move";
+    });
+    chip.addEventListener("dragleave", () => {
+      chip.classList.remove("drop-target");
+    });
+    chip.addEventListener("drop", (event) => {
+      const pageDragIndex = getDraggedPageIndex(event);
+      if (!draggedCardProviderId && pageDragIndex === null) return;
+      event.preventDefault();
+      chip.classList.remove("drop-target");
+      if (draggedCardProviderId) {
+        moveCalendarUnitToPage(draggedCardProviderId, index);
+        return;
+      }
+      reorderPageLayout(pageDragIndex, index);
+    });
+    tray.append(chip);
+  });
+
+  if (isPageEditMode) {
+    const addPage = document.createElement("button");
+    addPage.type = "button";
+    addPage.className = "page-chip add-page";
+    addPage.textContent = "+";
+    addPage.setAttribute("aria-label", "새 페이지를 만들거나 드래그한 캘린더를 새 페이지로 이동");
+    addPage.addEventListener("click", () => {
+      pageLayouts.push([]);
+      currentPageIndex = pageLayouts.length - 1;
+      storePageLayouts();
+      renderScheduler({ resetWeights: true });
+      showToast("빈 페이지를 추가했습니다. 카드 메뉴에서 새 페이지로 이동할 수 있습니다");
+    });
+    addPage.addEventListener("dragover", (event) => {
+      if (!isPageEditMode || !draggedCardProviderId) return;
+      event.preventDefault();
+      addPage.classList.add("drop-target");
+      event.dataTransfer.dropEffect = "move";
+    });
+    addPage.addEventListener("dragleave", () => {
+      addPage.classList.remove("drop-target");
+    });
+    addPage.addEventListener("drop", (event) => {
+      if (!isPageEditMode || !draggedCardProviderId) return;
+      event.preventDefault();
+      addPage.classList.remove("drop-target");
+      moveCalendarUnitToPage(draggedCardProviderId, pageLayouts.length);
+    });
+    tray.append(addPage);
+  }
+
+  pageIndicator.append(tray);
+  return { page: currentPageIndex + 1, totalPages: pageLayouts.length };
+}
+
 function syncProviderBottomScrollbar() {
   if (!scheduleHorizontalBar || !providerBottomScroll || !providerBottomSpacer || !providerViewport) return;
 
   const fullWidth = Math.ceil(providerColumns.getBoundingClientRect().width);
   const viewportWidth = Math.ceil(providerViewport.getBoundingClientRect().width);
-  const shouldShow = viewMode === "max" && fullWidth > viewportWidth + 1;
+  const shouldShow = (viewMode === "max" || usesManualPages()) && fullWidth > viewportWidth + 1;
 
   scheduleHorizontalBar.hidden = !shouldShow;
   providerBottomSpacer.style.width = `${Math.max(fullWidth, viewportWidth)}px`;
@@ -636,7 +1349,7 @@ function syncScheduleVerticalScrollbar() {
 }
 
 function updateProviderColumnsScrollWidth() {
-  if (viewMode !== "max" || !currentVisibleItems.length) {
+  if ((!usesManualPages() && viewMode !== "max") || !currentVisibleItems.length) {
     providerColumns.style.minWidth = "";
     providerColumns.style.width = "";
     syncProviderHeaderColumnsStyle();
@@ -735,6 +1448,13 @@ function getPreferredSingleIndex(displayItems = getDisplayItems()) {
 }
 
 function setViewMode(nextMode, options = {}) {
+  if (isPageEditMode && nextMode !== viewMode) {
+    updateSortState();
+    closeSortPopover();
+    showToast("페이지 편집 중에는 정렬을 변경할 수 없습니다");
+    return;
+  }
+
   if (nextMode === "single" && viewMode !== "single") {
     previousNonSingleViewMode = viewMode;
   } else if (nextMode !== "single") {
@@ -757,6 +1477,11 @@ function setViewMode(nextMode, options = {}) {
     firstVisibleIndex = 0;
   }
 
+  if (isPageEditMode) {
+    preparePageEditModeForCurrentView();
+  }
+
+  updatePageEditState();
   updateSortState();
   closeSortPopover();
   renderScheduler({ resetWeights: true, preserveVisibleCount: options.preserveVisibleCount });
@@ -801,6 +1526,109 @@ function createMenuButton(label, context) {
   return menu;
 }
 
+function trackDraggedCardPosition(event) {
+  if (!draggedCardProviderId || !Number.isFinite(event.clientX)) return;
+  if (event.clientX === 0 && event.clientY === 0) return;
+  lastCardDragClientX = event.clientX;
+  lastCardDragClientY = event.clientY;
+}
+
+function moveDraggedCardByEdge(providerId) {
+  if (
+    !isPageEditMode ||
+    !providerId ||
+    !Number.isFinite(lastCardDragClientX) ||
+    !Number.isFinite(lastCardDragClientY)
+  ) {
+    return false;
+  }
+
+  const rect = schedulerPane.getBoundingClientRect();
+  const threshold = 44;
+  if (lastCardDragClientX < rect.left + threshold) {
+    moveProviderToRelativePage(providerId, -1);
+    return true;
+  }
+  if (lastCardDragClientX > rect.right - threshold) {
+    moveProviderToRelativePage(providerId, 1);
+    return true;
+  }
+
+  return false;
+}
+
+function createCalendarDragPreview(element, providerId) {
+  const source =
+    element.closest(".provider-card") ||
+    providerColumns.querySelector(`.provider-card[data-provider-id="${providerId}"]`) ||
+    element;
+  const rect = source.getBoundingClientRect();
+  const preview = source.cloneNode(true);
+
+  preview.classList.add("calendar-drag-preview");
+  preview.style.width = `${Math.max(160, rect.width)}px`;
+  preview.style.height = `${Math.max(220, Math.min(rect.height, 520))}px`;
+  preview.style.left = "-10000px";
+  preview.style.top = "-10000px";
+  document.body.append(preview);
+
+  return { preview, rect };
+}
+
+function getProviderBodyCard(providerId) {
+  return providerColumns.querySelector(`.provider-card[data-provider-id="${providerId}"]`);
+}
+
+function clearCalendarDropTargets() {
+  document.querySelectorAll(".provider-card.drop-target, .provider-header-card.drop-target").forEach((element) => {
+    element.classList.remove("drop-target");
+  });
+}
+
+function beginCalendarCardDrag(event, providerId, element) {
+  event.stopPropagation();
+  draggedCardProviderId = providerId;
+  lastCardDragClientX = event.clientX;
+  lastCardDragClientY = event.clientY;
+  element.classList.add("dragging");
+  element.closest(".provider-header-card")?.classList.add("dragging");
+  getProviderBodyCard(providerId)?.classList.add("dragging-card");
+  providerColumns.classList.add("is-dragging-cards");
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", String(providerId));
+
+  const { preview, rect } = createCalendarDragPreview(element, providerId);
+  const offsetX = clamp(event.clientX - rect.left, 20, Math.max(20, rect.width - 20));
+  const offsetY = clamp(event.clientY - rect.top, 18, 54);
+  event.dataTransfer.setDragImage(preview, offsetX, offsetY);
+  requestAnimationFrame(() => preview.remove());
+}
+
+function endCalendarCardDrag(element) {
+  const providerId = draggedCardProviderId;
+  element.classList.remove("dragging", "dragging-card", "drop-target");
+  document.querySelectorAll(".provider-card.dragging-card, .provider-header-card.dragging").forEach((target) => {
+    target.classList.remove("dragging-card", "dragging");
+  });
+  clearCalendarDropTargets();
+  if (providerId) {
+    moveDraggedCardByEdge(providerId);
+  }
+  draggedCardProviderId = null;
+  lastCardDragClientX = null;
+  lastCardDragClientY = null;
+  cardDragEdgeDirection = 0;
+  clearTimeout(cardDragEdgeTimer);
+  providerColumns.classList.remove("is-dragging-cards");
+}
+
+function enableWholeCardDrag(card, providerId) {
+  card.draggable = false;
+  card.title = isPageEditMode
+    ? "상단 의사명 영역을 드래그하면 페이지나 위치를 변경할 수 있습니다"
+    : "상단 의사명 영역을 드래그하면 현재 페이지 안에서 위치를 변경할 수 있습니다";
+}
+
 function createSingleHeader(provider) {
   const header = document.createElement("header");
   header.className = "single-header";
@@ -819,27 +1647,43 @@ function createSingleHeader(provider) {
   });
 
   header.addEventListener("dragstart", (event) => {
-    draggedCardProviderId = provider.id;
-    header.classList.add("dragging");
-    providerColumns.classList.add("is-dragging-cards");
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", String(provider.id));
+    if (event.target.closest(".provider-menu, .tab-menu-button, button, select, input, textarea")) {
+      event.preventDefault();
+      return;
+    }
+    beginCalendarCardDrag(event, provider.id, header);
   });
 
+  header.addEventListener("drag", trackDraggedCardPosition);
+
   header.addEventListener("dragend", () => {
-    draggedCardProviderId = null;
-    header.classList.remove("dragging");
-    providerColumns.classList.remove("is-dragging-cards");
+    endCalendarCardDrag(header);
   });
 
   header.addEventListener("dragover", (event) => {
+    if (!draggedCardProviderId || draggedCardProviderId === provider.id) return;
     event.preventDefault();
+    header.closest(".provider-header-card")?.classList.add("drop-target");
     event.dataTransfer.dropEffect = "move";
   });
 
+  header.addEventListener("dragleave", () => {
+    header.closest(".provider-header-card")?.classList.remove("drop-target");
+  });
+
   header.addEventListener("drop", (event) => {
+    if (!draggedCardProviderId || draggedCardProviderId === provider.id) return;
     event.preventDefault();
-    reorderStandaloneCard(draggedCardProviderId, provider.id);
+    header.closest(".provider-header-card")?.classList.remove("drop-target");
+
+    if (usesManualPages()) {
+      moveCalendarUnitToPage(draggedCardProviderId, getProviderPageIndex(provider.id), provider.id, {
+        silent: true,
+      });
+    } else {
+      reorderStandaloneCard(draggedCardProviderId, provider.id);
+    }
+    showToast("캘린더 위치를 변경했습니다");
   });
 
   header.append(
@@ -948,7 +1792,10 @@ function createSlotBody(providerId, isSelectedCard) {
     row.role = "button";
     row.tabIndex = -1;
     row.setAttribute("aria-label", `${provider?.name || "캘린더"} ${time.label} 예약 선택`);
-    row.addEventListener("pointerdown", (event) => beginSlotSelection(event, index, providerId));
+    row.addEventListener("pointerdown", (event) => {
+      if (isPageEditMode) return;
+      beginSlotSelection(event, index, providerId);
+    });
     body.append(row);
   });
 
@@ -976,6 +1823,7 @@ function renderProviderCard(provider) {
     card.classList.add("is-selected");
   }
 
+  enableWholeCardDrag(card, provider.id);
   card.append(createSingleHeader(provider), createSlotBody(provider.id, provider.id === selectedProviderId));
   return card;
 }
@@ -997,6 +1845,7 @@ function renderGroupCard(groupProviders, groupId) {
   card.dataset.groupId = groupId;
   card.style.setProperty("--tab-count", groupProviders.length);
   card.classList.toggle("is-selected", isSelectedCard);
+  enableWholeCardDrag(card, activeProvider.id);
   card.append(createGroupHeader(groupProviders, groupId), createSlotBody(activeProvider.id, isSelectedCard));
   return card;
 }
@@ -1085,15 +1934,29 @@ function openCalendarActionMenu(anchor, context) {
 
   const menu = document.createElement("div");
   menu.className = "calendar-action-menu";
-  menu.append(
+  const actions = [
     createActionButton("캘린더 합치기", () => openMergeDialog(context.providerId, context)),
     createActionButton("분리하기", () => splitProviderFromGroup(context.providerId)),
     createActionButton("전체 분리하기", () => splitAllCalendars(context.providerId)),
+  ];
+
+  if (usesManualPages() && isPageEditMode) {
+    actions.push(
+      createActionButton("처음 페이지로 이동", () => moveProviderToFirstPage(context.providerId)),
+      createActionButton("이전 페이지로 이동", () => moveProviderToRelativePage(context.providerId, -1)),
+      createActionButton("다음 페이지로 이동", () => moveProviderToRelativePage(context.providerId, 1)),
+      createActionButton("마지막 페이지로 이동", () => moveProviderToLastPage(context.providerId)),
+    );
+  }
+
+  actions.push(
     createActionButton("예약자 목록 출력  ›", () => {
       closeCalendarActionMenu();
       showToast("예약자 목록 출력을 할 수 없습니다");
     }),
   );
+
+  menu.append(...actions);
 
   document.body.append(menu);
   const rect = anchor.getBoundingClientRect();
@@ -1137,6 +2000,9 @@ function mergeCalendarsAtAnchor(selectedIds, anchorProviderId, anchorSlotIndex) 
   const previousOrder = [...calendarOrder];
   const previousItems = getDisplayItems();
   const anchorDisplayIndex = previousItems.findIndex((item) => itemContainsProvider(item, anchorProviderId));
+  const manualAnchorPageIndex = usesManualPages() ? getProviderPageIndex(anchorProviderId) : null;
+  const manualDesiredItemCount =
+    manualAnchorPageIndex !== null ? getPageItemCount(manualAnchorPageIndex, previousItems) : 0;
   const activeIds = new Set(getActiveProviders().map((provider) => provider.id));
   const uniqueIds = [];
 
@@ -1193,9 +2059,15 @@ function mergeCalendarsAtAnchor(selectedIds, anchorProviderId, anchorSlotIndex) 
 
   nextGroups.push({ id: anchorGroupId, providerIds });
   calendarGroups = nextGroups;
+  seedGroupWidthFromAnchor(anchorGroupId, anchorProviderId);
 
   const nextActiveOrder = displayUnits.flat();
   calendarOrder = [...nextActiveOrder, ...previousOrder.filter((providerId) => !nextActiveOrder.includes(providerId))];
+  placeProvidersOnAnchorPage(providerIds, anchorProviderId);
+  if (manualAnchorPageIndex !== null) {
+    fillManualPageFromFollowing(manualAnchorPageIndex, manualDesiredItemCount);
+    currentPageIndex = getProviderPageIndex(anchorProviderId);
+  }
   selectedProviderId = anchorProviderId;
   activeGroupProviderIds.set(anchorGroupId, anchorProviderId);
 
@@ -1240,6 +2112,13 @@ function reorderGroupTab(sourceProviderId, targetProviderId) {
 function reorderStandaloneCard(sourceProviderId, targetProviderId) {
   if (!sourceProviderId || sourceProviderId === targetProviderId) return;
   if (findGroupByProvider(sourceProviderId) || findGroupByProvider(targetProviderId)) return;
+
+  if (usesManualPages()) {
+    const targetPageIndex = getProviderPageIndex(targetProviderId);
+    moveProviderToPage(sourceProviderId, targetPageIndex, targetProviderId, { silent: true });
+    showToast("캘린더 위치를 변경했습니다");
+    return;
+  }
 
   const sourceIndex = calendarOrder.indexOf(sourceProviderId);
   const targetIndex = calendarOrder.indexOf(targetProviderId);
@@ -1391,6 +2270,92 @@ function openMergeDialog(anchorProviderId, context = {}) {
   syncConfirmState();
 }
 
+function openPageCalendarDialog(targetPageIndex) {
+  closeCalendarActionMenu();
+  document.querySelector(".merge-dialog-backdrop")?.remove();
+
+  const pageIds = new Set(pageLayouts[targetPageIndex] || []);
+  const backdrop = document.createElement("div");
+  backdrop.className = "merge-dialog-backdrop";
+
+  const dialog = document.createElement("section");
+  dialog.className = "merge-dialog page-calendar-dialog";
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  dialog.setAttribute("aria-label", `${targetPageIndex + 1}페이지 캘린더 추가`);
+
+  const title = document.createElement("h2");
+  title.textContent = `${targetPageIndex + 1}페이지에 추가할 캘린더를 선택해주세요.`;
+
+  const list = document.createElement("div");
+  list.className = "merge-list";
+
+  providers.forEach((provider) => {
+    const row = document.createElement("label");
+    row.className = "merge-row";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = String(provider.id);
+    checkbox.checked = pageIds.has(provider.id);
+    checkbox.disabled = pageIds.has(provider.id);
+    row.classList.toggle("is-disabled", checkbox.disabled);
+
+    const text = document.createElement("span");
+    text.textContent = provider.name;
+    row.append(checkbox, text);
+    list.append(row);
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "merge-actions";
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "ghost";
+  cancel.textContent = "취소";
+  const confirm = document.createElement("button");
+  confirm.type = "button";
+  confirm.className = "primary";
+  confirm.textContent = "확인";
+
+  const getSelectedIds = () =>
+    Array.from(list.querySelectorAll("input:not(:disabled)"))
+      .filter((checkbox) => checkbox.checked)
+      .map((checkbox) => Number(checkbox.value));
+  const syncConfirmState = () => {
+    confirm.disabled = getSelectedIds().length === 0;
+  };
+
+  list.addEventListener("change", syncConfirmState);
+  cancel.addEventListener("click", () => backdrop.remove());
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop) backdrop.remove();
+  });
+  confirm.addEventListener("click", () => {
+    const selectedIds = getSelectedIds();
+    if (!selectedIds.length) {
+      syncConfirmState();
+      return;
+    }
+
+    selectedIds.forEach((providerId) => activeProviderIds.add(providerId));
+    const detachedIds = selectedIds.filter((providerId) => findGroupByProvider(providerId));
+    detachedIds.forEach((providerId) => removeProviderFromGroups(providerId));
+    moveProvidersToPage(selectedIds, targetPageIndex, null, {
+      message: detachedIds.length
+        ? `${targetPageIndex + 1}페이지에 선택한 탭 캘린더를 독립 카드로 추가했습니다`
+        : `${targetPageIndex + 1}페이지에 캘린더를 추가했습니다`,
+    });
+    renderDoctorList();
+    backdrop.remove();
+  });
+
+  actions.append(cancel, confirm);
+  dialog.append(title, list, actions);
+  backdrop.append(dialog);
+  document.body.append(backdrop);
+  syncConfirmState();
+}
+
 function createCardResizeHandle(leftIndex) {
   const handle = document.createElement("button");
   handle.type = "button";
@@ -1408,6 +2373,7 @@ function createCardResizeHandle(leftIndex) {
     const startX = event.clientX;
     const startWeights = [...columnWeights];
     const totalCardWidth = cards.reduce((sum, card) => sum + card.getBoundingClientRect().width, 0);
+    let didResize = false;
 
     handle.setPointerCapture(event.pointerId);
     handle.classList.add("active");
@@ -1421,11 +2387,17 @@ function createCardResizeHandle(leftIndex) {
 
       handle.classList.remove("is-limited");
       columnWeights = nextWeights;
+      didResize = true;
+      rememberVisibleColumnWeights({ persist: false });
       applyProviderGridColumns();
     };
 
     const onEnd = () => {
       handle.classList.remove("active", "is-limited");
+      if (didResize) {
+        markCurrentPageWidthsTouched();
+      }
+      rememberVisibleColumnWeights();
       handle.removeEventListener("pointermove", onMove);
       handle.removeEventListener("pointerup", onEnd);
       handle.removeEventListener("pointercancel", onEnd);
@@ -1437,7 +2409,8 @@ function createCardResizeHandle(leftIndex) {
   });
 
   handle.addEventListener("dblclick", () => {
-    columnWeights = Array.from({ length: visibleCount }, () => 1);
+    markCurrentPageWidthsTouched();
+    resetVisibleColumnWeights();
     applyProviderGridColumns();
   });
 
@@ -1448,7 +2421,8 @@ function createCardResizeHandle(leftIndex) {
     const index = Number(handle.dataset.cardResizeIndex);
 
     if (event.key === "Home" || event.key === "End") {
-      columnWeights = Array.from({ length: visibleCount }, () => 1);
+      markCurrentPageWidthsTouched();
+      resetVisibleColumnWeights();
     } else {
       const direction = event.key === "ArrowLeft" ? -1 : 1;
       const virtualCardWidth = visibleCount * 220;
@@ -1461,6 +2435,8 @@ function createCardResizeHandle(leftIndex) {
 
       handle.classList.remove("is-limited");
       columnWeights = nextWeights;
+      markCurrentPageWidthsTouched();
+      rememberVisibleColumnWeights();
     }
 
     applyProviderGridColumns();
@@ -1550,26 +2526,45 @@ function getAnchoredStartIndex(displayItems, focusIndex, preferredSlotIndex = 0)
 function renderScheduler(options = {}) {
   syncSelectedProvider();
   const activeProviders = getActiveProviders();
-  const displayItems = getDisplayItems();
+  const allDisplayItems = getDisplayItems();
+  let displayItems = allDisplayItems;
+  if (usesManualPages()) {
+    currentPageIndex = clamp(currentPageIndex, 0, Math.max(0, pageLayouts.length - 1));
+    displayItems = getPageDisplayItems(currentPageIndex, allDisplayItems);
+  }
   providerColumns.innerHTML = "";
   providerColumns.classList.remove("default-view", "single-view", "max-view");
   providerColumns.classList.add(`${viewMode}-view`);
 
-  if (!displayItems.length) {
+  if (!allDisplayItems.length || !displayItems.length) {
     visibleCount = 0;
-    firstVisibleIndex = 0;
-  currentVisibleItems = [];
-  pageIndicator.textContent = "0 / 0";
-  visibleDoctorCount.textContent = "0건";
-  totalDoctorCount.textContent = "0건";
-  providerColumns.style.gridTemplateColumns = "1fr";
-  renderProviderHeaders();
-  syncProviderBottomScrollbar();
-  syncScheduleVerticalScrollbar();
-  return;
-}
+    if (!usesManualPages()) {
+      firstVisibleIndex = 0;
+    }
+    currentVisibleItems = [];
+    columnWeights = [];
+    columnWeightKeys = [];
+    providerColumns.style.setProperty("--visible-columns", 0);
+    providerColumns.style.gridTemplateColumns = "1fr";
+    providerColumns.style.minWidth = "";
+    providerColumns.style.width = "";
+    renderPageControls(allDisplayItems);
+    const totalPages = usesManualPages() ? pageLayouts.length : 0;
+    const page = usesManualPages() ? currentPageIndex + 1 : 0;
+    prevPageButton.disabled = totalPages <= 1 || page <= 1;
+    nextPageButton.disabled = totalPages <= 1 || page >= totalPages;
+    visibleDoctorCount.textContent = "0건";
+    totalDoctorCount.textContent = `${activeProviders.length}건`;
+    renderProviderHeaders();
+    syncProviderBottomScrollbar();
+    syncScheduleVerticalScrollbar();
+    return;
+  }
 
-  if (!options.preserveVisibleCount) {
+  if (usesManualPages()) {
+    visibleCount = viewMode === "single" ? 1 : displayItems.length;
+    firstVisibleIndex = 0;
+  } else if (!options.preserveVisibleCount) {
     if (viewMode === "max") {
       firstVisibleIndex = 0;
     }
@@ -1585,7 +2580,15 @@ function renderScheduler(options = {}) {
 
   visibleCount = clamp(visibleCount, 1, displayItems.length);
 
-  if (viewMode === "single") {
+  if (usesManualPages()) {
+    if (viewMode === "single") {
+      const singleIndex = getPreferredSingleIndex(displayItems);
+      firstVisibleIndex = clamp(singleIndex, 0, Math.max(0, displayItems.length - 1));
+      currentVisibleItems = displayItems.slice(firstVisibleIndex, firstVisibleIndex + 1);
+    } else {
+      currentVisibleItems = displayItems;
+    }
+  } else if (viewMode === "single") {
     firstVisibleIndex = getPreferredSingleIndex(displayItems);
   } else if (viewMode === "max") {
     firstVisibleIndex = 0;
@@ -1593,10 +2596,13 @@ function renderScheduler(options = {}) {
     firstVisibleIndex = Math.floor(firstVisibleIndex / visibleCount) * visibleCount;
   }
 
-  firstVisibleIndex = clamp(firstVisibleIndex, 0, Math.max(0, displayItems.length - visibleCount));
-  ensureColumnWeights(visibleCount, options.resetWeights);
+  if (!usesManualPages()) {
+    firstVisibleIndex = clamp(firstVisibleIndex, 0, Math.max(0, displayItems.length - visibleCount));
+    currentVisibleItems = displayItems.slice(firstVisibleIndex, firstVisibleIndex + visibleCount);
+  }
+  const forceUniformWeights = usesManualPages() && autoFitPageIndexes.has(currentPageIndex);
+  ensureColumnWeights(visibleCount, options.resetWeights, forceUniformWeights);
   providerColumns.style.setProperty("--visible-columns", visibleCount);
-  currentVisibleItems = displayItems.slice(firstVisibleIndex, firstVisibleIndex + visibleCount);
   applyProviderGridColumns();
 
   currentVisibleItems.forEach((item, index) => {
@@ -1610,9 +2616,7 @@ function renderScheduler(options = {}) {
   syncProviderBottomScrollbar();
   syncScheduleVerticalScrollbar();
 
-  const page = Math.floor(firstVisibleIndex / visibleCount) + 1;
-  const totalPages = Math.ceil(displayItems.length / visibleCount);
-  pageIndicator.textContent = `${page} / ${totalPages}`;
+  const { page, totalPages } = renderPageControls(allDisplayItems);
   prevPageButton.disabled = totalPages <= 1 || page <= 1;
   nextPageButton.disabled = totalPages <= 1 || page >= totalPages;
   visibleDoctorCount.textContent = `${visibleCount}건`;
@@ -1623,6 +2627,14 @@ function updateVisibleColumns() {
   const displayItems = getDisplayItems();
   const width = providerColumns.getBoundingClientRect().width;
   if (!width || !displayItems.length) return;
+
+  if (usesManualPages()) {
+    providerColumns.style.setProperty("--visible-columns", visibleCount);
+    applyProviderGridColumns();
+    syncProviderBottomScrollbar();
+    syncScheduleVerticalScrollbar();
+    return;
+  }
 
   let nextVisibleCount = getResponsiveVisibleCount(displayItems, firstVisibleIndex);
   nextVisibleCount = getFilledVisibleCount(displayItems, firstVisibleIndex, nextVisibleCount, visibleCount);
@@ -1721,7 +2733,6 @@ function getResponsiveVisibleCount(displayItems = getDisplayItems(), startIndex 
 }
 
 function beginSlotSelection(event, index, providerId) {
-  event.preventDefault();
   selectedSlot = clamp(index, 0, times.length - 2);
   selectionEndSlot = selectedSlot;
   selectedProviderId = providerId;
@@ -1771,6 +2782,12 @@ function movePage(direction) {
   const displayItems = getDisplayItems();
   if (!displayItems.length) return;
 
+  if (usesManualPages()) {
+    currentPageIndex = clamp(currentPageIndex + direction, 0, Math.max(0, pageLayouts.length - 1));
+    renderScheduler({ resetWeights: true });
+    return;
+  }
+
   firstVisibleIndex = clamp(
     firstVisibleIndex + direction * visibleCount,
     0,
@@ -1806,8 +2823,85 @@ function installObservers() {
 
 function updateSortState() {
   sortPopover.querySelectorAll("[data-view-mode]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.viewMode === viewMode);
+    const isCurrentMode = button.dataset.viewMode === viewMode;
+    button.classList.toggle("active", isCurrentMode);
+    button.disabled = isPageEditMode && !isCurrentMode;
+    button.setAttribute("aria-disabled", String(button.disabled));
   });
+  sortPopover.querySelector("[data-page-edit]")?.classList.toggle("active", isPageEditMode);
+}
+
+function updatePageEditState() {
+  schedulerPane.classList.toggle("is-page-editing", isPageEditMode);
+  providerColumns.classList.toggle("is-page-editing", isPageEditMode);
+  providerHeaderColumns?.classList.toggle("is-page-editing", isPageEditMode);
+  if (pageEditActions) {
+    pageEditActions.hidden = !isPageEditMode;
+  }
+}
+
+function createPageEditSnapshot() {
+  return {
+    pageLayouts: pageLayouts.map((page) => [...page]),
+    calendarOrder: [...calendarOrder],
+    currentPageIndex,
+    itemWidthWeights: new Map(itemWidthWeights),
+    pageWidthEditVersions: new Map(pageWidthEditVersions),
+    hiddenWidthStates: new Map(hiddenWidthStates),
+    autoFitPageIndexes: new Set(autoFitPageIndexes),
+  };
+}
+
+function beginPageEditMode() {
+  if (isPageEditMode) return;
+
+  pageEditSnapshot = createPageEditSnapshot();
+  isPageEditMode = true;
+  preparePageEditModeForCurrentView();
+  updatePageEditState();
+  updateSortState();
+  closeSortPopover();
+  closePageContextMenu();
+  renderScheduler({ resetWeights: true });
+  showToast("페이지 구성 편집 중입니다. 카드 전체를 페이지 칩이나 좌우 바깥 영역으로 드래그해 이동하세요");
+}
+
+function cancelPageEditMode() {
+  if (!isPageEditMode) return;
+
+  if (pageEditSnapshot) {
+    pageLayouts = pageEditSnapshot.pageLayouts.map((page) => [...page]);
+    calendarOrder = [...pageEditSnapshot.calendarOrder];
+    currentPageIndex = pageEditSnapshot.currentPageIndex;
+    itemWidthWeights = new Map(pageEditSnapshot.itemWidthWeights);
+    pageWidthEditVersions = new Map(pageEditSnapshot.pageWidthEditVersions);
+    hiddenWidthStates = new Map(pageEditSnapshot.hiddenWidthStates);
+    autoFitPageIndexes = new Set(pageEditSnapshot.autoFitPageIndexes);
+    storePageLayouts();
+    storeCardWeights();
+  }
+
+  pageEditSnapshot = null;
+  isPageEditMode = false;
+  updatePageEditState();
+  updateSortState();
+  closePageContextMenu();
+  renderScheduler({ resetWeights: true });
+  renderDoctorList();
+  showToast("페이지 구성 편집을 취소했습니다");
+}
+
+function savePageEditMode() {
+  if (!isPageEditMode) return;
+
+  pageEditSnapshot = null;
+  isPageEditMode = false;
+  storePageLayouts();
+  storeCardWeights();
+  closePageContextMenu();
+  setViewMode("default");
+  renderDoctorList();
+  showToast("페이지 구성을 저장하고 캘린더 기본 보기로 전환했습니다");
 }
 
 function openSortPopover() {
@@ -1835,24 +2929,39 @@ function attachSortMenu() {
   });
 
   sortPopover.addEventListener("click", (event) => {
+    const editButton = event.target.closest("[data-page-edit]");
+    if (editButton) {
+      beginPageEditMode();
+      return;
+    }
+
     const button = event.target.closest("[data-view-mode]");
     if (!button) return;
+    if (button.disabled) return;
     setViewMode(button.dataset.viewMode);
   });
+
+  pageEditCancel?.addEventListener("click", cancelPageEditMode);
+  pageEditSave?.addEventListener("click", savePageEditMode);
 
   document.addEventListener("click", (event) => {
     if (!event.target.closest("#sortMenu")) {
       closeSortPopover();
     }
+    if (!event.target.closest(".page-context-menu") && !event.target.closest(".page-chip")) {
+      closePageContextMenu();
+    }
     if (!event.target.closest(".calendar-action-menu") && !event.target.closest(".provider-menu")) {
       closeCalendarActionMenu();
     }
   });
+  document.addEventListener("dragover", trackDraggedCardPosition);
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeSortPopover();
       closeCalendarActionMenu();
+      closePageContextMenu();
       document.querySelector(".merge-dialog-backdrop")?.remove();
     }
   });
@@ -1861,6 +2970,8 @@ function attachSortMenu() {
 }
 
 function init() {
+  syncCalendarOrderFromPageLayouts();
+  updatePageEditState();
   renderDoctorList();
   renderCalendarSelect();
   renderTimeAxis();
