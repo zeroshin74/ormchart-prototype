@@ -1805,7 +1805,9 @@ function clearCalendarDropTargets() {
 
 function getCalendarDropPlacement(element, event) {
   const rect = element.getBoundingClientRect();
-  return event.clientX < rect.left + rect.width / 2 ? "before" : "after";
+  const distanceToLeft = Math.abs(event.clientX - rect.left);
+  const distanceToRight = Math.abs(rect.right - event.clientX);
+  return distanceToLeft <= distanceToRight ? "before" : "after";
 }
 
 function setCalendarDropTarget(providerId, placement) {
@@ -1877,6 +1879,32 @@ function getTargetProviderIdForHeader(provider) {
   return group?.providerIds.find((providerId) => activeProviderIds.has(providerId)) || provider.id;
 }
 
+function getTargetProviderIdForCard(card, fallbackProviderId) {
+  const providerId = Number(card.dataset.providerId) || fallbackProviderId;
+  const provider = getProviderById(providerId);
+  return getTargetProviderIdForHeader(provider) || providerId;
+}
+
+function applyCalendarDropCue(event, targetElement, targetProviderId) {
+  if (!draggedCardProviderId || draggedCardProviderId === targetProviderId) return false;
+
+  event.preventDefault();
+  const placement = getCalendarDropPlacement(targetElement, event);
+  setCalendarDropTarget(targetProviderId, placement);
+  event.dataTransfer.dropEffect = "move";
+  return true;
+}
+
+function applyCalendarDrop(event, targetElement, targetProviderId) {
+  if (!draggedCardProviderId || draggedCardProviderId === targetProviderId) return false;
+
+  event.preventDefault();
+  const placement = getCalendarDropPlacement(targetElement, event);
+  clearCalendarDropTargets();
+  moveCalendarUnitToProviderDropTarget(draggedCardProviderId, targetProviderId, placement);
+  return true;
+}
+
 function beginCalendarCardDrag(event, providerId, element) {
   event.stopPropagation();
   draggedCardProviderId = providerId;
@@ -1923,6 +1951,21 @@ function enableWholeCardDrag(card, providerId) {
   card.title = isPageEditMode
     ? "상단 의사명 영역을 드래그하면 페이지나 위치를 변경할 수 있습니다"
     : "상단 의사명 영역을 드래그하면 현재 페이지 안에서 위치를 변경할 수 있습니다";
+
+  card.addEventListener("dragover", (event) => {
+    const targetProviderId = getTargetProviderIdForCard(card, providerId);
+    applyCalendarDropCue(event, card, targetProviderId);
+  });
+
+  card.addEventListener("dragleave", (event) => {
+    if (event.relatedTarget instanceof Node && card.contains(event.relatedTarget)) return;
+    clearCalendarDropTargets();
+  });
+
+  card.addEventListener("drop", (event) => {
+    const targetProviderId = getTargetProviderIdForCard(card, providerId);
+    applyCalendarDrop(event, card, targetProviderId);
+  });
 }
 
 function createSingleHeader(provider) {
@@ -1958,12 +2001,8 @@ function createSingleHeader(provider) {
 
   header.addEventListener("dragover", (event) => {
     const targetProviderId = getTargetProviderIdForHeader(provider);
-    if (!draggedCardProviderId || draggedCardProviderId === targetProviderId) return;
-    event.preventDefault();
     const targetElement = header.closest(".provider-header-card") || header;
-    const placement = getCalendarDropPlacement(targetElement, event);
-    setCalendarDropTarget(targetProviderId, placement);
-    event.dataTransfer.dropEffect = "move";
+    applyCalendarDropCue(event, targetElement, targetProviderId);
   });
 
   header.addEventListener("dragleave", () => {
@@ -1972,12 +2011,8 @@ function createSingleHeader(provider) {
 
   header.addEventListener("drop", (event) => {
     const targetProviderId = getTargetProviderIdForHeader(provider);
-    if (!draggedCardProviderId || draggedCardProviderId === targetProviderId) return;
-    event.preventDefault();
     const targetElement = header.closest(".provider-header-card") || header;
-    const placement = getCalendarDropPlacement(targetElement, event);
-    clearCalendarDropTargets();
-    moveCalendarUnitToProviderDropTarget(draggedCardProviderId, targetProviderId, placement);
+    applyCalendarDrop(event, targetElement, targetProviderId);
   });
 
   header.append(
@@ -2749,6 +2784,13 @@ function syncSelectionBox(box) {
   box.style.setProperty("--selection-size", range.size);
 }
 
+function syncEmptyPageViewport() {
+  if (!providerColumns.classList.contains("has-empty-page")) return;
+
+  const visibleHeight = scheduleScroll?.clientHeight || providerViewport?.clientHeight || 520;
+  providerColumns.style.setProperty("--empty-visible-h", `${Math.max(320, visibleHeight)}px`);
+}
+
 function getSlotIndexFromPoint(body, clientY) {
   const rect = body.getBoundingClientRect();
   const index = Math.floor((clientY - rect.top) / parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--slot-h")));
@@ -2871,6 +2913,8 @@ function renderScheduler(options = {}) {
     providerColumns.style.width = "";
     if (usesManualPages()) {
       providerColumns.classList.add("has-empty-page");
+      scheduleScroll.scrollTop = 0;
+      syncEmptyPageViewport();
       providerColumns.append(createEmptyPageState(currentPageIndex));
     }
     renderPageControls(allDisplayItems);
@@ -3137,6 +3181,7 @@ function installObservers() {
     const widths = getCurrentWidths();
     applyWidths(widths.left, widths.right, { store: false });
     updateVisibleColumns();
+    syncEmptyPageViewport();
     syncProviderBottomScrollbar();
     syncScheduleVerticalScrollbar();
   });

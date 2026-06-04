@@ -889,13 +889,16 @@ input {
 .provider-columns.has-empty-page {
   min-height: calc(var(--slot-h) * var(--time-row-count, 1));
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding-right: 0;
 }
 
 .empty-page-state {
   width: min(520px, 86%);
+  min-height: var(--empty-visible-h, 520px);
+  position: sticky;
+  top: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
