@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>예약 캘린더 Interaction Guide</title>
+    <link rel="stylesheet" href="./interaction-guide.css" />
+  </head>
+  <body>
+    <header class="guide-topbar">
+      <div>
+        <span class="eyebrow">UX/UI Guide</span>
+        <h1>예약 캘린더 Interaction Guide</h1>
+      </div>
+      <a class="open-prototype" href="./index.html">예약 화면 열기</a>
+    </header>
+
+    <main class="guide-layout">
+      <nav class="guide-nav" aria-label="Interaction 정책 메뉴">
+        <a href="#concept">1. 기본 개념</a>
+        <a href="#view-mode">2. 보기 모드</a>
+        <a href="#page-edit">3. 페이지 구성 편집</a>
+        <a href="#empty-page">4. 빈 페이지</a>
+        <a href="#check-filter">5. Check / UnCheck</a>
+        <a href="#width-resize">6. 캘린더 폭 조정</a>
+        <a href="#drag-drop">7. Drag & Drop</a>
+        <a href="#merge">8. 캘린더 합치기</a>
+        <a href="#split">9. 합쳐진 캘린더 분리</a>
+        <a href="#implementation">10. 개발 구현 기준</a>
+      </nav>
+
+      <section class="guide-content">
+        <article class="guide-section" id="concept">
+          <div class="section-copy">
+            <span class="section-number">01</span>
+            <h2>기본 개념</h2>
+            <p class="summary">캘린더는 의사, 검사, 치료 일정 단위의 카드이며 사용자가 페이지 단위로 자유롭게 배치할 수 있습니다.</p>
+            <dl class="guide-points">
+              <div>
+                <dt>사용자 동작</dt>
+                <dd>좌측 목록에서 캘린더 노출 여부를 선택하고, 중앙 영역에서 페이지별 캘린더를 확인합니다.</dd>
+              </div>
+              <div>
+                <dt>개발 기준</dt>
+                <dd>캘린더는 Provider Id로 식별하고, 페이지는 Provider Id 배열 묶음으로 관리합니다.</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="guide-visual app-concept" aria-label="기본 화면 구조 예시">
+            <div class="mock-left">
+              <strong>캘린더 설정</strong>
+              <span>✓ 김성진</span>
+              <span>✓ 김우진</span>
+              <span>✓ 김유선</span>
+            </div>
+            <div class="mock-center">
+              <div class="mock-toolbar">기본 보기 · 1 / 4</div>
+              <div class="mock-cards three">
+                <div>김성진</div>
+                <div>김우진</div>
+                <div>김유선</div>
+              </div>
+            </div>
+            <div class="mock-right">
+              <strong>예약 정보</strong>
+              <span>예약 내역</span>
+              <span>예약 상세</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="guide-section" id="view-mode">
+          <div class="section-copy">
+            <span class="section-number">02</span>
+            <h2>보기 모드</h2>
+            <p class="summary">정렬 메뉴에서 기본 보기, 하나 보기, 모두 보기, 페이지 구성 편집으로 진입합니다.</p>
+            <dl class="guide-points">
+              <div>
+                <dt>사용자 동작</dt>
+                <dd>정렬 버튼을 열어 원하는 보기 방식을 선택합니다. 설정 버튼은 아이콘만 남겨 공간을 확보합니다.</dd>
+              </div>
+              <div>
+                <dt>개발 기준</dt>
+                <dd>편집 저장 후에는 항상 캘린더 기본 보기로 돌아오며, 사용자가 구성한 페이지와 폭을 기준으로 표시합니다.</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="guide-visual mode-menu" aria-label="정렬 메뉴 예시">
+            <div class="toolbar-demo">
+              <button>예약상태(4)</button>
+              <button>새 예약</button>
+              <button class="icon-only">⚙</button>
+              <button class="active">정렬</button>
+            </div>
+            <div class="menu-demo">
+              <span>캘린더 기본 보기</span>
+              <span>캘린더 하나 보기</span>
+              <span>캘린더 모두 보기</span>
+              <span>페이지 구성 편집</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="guide-section" id="page-edit">
+          <div class="section-copy">
+            <span class="section-number">03</span>
+            <h2>페이지 구성 편집</h2>
+            <p class="summary">편집 모드에서는 페이지 번호가 버튼화되고, 페이지 추가와 순서 변경이 가능합니다.</p>
+            <dl class="guide-points">
+              <div>
+                <dt>사용자 동작</dt>
+                <dd>페이지 번호를 클릭해 이동하고, 번호를 드래그해서 페이지 순서를 바꿉니다. + 버튼으로 빈 페이지를 추가합니다.</dd>
+              </div>
+              <div>
+                <dt>개발 기준</dt>
+                <dd>편집 중에는 다른 보기 모드로 변경하지 않고, 우측 상단은 취소/저장 액션만 노출합니다.</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="guide-visual page-edit-demo" aria-label="페이지 구성 편집 예시">
+            <div class="edit-actions">
+              <button>취소</button>
+              <button class="primary">저장</button>
+            </div>
+            <div class="page-chips">
+              <span>1</span>
+              <span>2</span>
+              <span class="dragging">3</span>
+              <span>4</span>
+              <span>+</span>
+            </div>
+            <div class="context-bubble">
+              <b>우클릭 메뉴</b>
+              <span>캘린더 추가</span>
+              <span class="danger">페이지 삭제</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="guide-section" id="empty-page">
+          <div class="section-copy">
+            <span class="section-number">04</span>
+            <h2>빈 페이지</h2>
+            <p class="summary">캘린더가 없는 페이지는 비어 있음을 명확히 알리고, 추가와 삭제 액션을 제공합니다.</p>
+            <dl class="guide-points">
+              <div>
+                <dt>사용자 동작</dt>
+                <dd>빈 페이지 중앙의 캘린더 추가 또는 페이지 삭제 버튼을 선택합니다.</dd>
+              </div>
+              <div>
+                <dt>개발 기준</dt>
+                <dd>페이지 배열은 유지하되, 화면에는 Empty State 컴포넌트를 표시합니다. 캘린더가 있으면 삭제할 수 없습니다.</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="guide-visual empty-page-demo" aria-label="빈 페이지 예시">
+            <div class="time-axis-demo">
+              <span>오후 03:00</span>
+              <span>오후 04:00</span>
+              <span>오후 05:00</span>
+            </div>
+            <div class="empty-message">
+              <h3>빈 페이지</h3>
+              <p>캘린더가 존재하지 않습니다.</p>
+              <div>
+                <button>캘린더 추가</button>
+                <button class="danger">페이지 삭제</button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="guide-section" id="check-filter">
+          <div class="section-copy">
+            <span class="section-number">05</span>
+            <h2>캘린더 Check / UnCheck</h2>
+            <p class="summary">좌측 체크박스는 노출 필터이며, 페이지 이동을 강제로 발생시키지 않습니다.</p>
+            <dl class="guide-points">
+              <div>
+                <dt>사용자 동작</dt>
+                <dd>보고 싶은 캘린더만 체크합니다. 체크한 캘린더가 다른 페이지에 있으면 현재 페이지를 유지하고 토스트로 안내합니다.</dd>
+              </div>
+              <div>
+                <dt>개발 기준</dt>
+                <dd>숨긴 캘린더의 폭 저장값을 우선 복원하되, 최소 폭과 화면 폭 제약 안에서 가능한 폭으로 보정합니다.</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="guide-visual check-demo" aria-label="체크 해제와 폭 복원 예시">
+            <div class="check-list-demo">
+              <span>✓ 김성진</span>
+              <span>□ 김우진</span>
+              <span>✓ 김유선</span>
+            </div>
+            <div class="restore-demo">
+              <div class="wide">김성진 저장 폭</div>
+              <div>김유선</div>
+            </div>
+            <p class="toast-demo">김우진(내과) 캘린더가 3페이지에 표시되었습니다.</p>
+          </div>
+        </article>
+
+        <article class="guide-section" id="width-resize">
+          <div class="section-copy">
+            <span class="section-number">06</span>
+            <h2>캘린더 폭 조정</h2>
+            <p class="summary">캘린더 사이 경계선을 드래그하면 인접한 두 캘린더만 폭을 주고받습니다.</p>
+            <dl class="guide-points">
+              <div>
+                <dt>사용자 동작</dt>
+                <dd>캘린더 사이 세로 경계선을 드래그합니다. 엑셀 열 너비 조정처럼 인접 열만 변경됩니다.</dd>
+              </div>
+              <div>
+                <dt>개발 기준</dt>
+                <dd>왼쪽 캘린더가 넓어지면 오른쪽 인접 캘린더가 같은 만큼 줄고, 다른 캘린더는 변하지 않습니다.</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="guide-visual resize-demo" aria-label="인접 캘린더 보상 방식 예시">
+            <div class="resize-cards">
+              <div class="grow">1번</div>
+              <span class="handle"></span>
+              <div class="shrink">2번</div>
+              <div>3번 유지</div>
+              <div>4번 유지</div>
+            </div>
+            <div class="resize-rule">1번 ↔ 2번만 보상 · 3번/4번 폭 유지</div>
+          </div>
+        </article>
+
+        <article class="guide-section" id="drag-drop">
+          <div class="section-copy">
+            <span class="section-number">07</span>
+            <h2>캘린더 Drag & Drop</h2>
+            <p class="summary">캘린더 헤더를 드래그하여 같은 페이지의 순서를 바꾸거나, 편집 모드에서 다른 페이지로 이동합니다.</p>
+            <dl class="guide-points">
+              <div>
+                <dt>사용자 동작</dt>
+                <dd>의사명/더보기 헤더를 드래그합니다. 삽입 위치에는 3px 파란 세로선이 표시됩니다.</dd>
+              </div>
+              <div>
+                <dt>개발 기준</dt>
+                <dd>드롭 위치는 대상 캘린더의 좌/우 가까운 경계로 before/after를 계산합니다. 마지막 캘린더 오른쪽은 페이지 끝 삽입입니다.</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="guide-visual drag-demo" aria-label="드래그 앤 드롭 삽입 라인 예시">
+            <div class="drag-row">
+              <div>김성진</div>
+              <div class="drop-after">김우진</div>
+              <div>김유선</div>
+            </div>
+            <div class="page-targets">
+              <span>1</span>
+              <span class="active">2</span>
+              <span>3</span>
+              <span>+</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="guide-section" id="merge">
+          <div class="section-copy">
+            <span class="section-number">08</span>
+            <h2>캘린더 합치기</h2>
+            <p class="summary">선택한 캘린더를 호출한 카드 위치에서 하나의 카드로 합치고, 상단 탭으로 구분합니다.</p>
+            <dl class="guide-points">
+              <div>
+                <dt>사용자 동작</dt>
+                <dd>더보기에서 캘린더 합치기를 선택하고, 팝업에서 합칠 캘린더를 체크한 뒤 확인합니다.</dd>
+              </div>
+              <div>
+                <dt>개발 기준</dt>
+                <dd>탭은 성 뷸렛, 이름 말줄임, 더보기로 구성하며 내부 가로 스크롤은 만들지 않습니다.</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="guide-visual merge-demo" aria-label="캘린더 합치기 탭 예시">
+            <div class="merge-card">
+              <div class="group-tabs-demo">
+                <span><b>김</b> 김성...</span>
+                <span><b>김</b> 김우...</span>
+                <span><b>권</b></span>
+                <span><b>강</b></span>
+              </div>
+              <div class="calendar-grid-demo"></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="guide-section" id="split">
+          <div class="section-copy">
+            <span class="section-number">09</span>
+            <h2>합쳐진 캘린더 분리</h2>
+            <p class="summary">그룹 탭의 개별 더보기에서 특정 탭만 독립 캘린더로 분리할 수 있습니다.</p>
+            <dl class="guide-points">
+              <div>
+                <dt>사용자 동작</dt>
+                <dd>탭의 더보기에서 분리하기를 누르면 해당 캘린더가 우측 독립 카드로 빠집니다.</dd>
+              </div>
+              <div>
+                <dt>개발 기준</dt>
+                <dd>단독 카드에서 분리하기를 누르면 변경 없이 토스트를 표시합니다. 전체 분리하기는 그룹 전체를 기본 카드로 되돌립니다.</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="guide-visual split-demo" aria-label="합쳐진 캘린더 분리 예시">
+            <div class="split-before">
+              <span><b>김</b> 김성...</span>
+              <span><b>권</b> 권다...</span>
+              <span><b>강</b> 강세...</span>
+            </div>
+            <div class="arrow">→</div>
+            <div class="split-after">
+              <div>김성진</div>
+              <div>권다영</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="guide-section" id="implementation">
+          <div class="section-copy">
+            <span class="section-number">10</span>
+            <h2>개발 구현 기준</h2>
+            <p class="summary">상태는 Provider Id, Active Provider Ids, Page Layouts, Width Map을 기준으로 분리 관리합니다.</p>
+            <dl class="guide-points">
+              <div>
+                <dt>상태 모델</dt>
+                <dd>Provider Id는 캘린더 식별자, Page Layouts는 페이지별 배치, Active Provider Ids는 노출 상태, Width Map은 저장 폭입니다.</dd>
+              </div>
+              <div>
+                <dt>예외 처리</dt>
+                <dd>최소 폭, 빈 페이지, 숨김 복원, 그룹 탭 최소 폭, before/after 드롭 위치를 명시적으로 계산합니다.</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="guide-visual implementation-demo" aria-label="상태 모델 예시">
+            <div class="state-card">Provider Id</div>
+            <div class="state-card">Active Provider Ids</div>
+            <div class="state-card wide">Page Layouts<br />[[id1, id2], [id3]]</div>
+            <div class="state-card">Width Map</div>
+            <div class="state-card">Group Tabs</div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
