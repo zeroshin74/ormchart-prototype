@@ -1760,11 +1760,11 @@ function moveDraggedCardByEdge(providerId) {
   const rect = schedulerPane.getBoundingClientRect();
   const threshold = 44;
   if (lastCardDragClientX < rect.left + threshold) {
-    moveProviderToRelativePage(providerId, -1, { stayOnCurrentPage: false });
+    moveProviderToRelativePage(providerId, -1, { stayOnCurrentPage: true });
     return true;
   }
   if (lastCardDragClientX > rect.right - threshold) {
-    moveProviderToRelativePage(providerId, 1, { stayOnCurrentPage: false });
+    moveProviderToRelativePage(providerId, 1, { stayOnCurrentPage: true });
     return true;
   }
 
