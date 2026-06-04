@@ -28,6 +28,10 @@ const storageKey = "reservation-popup-pane-widths";
 const cardWidthStorageKey = "reservation-popup-card-width-preferences";
 const pageLayoutStorageKey = "reservation-popup-page-layouts";
 const defaultPageSize = 4;
+const cardHandleWidth = 12;
+const groupTabMinWidth = 56;
+const groupTabGap = 2;
+const groupTabPaddingX = 4;
 const paneDefaults = { left: 360, right: 510 };
 const paneLimits = {
   leftMin: 240,
@@ -132,6 +136,7 @@ let pageWidthEditVersions = new Map();
 let hiddenWidthStates = new Map();
 let autoFitPageIndexes = new Set();
 let pageEditSnapshot = null;
+let isCalendarDragPageCueVisible = false;
 
 function buildTimes() {
   const result = [];
@@ -427,7 +432,7 @@ function renderDoctorList() {
       } else {
         captureHiddenProviderWidthState(provider.id, affectedPageIndex);
         activeProviderIds.delete(provider.id);
-        autoFitPageIndexes.delete(affectedPageIndex);
+        refitPageAfterCalendarRemoval(affectedPageIndex);
       }
       label.style.opacity = checkbox.checked ? "1" : "0.45";
       syncSelectedProvider();
@@ -629,6 +634,7 @@ function moveProvidersToPage(providerIds, targetPageIndex, beforeProviderId = nu
   const primaryId = movingIds[0];
   const previousPageIndex = getProviderPageIndex(primaryId);
   const previousCurrentPage = currentPageIndex;
+  const movingWidthStates = new Map(movingIds.map((providerId) => [providerId, captureProviderWidthState(providerId)]));
   const targetIndex = ensurePageIndex(targetPageIndex);
   const movingSet = new Set(movingIds);
 
@@ -648,12 +654,14 @@ function moveProvidersToPage(providerIds, targetPageIndex, beforeProviderId = nu
     : nextPageIndex;
   syncCalendarOrderFromPageLayouts();
   if (previousPageIndex !== nextPageIndex) {
+    refitPageAfterCalendarRemoval(previousPageIndex);
     resetProviderWidthPreferences(movingIds);
-    autoFitPageIndexes.delete(previousPageIndex);
+    restoreMovedProviderWidths(movingWidthStates, nextPageIndex);
   }
   storePageLayouts();
   draggedCardProviderId = null;
   draggedTabProviderId = null;
+  isCalendarDragPageCueVisible = false;
   providerColumns.classList.remove("is-dragging-cards", "is-dragging-tabs");
   renderScheduler({ resetWeights: true });
   renderDoctorList();
@@ -932,6 +940,13 @@ function getCurrentProviderPixelWidth(providerId) {
   return Number.isFinite(width) && width > 0 ? width : null;
 }
 
+function captureProviderWidthState(providerId) {
+  return {
+    weight: getCurrentProviderWeight(providerId),
+    widthPx: getCurrentProviderPixelWidth(providerId),
+  };
+}
+
 function captureHiddenProviderWidthState(providerId, pageIndex) {
   hiddenWidthStates.set(providerId, {
     mode: viewMode,
@@ -943,27 +958,55 @@ function captureHiddenProviderWidthState(providerId, pageIndex) {
   });
 }
 
+function getRestoredWidthKey(targetItem, providerId) {
+  return targetItem ? getItemWidthKey(targetItem) : getProviderWidthKey(providerId);
+}
+
+function getProviderAvailableCardWidth(count) {
+  const viewportWidth =
+    providerViewport?.getBoundingClientRect().width ||
+    providerColumns.getBoundingClientRect().width ||
+    schedulerPane.getBoundingClientRect().width ||
+    0;
+  return Math.max(1, viewportWidth - cardHandleWidth * Math.max(0, count - 1));
+}
+
+function distributePixelWidthsByRatio(items, availableWidth, baseResolver = getStoredItemWeight) {
+  if (!items.length) return [];
+
+  const minWidths = items.map(getItemMinimumWidth);
+  const minTotal = minWidths.reduce((sum, width) => sum + width, 0);
+  const remaining = Math.max(0, availableWidth - minTotal);
+  const flexibleWidths = items.map((item, index) => {
+    const baseWidth = Number(baseResolver(item, index));
+    return Math.max(0, (Number.isFinite(baseWidth) && baseWidth > 0 ? baseWidth : 1) - minWidths[index]);
+  });
+  const flexibleTotal = flexibleWidths.reduce((sum, width) => sum + width, 0);
+
+  return items.map((item, index) => {
+    const extra = flexibleTotal > 0 ? remaining * (flexibleWidths[index] / flexibleTotal) : remaining / items.length;
+    return minWidths[index] + extra;
+  });
+}
+
 function restoreProviderWidthFromHiddenState(providerId, pageIndex, state) {
-  const key = getProviderWidthKey(providerId);
   const result = { limited: false };
+  const allItems = getDisplayItems();
+  const displayItems = usesManualPages() ? getPageDisplayItems(pageIndex, allItems) : allItems;
+  const targetItem = displayItems.find((item) => itemContainsProvider(item, providerId));
+  const key = getRestoredWidthKey(targetItem, providerId);
   if (Number.isFinite(state.weight) && state.weight > 0) {
     itemWidthWeights.set(key, state.weight);
   }
 
   if (!Number.isFinite(state.widthPx) || state.widthPx <= 0) return result;
 
-  const allItems = getDisplayItems();
-  const displayItems = usesManualPages() ? getPageDisplayItems(pageIndex, allItems) : allItems;
-  const targetItem = displayItems.find((item) => itemContainsProvider(item, providerId));
   if (!targetItem || displayItems.length <= 1) {
     itemWidthWeights.set(key, 1);
     return result;
   }
 
-  const handleWidth = 12;
-  const availableWidth =
-    (providerColumns.getBoundingClientRect().width || schedulerPane.getBoundingClientRect().width) -
-    handleWidth * (displayItems.length - 1);
+  const availableWidth = getProviderAvailableCardWidth(displayItems.length);
   if (!Number.isFinite(availableWidth) || availableWidth <= 0) return result;
 
   const otherItems = displayItems.filter((item) => !itemContainsProvider(item, providerId));
@@ -973,14 +1016,64 @@ function restoreProviderWidthFromHiddenState(providerId, pageIndex, state) {
   const targetWidth = clamp(state.widthPx, targetMinWidth, maxRestorableWidth);
   result.limited = targetWidth < state.widthPx - 1;
   const remainingWidth = Math.max(1, availableWidth - targetWidth);
-  const otherWeightSum = otherItems.reduce((sum, item) => sum + getStoredItemWeight(item), 0);
-  const restoredWeight = (targetWidth * Math.max(otherWeightSum, 1)) / remainingWidth;
-
-  if (Number.isFinite(restoredWeight) && restoredWeight > 0) {
-    itemWidthWeights.set(key, Math.max(getCollapsedWeight(), restoredWeight));
-  }
+  const otherWidths = distributePixelWidthsByRatio(otherItems, remainingWidth);
+  itemWidthWeights.set(key, targetWidth);
+  otherItems.forEach((item, index) => {
+    itemWidthWeights.set(getItemWidthKey(item), otherWidths[index]);
+  });
 
   return result;
+}
+
+function refitPageAfterCalendarRemoval(pageIndex) {
+  if (!usesManualPages() || !Number.isInteger(pageIndex) || pageIndex < 0) return;
+
+  const remainingProviderIds = new Set((pageLayouts[pageIndex] || []).filter((providerId) => activeProviderIds.has(providerId)));
+  if (currentPageIndex === pageIndex && remainingProviderIds.size) {
+    const cards = Array.from(providerColumns.querySelectorAll(".provider-card"));
+    const remainingItems = currentVisibleItems.filter((item) =>
+      getItemProviderIds(item).some((providerId) => remainingProviderIds.has(providerId)),
+    );
+    const nextWidths = distributePixelWidthsByRatio(
+      remainingItems,
+      getProviderAvailableCardWidth(remainingItems.length),
+      (item) => {
+        const visibleIndex = currentVisibleItems.indexOf(item);
+        const domWidth = cards[visibleIndex]?.getBoundingClientRect().width;
+        if (Number.isFinite(domWidth) && domWidth > 0) return domWidth;
+        const weight = columnWeights[visibleIndex];
+        return Number.isFinite(weight) && weight > 0 ? weight : getStoredItemWeight(item);
+      },
+    );
+
+    remainingItems.forEach((item, index) => {
+      itemWidthWeights.set(getItemWidthKey(item), nextWidths[index]);
+    });
+  }
+
+  autoFitPageIndexes.delete(pageIndex);
+  storeCardWeights();
+}
+
+function restoreMovedProviderWidths(widthStates, targetPageIndex) {
+  if (!usesManualPages() || !(widthStates instanceof Map)) return;
+
+  const limitedProviders = [];
+  widthStates.forEach((state, providerId) => {
+    if (!activeProviderIds.has(providerId)) return;
+    const result = restoreProviderWidthFromHiddenState(providerId, targetPageIndex, state);
+    if (result?.limited) {
+      limitedProviders.push(providerId);
+    }
+  });
+
+  autoFitPageIndexes.delete(targetPageIndex);
+  storeCardWeights();
+
+  if (limitedProviders.length) {
+    const provider = getProviderById(limitedProviders[0]);
+    showToast(`${provider?.name || "캘린더"}는 공간이 부족해 가능한 최대 폭으로 이동했습니다`);
+  }
 }
 
 function applyReturningProviderWidthPolicy(providerId, pageIndex) {
@@ -1045,6 +1138,40 @@ function haveColumnKeysChanged(nextKeys) {
   return nextKeys.length !== columnWeightKeys.length || nextKeys.some((key, index) => key !== columnWeightKeys[index]);
 }
 
+function isPixelColumnWidthMode(weights = columnWeights) {
+  return weights.some((weight) => Number.isFinite(weight) && weight >= 24);
+}
+
+function getColumnPixelWidth(index) {
+  const item = currentVisibleItems[index];
+  const width = columnWeights[index];
+  return Math.max(getItemMinimumWidth(item), Number.isFinite(width) && width > 0 ? width : getStoredItemWeight(item));
+}
+
+function getPixelGridTotalWidth() {
+  if (!isPixelColumnWidthMode() || !visibleCount) return null;
+
+  const cardWidth = currentVisibleItems
+    .slice(0, visibleCount)
+    .reduce((sum, item, index) => sum + getColumnPixelWidth(index), 0);
+  return cardWidth + cardHandleWidth * Math.max(0, visibleCount - 1);
+}
+
+function fitColumnWeightsToAvailableWidth() {
+  if (!isPixelColumnWidthMode() || !visibleCount) return;
+
+  const items = currentVisibleItems.slice(0, visibleCount);
+  const availableWidth = getProviderAvailableCardWidth(items.length);
+  const minimumWidth = items.reduce((sum, item) => sum + getItemMinimumWidth(item), 0);
+  if (!Number.isFinite(availableWidth) || availableWidth <= 0 || minimumWidth > availableWidth + 0.5) return;
+
+  const currentWidth = items.reduce((sum, item, index) => sum + getColumnPixelWidth(index), 0);
+  if (Math.abs(currentWidth - availableWidth) < 1) return;
+
+  columnWeights = distributePixelWidthsByRatio(items, availableWidth, (_item, index) => getColumnPixelWidth(index));
+  columnWeightKeys = getCurrentColumnWeightKeys(visibleCount);
+}
+
 function ensureColumnWeights(count, reset = false, forceUniform = false) {
   const nextKeys = getCurrentColumnWeightKeys(count);
   if (forceUniform) {
@@ -1101,6 +1228,8 @@ function seedGroupWidthFromAnchor(groupId, anchorProviderId) {
 }
 
 function applyProviderGridColumns() {
+  ensureColumnWeights(visibleCount);
+  fitColumnWeightsToAvailableWidth();
   updateProviderColumnsScrollWidth();
 
   if (visibleCount <= 1) {
@@ -1111,10 +1240,12 @@ function applyProviderGridColumns() {
     return;
   }
 
-  ensureColumnWeights(visibleCount);
-  providerColumns.style.gridTemplateColumns = columnWeights
-    .map((weight, index) => {
-      const cardColumn = `minmax(${getColumnMinWidth(index)}, ${weight.toFixed(3)}fr)`;
+  providerColumns.style.gridTemplateColumns = currentVisibleItems
+    .slice(0, visibleCount)
+    .map((item, index) => {
+      const cardColumn = isPixelColumnWidthMode()
+        ? `${getColumnPixelWidth(index).toFixed(1)}px`
+        : `minmax(${getColumnMinWidth(index)}, ${columnWeights[index].toFixed(3)}fr)`;
       return index === visibleCount - 1 ? cardColumn : `${cardColumn} 12px`;
     })
     .join(" ");
@@ -1197,6 +1328,10 @@ function clearPageDropTargets() {
   });
 }
 
+function shouldRenderPageDropQueue() {
+  return usesManualPages() && (isPageEditMode || isCalendarDragPageCueVisible);
+}
+
 function closePageContextMenu() {
   if (activePageContextMenu) {
     activePageContextMenu.remove();
@@ -1272,32 +1407,41 @@ function renderPageControls(allItems = getDisplayItems()) {
 
   const page = pageLayouts.length ? currentPageIndex + 1 : 0;
   const totalPages = pageLayouts.length;
-  if (!isPageEditMode) {
+  if (!shouldRenderPageDropQueue()) {
     pageIndicator.textContent = `${page} / ${totalPages}`;
     return { page, totalPages };
   }
 
   const tray = document.createElement("div");
   tray.className = "page-tray";
+  tray.classList.toggle("drag-page-cue", isCalendarDragPageCueVisible && !isPageEditMode);
 
   pageLayouts.forEach((page, index) => {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "page-chip";
-    chip.draggable = true;
+    chip.draggable = isPageEditMode;
     chip.classList.toggle("active", index === currentPageIndex);
     chip.textContent = `${index + 1}`;
     chip.setAttribute("aria-label", `${index + 1}페이지`);
-    chip.title = "클릭하면 페이지 이동, 드래그하면 페이지 순서 변경, 우클릭하면 캘린더 추가";
+    chip.title = isPageEditMode
+      ? "클릭하면 페이지 이동, 드래그하면 페이지 순서 변경, 우클릭하면 캘린더 추가"
+      : "드래그 중인 캘린더를 이 페이지로 이동";
     chip.addEventListener("click", () => {
+      if (isCalendarDragPageCueVisible && !isPageEditMode) return;
       currentPageIndex = index;
       renderScheduler({ resetWeights: true });
     });
     chip.addEventListener("contextmenu", (event) => {
+      if (!isPageEditMode) return;
       event.preventDefault();
       openPageContextMenu(event, index);
     });
     chip.addEventListener("dragstart", (event) => {
+      if (!isPageEditMode) {
+        event.preventDefault();
+        return;
+      }
       event.stopPropagation();
       draggedPageIndex = index;
       draggedCardProviderId = null;
@@ -1312,7 +1456,7 @@ function renderPageControls(allItems = getDisplayItems()) {
     });
     chip.addEventListener("dragover", (event) => {
       const pageDragIndex = getDraggedPageIndex(event);
-      if (!draggedCardProviderId && pageDragIndex === null) return;
+      if (!draggedCardProviderId && (pageDragIndex === null || !isPageEditMode)) return;
       event.preventDefault();
       chip.classList.add("drop-target");
       event.dataTransfer.dropEffect = "move";
@@ -1322,7 +1466,7 @@ function renderPageControls(allItems = getDisplayItems()) {
     });
     chip.addEventListener("drop", (event) => {
       const pageDragIndex = getDraggedPageIndex(event);
-      if (!draggedCardProviderId && pageDragIndex === null) return;
+      if (!draggedCardProviderId && (pageDragIndex === null || !isPageEditMode)) return;
       event.preventDefault();
       chip.classList.remove("drop-target");
       if (draggedCardProviderId) {
@@ -1331,7 +1475,9 @@ function renderPageControls(allItems = getDisplayItems()) {
         });
         return;
       }
-      reorderPageLayout(pageDragIndex, index);
+      if (isPageEditMode) {
+        reorderPageLayout(pageDragIndex, index);
+      }
     });
     tray.append(chip);
   });
@@ -1347,7 +1493,7 @@ function renderPageControls(allItems = getDisplayItems()) {
       currentPageIndex = pageLayouts.length - 1;
       storePageLayouts();
       renderScheduler({ resetWeights: true });
-      showToast("빈 페이지를 추가했습니다. 카드 메뉴에서 새 페이지로 이동할 수 있습니다");
+      showToast("빈 페이지를 추가했습니다. 캘린더 추가 버튼이나 드래그로 구성할 수 있습니다");
     });
     addPage.addEventListener("dragover", (event) => {
       if (!isPageEditMode || !draggedCardProviderId) return;
@@ -1434,13 +1580,14 @@ function updateProviderColumnsScrollWidth() {
     return;
   }
 
-  const handleWidth = 12;
   const minimumWidth = currentVisibleItems.reduce((sum, item, index) => {
-    return sum + getItemMinimumWidth(item) + (index > 0 ? handleWidth : 0);
+    return sum + getItemMinimumWidth(item) + (index > 0 ? cardHandleWidth : 0);
   }, 0);
+  const pixelGridWidth = getPixelGridTotalWidth();
+  const fixedWidth = pixelGridWidth ? Math.max(minimumWidth, pixelGridWidth) : null;
 
   providerColumns.style.minWidth = `${minimumWidth}px`;
-  providerColumns.style.width = "100%";
+  providerColumns.style.width = fixedWidth ? `${fixedWidth}px` : "100%";
   syncProviderHeaderColumnsStyle();
   requestAnimationFrame(syncProviderBottomScrollbar);
   requestAnimationFrame(syncScheduleVerticalScrollbar);
@@ -1449,7 +1596,7 @@ function updateProviderColumnsScrollWidth() {
 function getColumnMinWidth(index) {
   const item = currentVisibleItems[index];
   if (item?.type === "group") {
-    return "56px";
+    return `${getItemMinimumWidth(item)}px`;
   }
 
   return "var(--card-min)";
@@ -1480,38 +1627,29 @@ function getCollapsedWeight() {
   return viewMode === "max" ? 0.16 : 0.2;
 }
 
-function getCardResizeScale() {
-  return viewMode === "max" ? 1 : 1.35;
+function getVisibleCardPixelWidths(cards = Array.from(providerColumns.querySelectorAll(".provider-card"))) {
+  return currentVisibleItems.slice(0, visibleCount).map((item, index) => {
+    const width = cards[index]?.getBoundingClientRect().width;
+    if (Number.isFinite(width) && width > 0) return width;
+    return getColumnPixelWidth(index);
+  });
 }
 
-function getRedistributedWeights(startWeights, handleIndex, deltaPx, totalCardWidth) {
-  if (!deltaPx || totalCardWidth <= 0) return [...startWeights];
+function getRedistributedWeights(startWidths, handleIndex, deltaPx) {
+  if (!deltaPx) return [...startWidths];
 
-  const nextWeights = [...startWeights];
-  const minWeight = getCollapsedWeight();
-  const sumWeights = startWeights.reduce((sum, weight) => sum + weight, 0);
-  const requestedShrink = (Math.abs(deltaPx) / totalCardWidth) * sumWeights * getCardResizeScale();
-  const dragToLeft = deltaPx < 0;
-  const shrinkIndexes = dragToLeft
-    ? Array.from({ length: handleIndex + 1 }, (_, index) => index)
-    : Array.from({ length: startWeights.length - handleIndex - 1 }, (_, index) => handleIndex + 1 + index);
-  const growIndex = dragToLeft ? handleIndex + 1 : handleIndex;
-  const totalAvailableShrink = shrinkIndexes.reduce(
-    (sum, index) => sum + Math.max(0, startWeights[index] - minWeight),
-    0,
-  );
-  const actualShrink = Math.min(requestedShrink, totalAvailableShrink);
+  const nextWidths = [...startWidths];
+  const leftIndex = clamp(handleIndex, 0, Math.max(0, startWidths.length - 2));
+  const rightIndex = leftIndex + 1;
+  const leftMinWidth = getItemMinimumWidth(currentVisibleItems[leftIndex]);
+  const rightMinWidth = getItemMinimumWidth(currentVisibleItems[rightIndex]);
+  const leftStartWidth = Math.max(leftMinWidth, startWidths[leftIndex]);
+  const rightStartWidth = Math.max(rightMinWidth, startWidths[rightIndex]);
+  const effectiveDelta = clamp(deltaPx, leftMinWidth - leftStartWidth, rightStartWidth - rightMinWidth);
 
-  if (actualShrink <= 0) return nextWeights;
-
-  shrinkIndexes.forEach((index) => {
-    const available = Math.max(0, startWeights[index] - minWeight);
-    const shrink = totalAvailableShrink ? actualShrink * (available / totalAvailableShrink) : 0;
-    nextWeights[index] = Math.max(minWeight, startWeights[index] - shrink);
-  });
-
-  nextWeights[growIndex] = startWeights[growIndex] + actualShrink;
-  return nextWeights;
+  nextWidths[leftIndex] = leftStartWidth + effectiveDelta;
+  nextWidths[rightIndex] = rightStartWidth - effectiveDelta;
+  return nextWidths;
 }
 
 function getPreferredSingleIndex(displayItems = getDisplayItems()) {
@@ -1656,14 +1794,93 @@ function getProviderBodyCard(providerId) {
 }
 
 function clearCalendarDropTargets() {
-  document.querySelectorAll(".provider-card.drop-target, .provider-header-card.drop-target").forEach((element) => {
-    element.classList.remove("drop-target");
+  document
+    .querySelectorAll(
+      ".provider-card.drop-target, .provider-card.drop-before, .provider-card.drop-after, .provider-header-card.drop-target, .provider-header-card.drop-before, .provider-header-card.drop-after",
+    )
+    .forEach((element) => {
+      element.classList.remove("drop-target", "drop-before", "drop-after");
+    });
+}
+
+function getCalendarDropPlacement(element, event) {
+  const rect = element.getBoundingClientRect();
+  return event.clientX < rect.left + rect.width / 2 ? "before" : "after";
+}
+
+function setCalendarDropTarget(providerId, placement) {
+  clearCalendarDropTargets();
+  const className = placement === "after" ? "drop-after" : "drop-before";
+  document
+    .querySelectorAll(
+      `.provider-card[data-provider-id="${providerId}"], .provider-header-card[data-provider-id="${providerId}"]`,
+    )
+    .forEach((element) => {
+      element.classList.add("drop-target", className);
+    });
+}
+
+function getBeforeProviderIdForDrop(targetProviderId, placement, movingProviderId) {
+  const targetPageIndex = getProviderPageIndex(targetProviderId);
+  const movingIds = new Set(getMovablePageProviderIds(movingProviderId));
+  const pageProviderIds = (pageLayouts[targetPageIndex] || []).filter((providerId) => !movingIds.has(providerId));
+  const pageItems = getPageDisplayItems(targetPageIndex, getDisplayItems()).filter((item) => {
+    return !getItemProviderIds(item).some((providerId) => movingIds.has(providerId));
   });
+  const targetItem = getDisplayItemByProviderId(pageItems, targetProviderId);
+  const targetIds = getItemProviderIds(targetItem).filter((providerId) => pageProviderIds.includes(providerId));
+  if (!targetIds.length) return placement === "after" ? null : targetProviderId;
+
+  if (placement !== "after") return targetIds[0];
+
+  const lastTargetIndex = Math.max(...targetIds.map((providerId) => pageProviderIds.indexOf(providerId)));
+  if (lastTargetIndex < 0) return null;
+
+  return pageProviderIds[lastTargetIndex + 1] || null;
+}
+
+function reorderStandaloneCardByPlacement(sourceProviderId, targetProviderId, placement) {
+  if (!sourceProviderId || sourceProviderId === targetProviderId) return;
+  if (findGroupByProvider(sourceProviderId) || findGroupByProvider(targetProviderId)) return;
+
+  const sourceIndex = calendarOrder.indexOf(sourceProviderId);
+  const targetIndex = calendarOrder.indexOf(targetProviderId);
+  if (sourceIndex < 0 || targetIndex < 0) return;
+
+  const nextOrder = [...calendarOrder];
+  const [movedId] = nextOrder.splice(sourceIndex, 1);
+  const adjustedTargetIndex = nextOrder.indexOf(targetProviderId);
+  nextOrder.splice(placement === "after" ? adjustedTargetIndex + 1 : adjustedTargetIndex, 0, movedId);
+  calendarOrder = nextOrder;
+  renderScheduler({ preserveVisibleCount: true, alignPage: false });
+}
+
+function moveCalendarUnitToProviderDropTarget(sourceProviderId, targetProviderId, placement) {
+  if (usesManualPages()) {
+    moveCalendarUnitToPage(
+      sourceProviderId,
+      getProviderPageIndex(targetProviderId),
+      getBeforeProviderIdForDrop(targetProviderId, placement, sourceProviderId),
+      { silent: true },
+    );
+    showToast("캘린더 위치를 변경했습니다");
+    return;
+  }
+
+  reorderStandaloneCardByPlacement(sourceProviderId, targetProviderId, placement);
+  showToast("캘린더 위치를 변경했습니다");
+}
+
+function getTargetProviderIdForHeader(provider) {
+  if (!provider) return null;
+  const group = findGroupByProvider(provider.id);
+  return group?.providerIds.find((providerId) => activeProviderIds.has(providerId)) || provider.id;
 }
 
 function beginCalendarCardDrag(event, providerId, element) {
   event.stopPropagation();
   draggedCardProviderId = providerId;
+  isCalendarDragPageCueVisible = usesManualPages();
   lastCardDragClientX = event.clientX;
   lastCardDragClientY = event.clientY;
   element.classList.add("dragging");
@@ -1677,6 +1894,7 @@ function beginCalendarCardDrag(event, providerId, element) {
   const offsetX = clamp(event.clientX - rect.left, 20, Math.max(20, rect.width - 20));
   const offsetY = clamp(event.clientY - rect.top, 18, 54);
   event.dataTransfer.setDragImage(preview, offsetX, offsetY);
+  renderPageControls();
   requestAnimationFrame(() => preview.remove());
 }
 
@@ -1691,11 +1909,13 @@ function endCalendarCardDrag(element) {
     moveDraggedCardByEdge(providerId);
   }
   draggedCardProviderId = null;
+  isCalendarDragPageCueVisible = false;
   lastCardDragClientX = null;
   lastCardDragClientY = null;
   cardDragEdgeDirection = 0;
   clearTimeout(cardDragEdgeTimer);
   providerColumns.classList.remove("is-dragging-cards");
+  renderPageControls();
 }
 
 function enableWholeCardDrag(card, providerId) {
@@ -1737,29 +1957,27 @@ function createSingleHeader(provider) {
   });
 
   header.addEventListener("dragover", (event) => {
-    if (!draggedCardProviderId || draggedCardProviderId === provider.id) return;
+    const targetProviderId = getTargetProviderIdForHeader(provider);
+    if (!draggedCardProviderId || draggedCardProviderId === targetProviderId) return;
     event.preventDefault();
-    header.closest(".provider-header-card")?.classList.add("drop-target");
+    const targetElement = header.closest(".provider-header-card") || header;
+    const placement = getCalendarDropPlacement(targetElement, event);
+    setCalendarDropTarget(targetProviderId, placement);
     event.dataTransfer.dropEffect = "move";
   });
 
   header.addEventListener("dragleave", () => {
-    header.closest(".provider-header-card")?.classList.remove("drop-target");
+    clearCalendarDropTargets();
   });
 
   header.addEventListener("drop", (event) => {
-    if (!draggedCardProviderId || draggedCardProviderId === provider.id) return;
+    const targetProviderId = getTargetProviderIdForHeader(provider);
+    if (!draggedCardProviderId || draggedCardProviderId === targetProviderId) return;
     event.preventDefault();
-    header.closest(".provider-header-card")?.classList.remove("drop-target");
-
-    if (usesManualPages()) {
-      moveCalendarUnitToPage(draggedCardProviderId, getProviderPageIndex(provider.id), provider.id, {
-        silent: true,
-      });
-    } else {
-      reorderStandaloneCard(draggedCardProviderId, provider.id);
-    }
-    showToast("캘린더 위치를 변경했습니다");
+    const targetElement = header.closest(".provider-header-card") || header;
+    const placement = getCalendarDropPlacement(targetElement, event);
+    clearCalendarDropTargets();
+    moveCalendarUnitToProviderDropTarget(draggedCardProviderId, targetProviderId, placement);
   });
 
   header.append(
@@ -2015,15 +2233,6 @@ function openCalendarActionMenu(anchor, context) {
     createActionButton("분리하기", () => splitProviderFromGroup(context.providerId)),
     createActionButton("전체 분리하기", () => splitAllCalendars(context.providerId)),
   ];
-
-  if (usesManualPages() && isPageEditMode) {
-    actions.push(
-      createActionButton("처음 페이지로 이동", () => moveProviderToFirstPage(context.providerId)),
-      createActionButton("이전 페이지로 이동", () => moveProviderToRelativePage(context.providerId, -1)),
-      createActionButton("다음 페이지로 이동", () => moveProviderToRelativePage(context.providerId, 1)),
-      createActionButton("마지막 페이지로 이동", () => moveProviderToLastPage(context.providerId)),
-    );
-  }
 
   actions.push(
     createActionButton("예약자 목록 출력  ›", () => {
@@ -2448,15 +2657,14 @@ function createCardResizeHandle(leftIndex) {
     if (!cards[index] || !cards[index + 1]) return;
 
     const startX = event.clientX;
-    const startWeights = [...columnWeights];
-    const totalCardWidth = cards.reduce((sum, card) => sum + card.getBoundingClientRect().width, 0);
+    const startWeights = getVisibleCardPixelWidths(cards);
     let didResize = false;
 
     handle.setPointerCapture(event.pointerId);
     handle.classList.add("active");
 
     const onMove = (moveEvent) => {
-      const nextWeights = getRedistributedWeights(startWeights, index, moveEvent.clientX - startX, totalCardWidth);
+      const nextWeights = getRedistributedWeights(startWeights, index, moveEvent.clientX - startX);
       if (Math.abs(moveEvent.clientX - startX) > 4 && areWeightsEqual(nextWeights, columnWeights)) {
         showResizeLimitFeedback(handle);
         return;
@@ -2502,9 +2710,8 @@ function createCardResizeHandle(leftIndex) {
       resetVisibleColumnWeights();
     } else {
       const direction = event.key === "ArrowLeft" ? -1 : 1;
-      const virtualCardWidth = visibleCount * 220;
       const virtualDelta = direction * (event.shiftKey ? 96 : 48);
-      const nextWeights = getRedistributedWeights(columnWeights, index, virtualDelta, virtualCardWidth);
+      const nextWeights = getRedistributedWeights(getVisibleCardPixelWidths(), index, virtualDelta);
       if (areWeightsEqual(nextWeights, columnWeights)) {
         showResizeLimitFeedback(handle);
         return;
@@ -2584,6 +2791,41 @@ function updateSelectionVisuals() {
   });
 }
 
+function createEmptyPageState(pageIndex) {
+  const state = document.createElement("section");
+  state.className = "empty-page-state";
+  state.setAttribute("aria-label", "빈 페이지");
+
+  const title = document.createElement("h2");
+  title.textContent = "빈 페이지";
+
+  const description = document.createElement("p");
+  description.textContent = "캘린더가 존재하지 않습니다.";
+
+  const actions = document.createElement("div");
+  actions.className = "empty-page-actions";
+
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.className = "ghost";
+  addButton.textContent = "캘린더 추가";
+  addButton.addEventListener("click", () => {
+    openPageCalendarDialog(pageIndex);
+  });
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "danger";
+  deleteButton.textContent = "페이지 삭제";
+  deleteButton.addEventListener("click", () => {
+    deleteEmptyPage(pageIndex);
+  });
+
+  actions.append(addButton, deleteButton);
+  state.append(title, description, actions);
+  return state;
+}
+
 function getAnchoredStartIndex(displayItems, focusIndex, preferredSlotIndex = 0) {
   if (focusIndex < 0) return firstVisibleIndex;
 
@@ -2611,7 +2853,9 @@ function renderScheduler(options = {}) {
   }
   providerColumns.innerHTML = "";
   providerColumns.classList.remove("default-view", "single-view", "max-view");
+  providerColumns.classList.remove("has-empty-page");
   providerColumns.classList.add(`${viewMode}-view`);
+  providerColumns.style.setProperty("--time-row-count", times.length);
 
   if (!allDisplayItems.length || !displayItems.length) {
     visibleCount = 0;
@@ -2625,6 +2869,10 @@ function renderScheduler(options = {}) {
     providerColumns.style.gridTemplateColumns = "1fr";
     providerColumns.style.minWidth = "";
     providerColumns.style.width = "";
+    if (usesManualPages()) {
+      providerColumns.classList.add("has-empty-page");
+      providerColumns.append(createEmptyPageState(currentPageIndex));
+    }
     renderPageControls(allDisplayItems);
     const totalPages = usesManualPages() ? pageLayouts.length : 0;
     const page = usesManualPages() ? currentPageIndex + 1 : 0;
@@ -2734,15 +2982,20 @@ function getItemRequiredWidth(item) {
 
     const visibleTabs = Math.min(item.providers.length, viewMode === "max" ? 1 : 4);
     const comfortableTabWidth = viewMode === "max" ? 56 : 86;
-    return Math.max(mode.targetWidth, Math.min(360, visibleTabs * comfortableTabWidth));
+    return Math.max(getItemMinimumWidth(item), mode.targetWidth, Math.min(360, visibleTabs * comfortableTabWidth));
   }
 
   return mode.targetWidth;
 }
 
+function getGroupMinimumWidth(item) {
+  const tabCount = Math.max(1, item?.providers?.length || 1);
+  return groupTabMinWidth * tabCount + groupTabGap * Math.max(0, tabCount - 1) + groupTabPaddingX;
+}
+
 function getItemMinimumWidth(item) {
   if (item?.type === "group") {
-    return 56;
+    return getGroupMinimumWidth(item);
   }
 
   return viewMode === "max" ? 56 : 48;

@@ -13,7 +13,7 @@
   --titlebar: #303747;
   --slot-h: 38px;
   --card-header-h: 44px;
-  --tab-scrollbar-h: 8px;
+  --tab-scrollbar-h: 0px;
   font-family:
     Inter,
     "Pretendard",
@@ -886,6 +886,63 @@ input {
   --card-min: 56px;
 }
 
+.provider-columns.has-empty-page {
+  min-height: calc(var(--slot-h) * var(--time-row-count, 1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: 0;
+}
+
+.empty-page-state {
+  width: min(520px, 86%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #5f6470;
+  text-align: center;
+}
+
+.empty-page-state h2 {
+  margin: 0;
+  color: #565b64;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.empty-page-state p {
+  margin: 0 0 10px;
+  color: #9ca2ad;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.empty-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+
+.empty-page-actions button {
+  min-width: 136px;
+  height: 48px;
+  padding: 0 22px;
+  border: 2px solid #c4ccd9;
+  border-radius: 8px;
+  background: #fff;
+  color: #5b6474;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.empty-page-actions button.danger {
+  color: #c30000;
+}
+
 .provider-card {
   min-width: 0;
   overflow: hidden;
@@ -976,14 +1033,42 @@ input {
 }
 
 .provider-card.drop-target {
+  position: relative;
   outline-color: #1f58d0;
   background: #f7faff;
 }
 
 .provider-header-card.drop-target {
+  position: relative;
   outline: 2px solid #1f58d0;
   outline-offset: -2px;
   background: #edf3ff;
+}
+
+.provider-card.drop-before::before,
+.provider-card.drop-after::after,
+.provider-header-card.drop-before::before,
+.provider-header-card.drop-after::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: #2f67df;
+  box-shadow: 0 0 0 2px rgba(47, 103, 223, 0.14);
+  z-index: 7;
+  pointer-events: none;
+}
+
+.provider-card.drop-before::before,
+.provider-header-card.drop-before::before {
+  left: 0;
+}
+
+.provider-card.drop-after::after,
+.provider-header-card.drop-after::after {
+  right: 0;
 }
 
 .provider-header-card.dragging {
@@ -1133,26 +1218,24 @@ input {
   flex-wrap: nowrap;
   min-width: 0;
   align-items: flex-start;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
-  padding: 0 2px var(--tab-scrollbar-h);
-  scrollbar-width: thin;
-  scrollbar-color: #c4cad5 transparent;
+  padding: 0 2px;
+  scrollbar-width: none;
 }
 
 .group-tabs::-webkit-scrollbar {
-  height: 6px;
+  display: none;
 }
 
 .group-tabs::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: #c4cad5;
+  background: transparent;
 }
 
 .group-tab {
   min-width: 56px;
   max-width: 142px;
-  height: calc(var(--card-header-h) - var(--tab-scrollbar-h) - 1px);
+  height: calc(var(--card-header-h) - 1px);
   flex: 1 1 108px;
   display: flex;
   align-items: center;
@@ -1527,6 +1610,18 @@ input {
   overflow-x: auto;
   padding: 2px 4px 5px;
   scrollbar-width: thin;
+}
+
+.page-tray.drag-page-cue {
+  padding: 4px 8px 7px;
+  border: 1px dashed rgba(47, 103, 223, 0.45);
+  border-radius: 999px;
+  background: rgba(237, 243, 255, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(47, 103, 223, 0.08);
+}
+
+.page-tray.drag-page-cue .page-chip {
+  cursor: copy;
 }
 
 .page-chip {
