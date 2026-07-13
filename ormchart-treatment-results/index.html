@@ -110,33 +110,6 @@
   .topbar h1 { font-size: 16px; font-weight: 700; margin: 0; letter-spacing: -0.2px; }
   .topbar .date { font-size: 11px; color: var(--muted); margin-left: 10px; font-weight: 400; }
 
-  .view-ctl { position: relative; }
-  .view-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    font: inherit; font-size: 12px; font-weight: 500; color: var(--text);
-    background: var(--card); border: 0.5px solid var(--border); border-radius: 6px;
-    padding: 6px 12px; cursor: pointer; box-shadow: var(--shadow);
-  }
-  .view-btn:hover { border-color: var(--accent); }
-  .view-btn .vcaret { font-size: 9px; color: var(--muted); }
-  .view-menu {
-    position: absolute; right: 0; top: calc(100% + 4px); z-index: 30;
-    min-width: 148px; background: var(--card); border: 0.5px solid var(--border);
-    border-radius: 8px; box-shadow: var(--menu-shadow); padding: 4px;
-    display: none;
-  }
-  .view-menu.open { display: block; }
-  .view-menu button {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    width: 100%; font: inherit; font-size: 12px; color: var(--text);
-    background: none; border: 0; border-radius: 5px; padding: 7px 10px;
-    cursor: pointer; text-align: left;
-  }
-  .view-menu button:hover { background: var(--row-hover); }
-  .view-menu button.selected { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
-  .view-menu button .chk { visibility: hidden; font-size: 11px; }
-  .view-menu button.selected .chk { visibility: visible; }
-
   /* ── 섹션 카드 ────────────────────────────────── */
   .section {
     background: var(--card); border: 0.5px solid var(--border);
@@ -155,14 +128,23 @@
     color: #fff; font-size: 9px; display: inline-flex; align-items: center; justify-content: center;
     line-height: 1;
   }
-  .row-toggle {
-    font: inherit; font-size: 11px; color: var(--text-sub);
-    background: none; border: 0.5px solid var(--border); border-radius: 6px;
-    padding: 3px 10px; cursor: pointer; margin-left: 4px;
-    display: inline-flex; align-items: center; gap: 4px;
+  .seg {
+    display: inline-flex; margin-left: 6px; padding: 2px;
+    background: var(--chip-bg); border: 0.5px solid var(--border-soft);
+    border-radius: 999px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
   }
-  .row-toggle:hover { border-color: var(--accent); color: var(--accent); }
-  .row-toggle .tg-ic { font-size: 9px; }
+  .seg-opt {
+    font: inherit; font-size: 11px; color: var(--muted); background: transparent; border: 0;
+    padding: 3px 14px; cursor: pointer; border-radius: 999px; line-height: 1.5;
+  }
+  .seg-opt.active {
+    background: var(--accent); color: #fff; font-weight: 600; cursor: default;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+  }
+  .seg-opt:not(.active):hover { color: var(--text-sub); }
+  @media (prefers-reduced-motion: no-preference) {
+    .seg-opt { transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; }
+  }
   .sec-actions { margin-left: auto; display: flex; gap: 6px; }
   .btn {
     font: inherit; font-size: 11px; font-weight: 500; border-radius: 6px;
@@ -318,10 +300,6 @@
   .spec ul { margin: 0; padding-left: 16px; color: var(--text-sub); font-size: 11px; display: flex; flex-direction: column; gap: 4px; }
   .spec li b { color: var(--text); font-weight: 600; }
 
-  @media (prefers-reduced-motion: no-preference) {
-    .view-menu.open { animation: pop 0.12s ease-out; }
-    @keyframes pop { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
-  }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
 </style>
 </head>
@@ -329,23 +307,13 @@
 <div class="wrap">
   <div class="simbar">
     <span class="sim-tag">SIMULATION</span>
-    <span class="sim-steps">① 화면 조작 → ② <b>화면 나가기</b> → ③ 재진입 시 상태 유지 확인 · <b>기본 보기</b> 선택 시 초기화</span>
+    <span class="sim-steps">① 섹션 타이틀 옆 <b>펼침/접힘 설정</b> 조작 → ② <b>화면 나가기</b> → ③ 재진입 시 설정 유지 확인</span>
     <button class="sim-leave" id="leaveBtn" type="button">화면 나가기 →</button>
   </div>
 
   <div id="screen">
   <div class="topbar">
     <h1>치료 결과<span class="date">홍길동 · M/58 · 2026-07-13</span></h1>
-    <div class="view-ctl">
-      <button class="view-btn" id="viewBtn" aria-haspopup="true" aria-expanded="false">
-        <span id="viewLabel">기본 보기</span><span class="vcaret">▼</span>
-      </button>
-      <div class="view-menu" id="viewMenu" role="menu">
-        <button data-view="default" class="selected" role="menuitem">기본 보기 <span class="chk">✓</span></button>
-        <button data-view="expand" role="menuitem">모두 펼치기 <span class="chk">✓</span></button>
-        <button data-view="collapse" role="menuitem">모두 접기 <span class="chk">✓</span></button>
-      </div>
-    </div>
   </div>
 
   <div id="sections"></div>
@@ -361,14 +329,12 @@
   <div class="spec">
     <h2>Interaction Spec</h2>
     <ul>
-      <li><b>보기 드롭다운(최상단)</b> — 기본 보기: 모든 섹션 카드 열기 + 각 섹션 행을 기본값으로 리셋(기초검사 펼침, 나머지 접힘) · 모두 펼치기: 8개 섹션 카드 모두 열기(행 상태 유지) · 모두 접기: 8개 섹션 카드 모두 닫기(헤더만 표시)</li>
       <li><b>섹션 헤더 ▼/▶</b> — 해당 섹션 카드 열기/닫기. 테이블 목록 전체가 숨겨지고 헤더만 남음</li>
-      <li><b>타이틀 옆 토글 버튼</b> — 해당 섹션의 행 상세 전체를 펼치기/접기. 레이블은 "펼치기"/"접기"로 표기하며("모두"는 우상단 드롭다운 전용), 행이 하나라도 펼쳐져 있으면 "접기"로 표시. 테이블 목록은 항상 유지</li>
+      <li><b>타이틀 옆 펼침/접힘 설정(필 토글)</b> — 순간 동작 버튼이 아닌 <b>유지되는 설정</b>. 트랙 안에서 현재 설정된 쪽이 채워진 썸(thumb)으로 표시되어 ON/OFF 토글처럼 읽히며, 재진입 후에도 같은 쪽이 채워져 있어 "설정이 고정되어 있음"이 시각적으로 드러남. 행을 개별 클릭해 혼합 상태가 되면 양쪽 모두 비활성 표시. 테이블 목록은 항상 유지</li>
       <li><b>상태 텍스트</b> — 펼침 기능이 있는 행은 ▶/▼ + 밑줄 텍스트로 표시되며 클릭 시 해당 행의 상세가 열리고 닫힘. 펼침 기능이 없으면(주사·진단의학 단문형/수치형) 색상 텍스트만 표시</li>
       <li><b>빠른 입력 칩(치료)</b> — 클릭 시 치료 소견에 문구가 추가되고 바이트 카운터가 갱신됨</li>
       <li><b>기본값 정책</b> — 주사: 펼침 없음 · 진단의학: 단문형/수치형 없음, 장문형 접힘 · 기초검사: 펼쳐짐 · 치료/영상의학/내시경/수술처치/기능검사: 접힘. 저장된 상태가 없는 최초 진입에만 적용되는 초기값</li>
-      <li><b>상태 유지 (TO-BE)</b> — 섹션 카드 열림/닫힘과 행 상세 펼침 상태가 조작 즉시 <b>사용자별</b>로 저장되어, 화면 이탈 후 재진입 시 그대로 복원됨 (환자 단위 아님). 최초 조작 시 1회 안내 토스트 표시. 저장하지 않은 소견 입력값은 유지 대상이 아님</li>
-      <li><b>기본 보기 = 리셋</b> — 저장된 상태와 무관하게 정책 기본값으로 복귀하며, 그 기본값 상태가 새 저장값이 됨. 상태가 낯설어졌을 때의 탈출구 역할</li>
+      <li><b>상태 유지 (TO-BE)</b> — 펼침/접힘 설정과 행 상세·카드 상태가 조작 즉시 <b>사용자별</b>로 저장되어, 화면 이탈 후 재진입 시 그대로 복원됨 (환자 단위 아님). 토글 조작 시마다 간결한 저장 토스트("치료 · 펼침으로 저장됨"), 재진입 시 복원 토스트("저장된 설정을 복원했습니다") 표시. 저장하지 않은 소견 입력값은 유지 대상이 아님</li>
     </ul>
   </div>
 </div>
@@ -649,11 +615,18 @@
     var expRows = [];
     var hasExpand = spec.expandable || (spec.subsections || []).some(function (s) { return s.expandable; });
 
-    var toggleBtn = null;
+    var seg = null, segOpen = null, segClose = null;
     if (hasExpand) {
-      toggleBtn = el('button', 'row-toggle');
-      toggleBtn.type = 'button';
-      head.appendChild(toggleBtn);
+      seg = el('div', 'seg');
+      seg.setAttribute('role', 'group');
+      seg.setAttribute('aria-label', spec.title + ' 행 상세 표시 설정');
+      segOpen = el('button', 'seg-opt', '펼침');
+      segClose = el('button', 'seg-opt', '접힘');
+      segOpen.type = 'button';
+      segClose.type = 'button';
+      seg.appendChild(segOpen);
+      seg.appendChild(segClose);
+      head.appendChild(seg);
     }
 
     var actions = el('div', 'sec-actions');
@@ -681,23 +654,32 @@
     root.appendChild(body);
 
     function updateToggle() {
-      if (!toggleBtn) return;
-      var any = expRows.some(isOpen);
-      toggleBtn.innerHTML = any
-        ? '<span class="tg-ic">▲</span> 접기'
-        : '<span class="tg-ic">▼</span> 펼치기';
+      if (!seg) return;
+      var openCount = expRows.filter(isOpen).length;
+      var allOpen = openCount > 0 && openCount === expRows.length;
+      var allClosed = openCount === 0;
+      segOpen.classList.toggle('active', allOpen);
+      segClose.classList.toggle('active', allClosed);
+      segOpen.setAttribute('aria-pressed', allOpen ? 'true' : 'false');
+      segClose.setAttribute('aria-pressed', allClosed ? 'true' : 'false');
+      seg.title = (!allOpen && !allClosed) ? '행별로 개별 조작된 상태' : '';
     }
 
     caret.addEventListener('click', function () {
       root.classList.toggle('closed');
       persist();
     });
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', function () {
-        var any = expRows.some(isOpen);
-        expRows.forEach(function (r) { setRow(r, !any); });
+    if (seg) {
+      segOpen.addEventListener('click', function () {
+        expRows.forEach(function (r) { setRow(r, true); });
         updateToggle();
-        firstSaveNotice();
+        saveNotice('펼침', spec.title);
+        persist();
+      });
+      segClose.addEventListener('click', function () {
+        expRows.forEach(function (r) { setRow(r, false); });
+        updateToggle();
+        saveNotice('접힘', spec.title);
         persist();
       });
     }
@@ -705,7 +687,6 @@
       r._btn.addEventListener('click', function () {
         setRow(r, !isOpen(r));
         updateToggle();
-        firstSaveNotice();
         persist();
       });
       setRow(r, !!r._default);
@@ -723,8 +704,6 @@
   /* ── 사용자별 상태 저장 (시뮬레이션) ─────────── */
   var STORE_KEY = 'ormchart-proto-user-state';
   var memoryState = null;
-  var noticeShown = false;
-  var currentMode = 'default';
 
   function loadState() {
     if (memoryState) return memoryState;
@@ -735,7 +714,7 @@
     return null;
   }
   function persist() {
-    var st = { mode: currentMode, cards: {}, rows: {} };
+    var st = { cards: {}, rows: {} };
     sectionCtls.forEach(function (s) {
       st.cards[s.id] = s.root.classList.contains('closed');
       st.rows[s.id] = s.expRows.map(isOpen);
@@ -743,10 +722,8 @@
     memoryState = st;
     try { localStorage.setItem(STORE_KEY, JSON.stringify(st)); } catch (e) {}
   }
-  function firstSaveNotice() {
-    if (noticeShown) return;
-    noticeShown = true;
-    toast('펼침 상태가 저장되었습니다 — 화면을 나갔다 와도 유지됩니다');
+  function saveNotice(label, title) {
+    toast(title + ' · ' + label + '으로 저장됨');
   }
 
   var toastTimer = null;
@@ -758,52 +735,6 @@
     toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
   }
 
-  /* ── 최상단 보기 드롭다운 ────────────────────── */
-  var viewBtn = document.getElementById('viewBtn');
-  var viewMenu = document.getElementById('viewMenu');
-  var viewLabel = document.getElementById('viewLabel');
-  var LABELS = { default: '기본 보기', expand: '모두 펼치기', collapse: '모두 접기' };
-
-  viewBtn.addEventListener('click', function (e) {
-    e.stopPropagation();
-    var open = viewMenu.classList.toggle('open');
-    viewBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-  document.addEventListener('click', function () {
-    viewMenu.classList.remove('open');
-    viewBtn.setAttribute('aria-expanded', 'false');
-  });
-
-  function setModeUI(mode) {
-    viewLabel.textContent = LABELS[mode];
-    viewMenu.querySelectorAll('button').forEach(function (b) {
-      b.classList.toggle('selected', b.dataset.view === mode);
-    });
-  }
-
-  function applyView(mode) {
-    currentMode = mode;
-    setModeUI(mode);
-    sectionCtls.forEach(function (s) {
-      if (mode === 'collapse') {
-        s.root.classList.add('closed');
-      } else {
-        s.root.classList.remove('closed');
-        if (mode === 'default') {
-          s.expRows.forEach(function (r) { setRow(r, !!r._default); });
-          s.updateToggle();
-        }
-      }
-    });
-    persist();
-    if (mode === 'default') toast('기본 보기로 리셋되었습니다 — 저장된 펼침 상태가 초기화되었습니다');
-  }
-  viewMenu.addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-view]');
-    if (!b) return;
-    applyView(b.dataset.view);
-  });
-
   /* ── 화면 렌더링 + 저장 상태 복원 ────────────── */
   function renderScreen() {
     host.innerHTML = '';
@@ -811,7 +742,6 @@
     SECTIONS.forEach(function (s) { host.appendChild(buildSection(s)); });
     var st = loadState();
     if (st) {
-      currentMode = st.mode || 'default';
       sectionCtls.forEach(function (s) {
         if (st.cards && (s.id in st.cards)) s.root.classList.toggle('closed', !!st.cards[s.id]);
         if (st.rows && st.rows[s.id]) {
@@ -822,7 +752,6 @@
         s.updateToggle();
       });
     }
-    setModeUI(currentMode);
   }
 
   /* ── 화면 이탈 / 재진입 시뮬레이션 ───────────── */
@@ -834,7 +763,7 @@
     interstitial.hidden = true;
     screenEl.hidden = false;
     renderScreen();
-    toast(loadState() ? '재진입 — 마지막 펼침 상태가 복원되었습니다' : '재진입 — 기본 보기로 표시합니다');
+    toast(loadState() ? '저장된 설정을 복원했습니다' : '기본 설정으로 표시합니다');
   });
 
   renderScreen();
