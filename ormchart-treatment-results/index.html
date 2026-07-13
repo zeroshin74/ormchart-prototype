@@ -291,20 +291,78 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 
-  /* ── 인터랙션 정의 패널 ───────────────────────── */
-  .spec {
-    margin-top: 16px; border: 0.5px dashed var(--border); border-radius: 8px;
-    padding: 14px 16px; background: none;
+  /* ── 상단 탭 메뉴 ─────────────────────────────── */
+  .tabs {
+    display: flex; gap: 2px; border-bottom: 0.5px solid var(--border);
+    margin-bottom: 14px;
   }
-  .spec h2 { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.6px; margin: 0 0 8px; text-transform: uppercase; }
-  .spec ul { margin: 0; padding-left: 16px; color: var(--text-sub); font-size: 11px; display: flex; flex-direction: column; gap: 4px; }
-  .spec li b { color: var(--text); font-weight: 600; }
+  .tab-btn {
+    font: inherit; font-size: 13px; font-weight: 500; color: var(--muted);
+    background: none; border: 0; border-bottom: 2px solid transparent;
+    padding: 9px 16px 8px; cursor: pointer; margin-bottom: -0.5px;
+  }
+  .tab-btn:hover { color: var(--text-sub); }
+  .tab-btn.active { color: var(--accent); font-weight: 700; border-bottom-color: var(--accent); }
+
+  /* ── 화면설계 문서 ────────────────────────────── */
+  .specdoc {
+    background: var(--card); border: 0.5px solid var(--border); border-radius: 8px;
+    box-shadow: var(--shadow); padding: 24px 28px 32px;
+    font-size: 12px; color: var(--text-sub); line-height: 1.7;
+  }
+  .specdoc h2 {
+    font-size: 13px; font-weight: 700; color: var(--text); margin: 26px 0 10px;
+    padding-top: 18px; border-top: 0.5px solid var(--border-soft); letter-spacing: -0.2px;
+  }
+  .specdoc h2:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .specdoc h3 { font-size: 12px; font-weight: 600; color: var(--text); margin: 14px 0 6px; }
+  .specdoc p { margin: 0 0 8px; }
+  .specdoc ul { margin: 0 0 8px; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; }
+  .specdoc table { width: 100%; margin: 6px 0 10px; font-size: 11px; }
+  .specdoc th { white-space: nowrap; }
+  .specdoc td { white-space: normal; vertical-align: top; }
+  .specdoc code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 10.5px;
+    background: var(--chip-bg); border-radius: 4px; padding: 1px 5px;
+  }
+  .specdoc pre {
+    background: var(--detail-bg); border: 0.5px solid var(--border-soft); border-radius: 8px;
+    padding: 12px 14px; overflow-x: auto; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 10.5px; line-height: 1.6; color: var(--text-sub); margin: 6px 0 10px;
+  }
+  .sw {
+    display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+    vertical-align: middle; margin-right: 6px; border: 0.5px solid var(--border-soft);
+  }
+  .ann {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; border-radius: 50%; flex: 0 0 auto;
+    background: var(--st-amber); color: #fff; font-size: 9px; font-weight: 700;
+    vertical-align: middle; margin: 0 4px;
+  }
+  .mock {
+    border: 0.5px solid var(--border); border-radius: 8px; margin: 8px 0 10px;
+    overflow-x: auto; background: var(--card);
+  }
+  .mock-head { display: flex; align-items: center; gap: 6px; padding: 10px 14px; min-width: 720px; }
+  .mock-row {
+    display: flex; align-items: center; gap: 6px; padding: 9px 14px; min-width: 720px;
+    border-top: 0.5px solid var(--border-soft); font-size: 11px;
+  }
+  .mock .seg, .mock .status-link, .mock .btn, .mock .chkbox { pointer-events: none; }
+  .mock-cells { color: var(--muted); }
 
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab-btn active" id="tabBtnProto" role="tab" aria-selected="true" type="button">프로토타입</button>
+    <button class="tab-btn" id="tabBtnSpec" role="tab" aria-selected="false" type="button">화면설계</button>
+  </div>
+
+  <div id="tab-proto">
   <div class="simbar">
     <span class="sim-tag">SIMULATION</span>
     <span class="sim-steps">① 섹션 타이틀 옆 <b>펼침/접힘 설정</b> 조작 → ② <b>화면 나가기</b> → ③ 재진입 시 설정 유지 확인</span>
@@ -326,16 +384,150 @@
     <button id="reenterBtn" type="button">← 치료 결과 화면 재진입</button>
   </div>
 
-  <div class="spec">
-    <h2>Interaction Spec</h2>
-    <ul>
-      <li><b>섹션 헤더 ▼/▶</b> — 해당 섹션 카드 열기/닫기. 테이블 목록 전체가 숨겨지고 헤더만 남음</li>
-      <li><b>타이틀 옆 펼침/접힘 설정(필 토글)</b> — 순간 동작 버튼이 아닌 <b>유지되는 설정</b>. 트랙 안에서 현재 설정된 쪽이 채워진 썸(thumb)으로 표시되어 ON/OFF 토글처럼 읽히며, 재진입 후에도 같은 쪽이 채워져 있어 "설정이 고정되어 있음"이 시각적으로 드러남. 행을 개별 클릭해 혼합 상태가 되면 양쪽 모두 비활성 표시. 테이블 목록은 항상 유지</li>
-      <li><b>상태 텍스트</b> — 펼침 기능이 있는 행은 ▶/▼ + 밑줄 텍스트로 표시되며 클릭 시 해당 행의 상세가 열리고 닫힘. 펼침 기능이 없으면(주사·진단의학 단문형/수치형) 색상 텍스트만 표시</li>
-      <li><b>빠른 입력 칩(치료)</b> — 클릭 시 치료 소견에 문구가 추가되고 바이트 카운터가 갱신됨</li>
-      <li><b>기본값 정책</b> — 주사: 펼침 없음 · 진단의학: 단문형/수치형 없음, 장문형 접힘 · 기초검사: 펼쳐짐 · 치료/영상의학/내시경/수술처치/기능검사: 접힘. 저장된 상태가 없는 최초 진입에만 적용되는 초기값</li>
-      <li><b>상태 유지 (TO-BE)</b> — 펼침/접힘 설정과 행 상세·카드 상태가 조작 즉시 <b>사용자별</b>로 저장되어, 화면 이탈 후 재진입 시 그대로 복원됨 (환자 단위 아님). 토글 조작 시마다 간결한 저장 토스트("치료 · 펼침으로 저장됨"), 재진입 시 복원 토스트("저장된 설정을 복원했습니다") 표시. 저장하지 않은 소견 입력값은 유지 대상이 아님</li>
-    </ul>
+  </div><!-- /#tab-proto -->
+
+  <div id="tab-spec" hidden>
+    <div class="specdoc">
+      <h2>1. 문서 정보</h2>
+      <table>
+        <tbody>
+          <tr><td style="width:120px"><b>화면명</b></td><td>치료 결과 (오더분류별 수행/결과 조회·기록)</td></tr>
+          <tr><td><b>버전 / 작성일</b></td><td>v1.0 · 2026-07-13</td></tr>
+          <tr><td><b>대상 독자</b></td><td>기획자, 프론트엔드/백엔드 개발자</td></tr>
+          <tr><td><b>관련 VOC</b></td><td>"치료 오더의 펼침 상태가 화면 재진입 시 유지되지 않아 매번 다시 펼쳐야 함"</td></tr>
+        </tbody>
+      </table>
+
+      <h2>2. 화면 개요</h2>
+      <p>환자의 당일 오더를 8개 오더분류 섹션으로 나누어 표시하고, 수행/결과 입력을 한 화면에서 처리한다.
+      핵심 UX 결정은 두 가지다.</p>
+      <ul>
+        <li><b>행 상세는 기본 접힘</b>(기초검사 제외) — 목록 스캔 효율 우선</li>
+        <li><b>펼침/접힘은 사용자별 설정으로 저장·복원</b> — 재진입 시 반복 조작(VOC)을 제거. 환자 단위가 아닌 <b>사용자 단위</b> 저장</li>
+      </ul>
+
+      <h2>3. 레이아웃 · 영역 정의</h2>
+      <p>섹션 카드 스택(폭 940px). 섹션 순서: 치료 → 주사 → 진단의학(단문형/수치형/장문형) → 기초검사 → 영상의학 → 내시경 → 수술/처치 → 기능검사</p>
+      <div class="mock">
+        <div class="mock-head">
+          <span class="ann">1</span><span style="color:var(--accent);font-size:10px">▼</span>
+          <span class="sec-title">치료</span><span class="sec-check">✓</span>
+          <span class="ann">2</span>
+          <div class="seg"><span class="seg-opt">펼침</span><span class="seg-opt active">접힘</span></div>
+          <div class="sec-actions"><span class="ann">3</span>
+            <span class="btn">취소</span><span class="btn">수행시작</span><span class="btn filled-blue">수행완료</span><span class="btn filled-dark">결과완료</span>
+          </div>
+        </div>
+        <div class="mock-row">
+          <span class="ann">4</span><input type="checkbox" class="chkbox" aria-label="예시">
+          <span class="ann">5</span>
+          <span class="status-link st st-blue"><span class="st-caret">▶</span><span class="st-txt" style="text-decoration:underline">결과완료</span></span>
+          <span class="mock-cells">PT_01 · 물리치료 · ICT (간섭파전류치료) · 요추부 · 15분 · 1 · 1 · 1 · — · 김민석</span>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th style="width:44px">번호</th><th style="width:160px">영역</th><th>정의</th></tr></thead>
+        <tbody>
+          <tr><td><span class="ann">1</span></td><td>섹션 캐럿 ▼/▶</td><td>섹션 카드 자체를 열고 닫음. 닫으면 테이블 목록 전체가 숨고 헤더만 남음</td></tr>
+          <tr><td><span class="ann">2</span></td><td>펼침/접힘 설정 (필 토글)</td><td>해당 섹션 행 상세의 일괄 표시 설정. 주사 섹션에는 미노출 (4.1 참조)</td></tr>
+          <tr><td><span class="ann">3</span></td><td>오더 액션 버튼</td><td>취소 · 수행시작(outlined) / 수행완료(#378ADD filled) / 결과완료(#374151 filled)</td></tr>
+          <tr><td><span class="ann">4</span></td><td>선택 체크박스</td><td>액션 버튼의 대상 오더 선택. 체크박스 다음 열은 바로 상태(별도 확장 아이콘 컬럼 없음)</td></tr>
+          <tr><td><span class="ann">5</span></td><td>상태 텍스트</td><td>행 상세 펼침 트리거. 펼침 가능 여부에 따라 두 형태 (4.2 참조)</td></tr>
+        </tbody>
+      </table>
+
+      <h2>4. 컴포넌트 정의</h2>
+      <h3>4.1 펼침/접힘 설정 — 필 토글</h3>
+      <p>순간 동작 버튼이 아닌 <b>유지되는 설정</b>임을 드러내는 것이 목적. 트랙(pill) 안에서 선택된 쪽이
+      채워진 썸으로 항상 표시되어 ON/OFF 토글처럼 읽힌다.</p>
+      <table>
+        <thead><tr><th style="width:120px">상태</th><th>표시</th><th>진입 조건</th></tr></thead>
+        <tbody>
+          <tr><td>펼침 선택</td><td>"펼침" 쪽 채움(accent)</td><td>토글로 펼침 설정, 또는 모든 행이 펼쳐짐</td></tr>
+          <tr><td>접힘 선택</td><td>"접힘" 쪽 채움(accent)</td><td>토글로 접힘 설정, 또는 모든 행이 접힘</td></tr>
+          <tr><td>혼합</td><td>양쪽 모두 비활성</td><td>행 개별 클릭으로 펼침/접힘이 섞임. 툴팁 "행별로 개별 조작된 상태"</td></tr>
+        </tbody>
+      </table>
+      <h3>4.2 상태 텍스트</h3>
+      <table>
+        <thead><tr><th style="width:120px">형태</th><th>표시</th><th>적용 대상</th></tr></thead>
+        <tbody>
+          <tr><td>펼침형(클릭 가능)</td><td>▶/▼ + 밑줄 텍스트</td><td>치료 · 기초검사 · 영상의학 · 내시경 · 수술/처치 · 기능검사 · 진단의학 장문형</td></tr>
+          <tr><td>평문형(클릭 불가)</td><td>색상 텍스트만</td><td>주사 · 진단의학 단문형/수치형</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th style="width:120px">상태값</th><th style="width:140px">색상 (라이트 기준)</th><th>의미</th></tr></thead>
+        <tbody>
+          <tr><td><span class="sw" style="background:#2F7FCB"></span>결과완료</td><td><code>#2F7FCB</code> blue</td><td>결과 입력까지 완료</td></tr>
+          <tr><td><span class="sw" style="background:#33528C"></span>수행완료 / 완료</td><td><code>#33528C</code> navy</td><td>수행 완료, 결과 대기</td></tr>
+          <tr><td><span class="sw" style="background:#6B7280"></span>수행중</td><td><code>#6B7280</code> gray</td><td>수행 진행 중</td></tr>
+          <tr><td><span class="sw" style="background:#2E7D4F"></span>정상</td><td><code>#2E7D4F</code> green</td><td>검사 결과 참고치 이내</td></tr>
+          <tr><td><span class="sw" style="background:#B45309"></span>주의</td><td><code>#B45309</code> amber</td><td>검사 결과 참고치 벗어남</td></tr>
+        </tbody>
+      </table>
+      <h3>4.3 행 상세 (치료)</h3>
+      <p>시작/종료 시간 입력 + 빠른 입력 칩 + 치료 소견 텍스트영역(4000 bytes 제한, 우하단 카운터)을
+      하나의 폼 컨테이너로 구성. 칩 클릭 시 소견에 문구가 추가/제거되고 카운터가 갱신된다.
+      기타 섹션의 상세는 판독문/처치기록(읽기 블록) 또는 측정값 테이블(기초검사).</p>
+
+      <h2>5. 오더분류별 펼침 정책</h2>
+      <table>
+        <thead><tr><th>오더분류</th><th style="width:110px">행 펼침 기능</th><th style="width:90px">기본값</th><th style="width:110px">필 토글 노출</th></tr></thead>
+        <tbody>
+          <tr><td>치료</td><td>있음</td><td>접힘</td><td>노출</td></tr>
+          <tr><td>주사</td><td>없음</td><td>—</td><td>미노출</td></tr>
+          <tr><td>진단의학 · 단문형/수치형</td><td>없음</td><td>—</td><td rowspan="2">노출 (장문형에만 작용)</td></tr>
+          <tr><td>진단의학 · 장문형</td><td>있음</td><td>접힘</td></tr>
+          <tr><td>기초검사</td><td>있음</td><td><b>펼쳐짐</b></td><td>노출</td></tr>
+          <tr><td>영상의학 / 내시경 / 수술·처치 / 기능검사</td><td>있음</td><td>접힘</td><td>노출</td></tr>
+        </tbody>
+      </table>
+      <p>기본값은 <b>저장된 사용자 설정이 없는 최초 진입에만</b> 적용되는 초기값이다.</p>
+
+      <h2>6. 인터랙션 정의</h2>
+      <table>
+        <thead><tr><th style="width:56px">ID</th><th style="width:150px">트리거</th><th>동작</th><th style="width:80px">저장</th></tr></thead>
+        <tbody>
+          <tr><td>IX-01</td><td>섹션 캐럿 ▼/▶ 클릭</td><td>섹션 카드 열기/닫기 (테이블 목록 표시/숨김)</td><td>저장</td></tr>
+          <tr><td>IX-02</td><td>필 토글 "펼침"/"접힘" 클릭</td><td>해당 섹션의 모든 행 상세를 일괄 펼침/접힘 + 토글 상태 채움 + 저장 토스트</td><td>저장</td></tr>
+          <tr><td>IX-03</td><td>행 상태 텍스트 클릭</td><td>해당 행의 상세만 펼침/접힘 (▶↔▼). 결과적으로 혼합 상태가 되면 토글은 양쪽 비활성</td><td>저장</td></tr>
+          <tr><td>IX-04</td><td>빠른 입력 칩 클릭 (치료)</td><td>선택 시 소견에 문구 추가, 해제 시 제거. 바이트 카운터 갱신</td><td>저장 안 함</td></tr>
+          <tr><td>IX-05</td><td>화면 재진입</td><td>저장된 사용자 설정으로 화면 복원 + 복원 토스트. 저장값 없으면 5장의 기본값 적용</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <h2>7. 상태 유지 정책</h2>
+      <ul>
+        <li><b>저장 단위</b> — 사용자 × 섹션 × 행. 환자 단위 아님 (환자를 바꿔도 사용자의 화면 설정은 동일하게 적용)</li>
+        <li><b>저장 시점</b> — 조작 즉시 자동 저장. 별도 저장 버튼·설정 화면 없음</li>
+        <li><b>복원 시점</b> — 화면 재진입·새로고침 시. 프로토타입은 <code>localStorage</code>, 실서비스는 사용자 설정 API로 대체</li>
+        <li><b>제외 대상</b> — 저장하지 않은 소견 입력값은 유지되지 않음 (기존 저장 동작과 동일)</li>
+      </ul>
+      <p>저장 데이터 구조 (프로토타입 기준, 키 <code>ormchart-proto-user-state</code>):</p>
+      <pre>{
+  "cards": { "treat": false, "inject": false, ... },   // 섹션 카드 닫힘 여부
+  "rows":  { "treat": [true, false, false], ... }      // 섹션별 행 상세 펼침 여부 (행 순서 기준)
+}</pre>
+
+      <h2>8. 메시지 정의</h2>
+      <table>
+        <thead><tr><th style="width:180px">트리거</th><th>토스트 문구</th></tr></thead>
+        <tbody>
+          <tr><td>필 토글 조작 (매회)</td><td><code>{섹션명} · {펼침|접힘}으로 저장됨</code> — 예: "치료 · 펼침으로 저장됨"</td></tr>
+          <tr><td>재진입 (저장값 있음)</td><td>저장된 설정을 복원했습니다</td></tr>
+          <tr><td>재진입 (저장값 없음)</td><td>기본 설정으로 표시합니다</td></tr>
+        </tbody>
+      </table>
+
+      <h2>9. 개발 참고</h2>
+      <ul>
+        <li>행 상세는 <code>colspan</code> 상세 행으로 구현. 상세 열림 여부와 무관하게 테이블 목록(오더 행)은 항상 유지</li>
+        <li>필 토글의 채움 상태는 별도 상태값이 아니라 <b>행 펼침 상태로부터 파생</b> (모두 펼침 → "펼침" 채움, 모두 접힘 → "접힘" 채움, 그 외 혼합)</li>
+        <li>복원 순서: 화면 렌더(기본값) → 저장값 로드 → 카드/행 상태 덮어쓰기 → 토글 표시 갱신</li>
+        <li>디자인 토큰 — 폭 940px · Pretendard · accent <code>#378ADD</code> · 결과완료 버튼 <code>#374151</code> · 보더 <code>0.5px #D7DCE1</code> · 카드 radius 8px · 라이트/다크 테마 지원</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -765,6 +957,23 @@
     renderScreen();
     toast(loadState() ? '저장된 설정을 복원했습니다' : '기본 설정으로 표시합니다');
   });
+
+  /* ── 상단 탭 전환 ────────────────────────────── */
+  var tabBtnProto = document.getElementById('tabBtnProto');
+  var tabBtnSpec = document.getElementById('tabBtnSpec');
+  var tabProto = document.getElementById('tab-proto');
+  var tabSpec = document.getElementById('tab-spec');
+
+  function selectTab(spec) {
+    tabProto.hidden = spec;
+    tabSpec.hidden = !spec;
+    tabBtnProto.classList.toggle('active', !spec);
+    tabBtnSpec.classList.toggle('active', spec);
+    tabBtnProto.setAttribute('aria-selected', !spec ? 'true' : 'false');
+    tabBtnSpec.setAttribute('aria-selected', spec ? 'true' : 'false');
+  }
+  tabBtnProto.addEventListener('click', function () { selectTab(false); });
+  tabBtnSpec.addEventListener('click', function () { selectTab(true); });
 
   renderScreen();
 })();
