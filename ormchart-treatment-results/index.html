@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">
+<title>ORMCHART 치료 결과 — 인터랙션 프로토타입</title>
+<style>
+  :root {
+    --bg: #F4F6F8;
+    --card: #FFFFFF;
+    --border: #D7DCE1;
+    --border-soft: #E7EBEF;
+    --text: #1F2937;
+    --text-sub: #4B5563;
+    --muted: #8A94A0;
+    --accent: #378ADD;
+    --accent-weak: #EAF3FC;
+    --accent-border: #BBD9F5;
+    --dark-btn: #374151;
+    --dark-btn-text: #FFFFFF;
+    --row-hover: #F8FAFC;
+    --detail-bg: #F9FAFB;
+    --input-bg: #FFFFFF;
+    --chip-bg: #F1F4F7;
+    --chip-on-bg: #EAF3FC;
+    --chip-on-border: #8FC0EE;
+    --thead-bg: #F6F8FA;
+    --st-blue: #2F7FCB;
+    --st-navy: #33528C;
+    --st-gray: #6B7280;
+    --st-green: #2E7D4F;
+    --st-amber: #B45309;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04);
+    --menu-shadow: 0 6px 20px rgba(15,23,42,0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171B;
+      --card: #1E2228;
+      --border: #363D46;
+      --border-soft: #2C323A;
+      --text: #E6E9ED;
+      --text-sub: #C2C9D1;
+      --muted: #8B95A1;
+      --accent: #5AA2E8;
+      --accent-weak: #1D3049;
+      --accent-border: #2E5A8C;
+      --dark-btn: #59636F;
+      --dark-btn-text: #F3F4F6;
+      --row-hover: #232830;
+      --detail-bg: #191D22;
+      --input-bg: #14171B;
+      --chip-bg: #262C34;
+      --chip-on-bg: #1D3049;
+      --chip-on-border: #3E6FA3;
+      --thead-bg: #22272E;
+      --st-blue: #6FB0EC;
+      --st-navy: #93AEDC;
+      --st-gray: #9AA3AE;
+      --st-green: #6FBF92;
+      --st-amber: #E0A45C;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3);
+      --menu-shadow: 0 6px 20px rgba(0,0,0,0.45);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F4F6F8; --card: #FFFFFF; --border: #D7DCE1; --border-soft: #E7EBEF;
+    --text: #1F2937; --text-sub: #4B5563; --muted: #8A94A0;
+    --accent: #378ADD; --accent-weak: #EAF3FC; --accent-border: #BBD9F5;
+    --dark-btn: #374151; --dark-btn-text: #FFFFFF;
+    --row-hover: #F8FAFC; --detail-bg: #F9FAFB; --input-bg: #FFFFFF;
+    --chip-bg: #F1F4F7; --chip-on-bg: #EAF3FC; --chip-on-border: #8FC0EE;
+    --thead-bg: #F6F8FA;
+    --st-blue: #2F7FCB; --st-navy: #33528C; --st-gray: #6B7280;
+    --st-green: #2E7D4F; --st-amber: #B45309;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04);
+    --menu-shadow: 0 6px 20px rgba(15,23,42,0.12);
+  }
+  :root[data-theme="dark"] {
+    --bg: #14171B; --card: #1E2228; --border: #363D46; --border-soft: #2C323A;
+    --text: #E6E9ED; --text-sub: #C2C9D1; --muted: #8B95A1;
+    --accent: #5AA2E8; --accent-weak: #1D3049; --accent-border: #2E5A8C;
+    --dark-btn: #59636F; --dark-btn-text: #F3F4F6;
+    --row-hover: #232830; --detail-bg: #191D22; --input-bg: #14171B;
+    --chip-bg: #262C34; --chip-on-bg: #1D3049; --chip-on-border: #3E6FA3;
+    --thead-bg: #22272E;
+    --st-blue: #6FB0EC; --st-navy: #93AEDC; --st-gray: #9AA3AE;
+    --st-green: #6FBF92; --st-amber: #E0A45C;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3);
+    --menu-shadow: 0 6px 20px rgba(0,0,0,0.45);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 28px 16px 48px;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── 최상단 타이틀 바 ─────────────────────────── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2px 2px 8px;
+  }
+  .topbar h1 { font-size: 16px; font-weight: 700; margin: 0; letter-spacing: -0.2px; }
+  .topbar .date { font-size: 11px; color: var(--muted); margin-left: 10px; font-weight: 400; }
+
+  .view-ctl { position: relative; }
+  .view-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: inherit; font-size: 12px; font-weight: 500; color: var(--text);
+    background: var(--card); border: 0.5px solid var(--border); border-radius: 6px;
+    padding: 6px 12px; cursor: pointer; box-shadow: var(--shadow);
+  }
+  .view-btn:hover { border-color: var(--accent); }
+  .view-btn .vcaret { font-size: 9px; color: var(--muted); }
+  .view-menu {
+    position: absolute; right: 0; top: calc(100% + 4px); z-index: 30;
+    min-width: 148px; background: var(--card); border: 0.5px solid var(--border);
+    border-radius: 8px; box-shadow: var(--menu-shadow); padding: 4px;
+    display: none;
+  }
+  .view-menu.open { display: block; }
+  .view-menu button {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 100%; font: inherit; font-size: 12px; color: var(--text);
+    background: none; border: 0; border-radius: 5px; padding: 7px 10px;
+    cursor: pointer; text-align: left;
+  }
+  .view-menu button:hover { background: var(--row-hover); }
+  .view-menu button.selected { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
+  .view-menu button .chk { visibility: hidden; font-size: 11px; }
+  .view-menu button.selected .chk { visibility: visible; }
+
+  /* ── 섹션 카드 ────────────────────────────────── */
+  .section {
+    background: var(--card); border: 0.5px solid var(--border);
+    border-radius: 8px; box-shadow: var(--shadow); overflow: visible;
+  }
+  .sec-head {
+    display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  }
+  .sec-caret {
+    font: inherit; font-size: 10px; color: var(--accent); background: none; border: 0;
+    cursor: pointer; padding: 2px 4px; line-height: 1;
+  }
+  .sec-title { font-size: 13px; font-weight: 600; letter-spacing: -0.2px; }
+  .sec-check {
+    width: 14px; height: 14px; border-radius: 50%; background: var(--accent);
+    color: #fff; font-size: 9px; display: inline-flex; align-items: center; justify-content: center;
+    line-height: 1;
+  }
+  .row-toggle {
+    font: inherit; font-size: 11px; color: var(--text-sub);
+    background: none; border: 0.5px solid var(--border); border-radius: 6px;
+    padding: 3px 10px; cursor: pointer; margin-left: 4px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .row-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .row-toggle .tg-ic { font-size: 9px; }
+  .sec-actions { margin-left: auto; display: flex; gap: 6px; }
+  .btn {
+    font: inherit; font-size: 11px; font-weight: 500; border-radius: 6px;
+    padding: 5px 12px; cursor: pointer; border: 0.5px solid var(--border);
+    background: var(--card); color: var(--muted);
+  }
+  .btn.filled-blue { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.filled-dark { background: var(--dark-btn); border-color: var(--dark-btn); color: var(--dark-btn-text); }
+
+  .sec-body { border-top: 0.5px solid var(--border-soft); }
+  .section.closed .sec-body { display: none; }
+  .section.closed .sec-caret .c-open, .section .sec-caret .c-closed { display: none; }
+  .section.closed .sec-caret .c-closed, .section .sec-caret .c-open { display: inline; }
+
+  /* ── 소섹션(진단의학) ─────────────────────────── */
+  .subsec-label {
+    font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.4px;
+    padding: 10px 14px 4px;
+  }
+  .subsec + .subsec { border-top: 0.5px solid var(--border-soft); }
+
+  /* ── 테이블 ──────────────────────────────────── */
+  .tbl-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead th {
+    background: var(--thead-bg); color: var(--muted); font-weight: 500; font-size: 10px;
+    text-align: left; padding: 6px 8px; border-bottom: 0.5px solid var(--border-soft);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 8px; border-bottom: 0.5px solid var(--border-soft);
+    white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--text-sub);
+  }
+  tbody tr.order-row:hover { background: var(--row-hover); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.c-name, th.c-name { white-space: normal; min-width: 130px; color: var(--text); }
+  .chkbox {
+    width: 13px; height: 13px; accent-color: var(--accent); vertical-align: middle;
+    margin: 0; cursor: pointer;
+  }
+
+  /* ── 상태 표시 ───────────────────────────────── */
+  .st { font-weight: 600; }
+  .st-blue  { color: var(--st-blue); }
+  .st-navy  { color: var(--st-navy); }
+  .st-gray  { color: var(--st-gray); }
+  .st-green { color: var(--st-green); }
+  .st-amber { color: var(--st-amber); }
+  button.status-link {
+    font: inherit; font-size: 11px; background: none; border: 0; padding: 0;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+  }
+  button.status-link .st-caret { font-size: 8px; }
+  button.status-link .st-txt { text-decoration: underline; text-underline-offset: 2px; }
+  button.status-link:hover .st-txt { opacity: 0.75; }
+  .status-plain { font-size: 11px; }
+
+  /* ── 상세(펼침) 영역 ──────────────────────────── */
+  tr.detail-row { display: none; }
+  tr.detail-row.open { display: table-row; }
+  tr.detail-row > td {
+    background: var(--detail-bg); padding: 12px 14px 14px; white-space: normal;
+  }
+  .detail-inner { display: flex; flex-direction: column; gap: 10px; max-width: 860px; }
+
+  .time-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-sub); }
+  .time-row input {
+    font: inherit; font-size: 11px; color: var(--text);
+    background: var(--input-bg); border: 0.5px solid var(--border); border-radius: 6px;
+    padding: 5px 9px; width: 96px;
+  }
+  .time-row input:focus { outline: none; border-color: var(--accent); }
+  .time-sep { color: var(--muted); }
+
+  .note-form {
+    background: var(--input-bg); border: 0.5px solid var(--border); border-radius: 8px;
+    overflow: hidden;
+  }
+  .chips {
+    display: flex; gap: 6px; overflow-x: auto; padding: 10px 12px 8px;
+  }
+  .chip {
+    font: inherit; font-size: 11px; color: var(--text-sub); white-space: nowrap;
+    background: var(--chip-bg); border: 0.5px solid var(--border-soft); border-radius: 999px;
+    padding: 4px 11px; cursor: pointer; flex: 0 0 auto;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.on { background: var(--chip-on-bg); border-color: var(--chip-on-border); color: var(--accent); font-weight: 600; }
+  .note-form textarea {
+    display: block; width: 100%; min-height: 64px; resize: vertical;
+    font: inherit; font-size: 12px; line-height: 1.6; color: var(--text);
+    background: transparent; border: 0; padding: 6px 12px 4px;
+  }
+  .note-form textarea:focus { outline: none; }
+  .byte-count { text-align: right; font-size: 10px; color: var(--muted); padding: 0 12px 8px; font-variant-numeric: tabular-nums; }
+
+  .report-box {
+    background: var(--input-bg); border: 0.5px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12px; line-height: 1.7; color: var(--text-sub);
+    white-space: pre-line;
+  }
+  .report-box b { color: var(--text); }
+  .measure-tbl { border: 0.5px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--input-bg); }
+  .measure-tbl table { font-size: 11px; }
+  .measure-tbl thead th { background: var(--thead-bg); }
+  .measure-tbl tbody td { padding: 6px 10px; }
+
+  /* ── 시뮬레이션 바 / 화면 이탈 / 토스트 ────────── */
+  .simbar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    border: 0.5px dashed var(--accent-border); background: var(--accent-weak);
+    border-radius: 8px; padding: 8px 12px; font-size: 11px; color: var(--text-sub);
+  }
+  .sim-tag {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.8px; color: var(--accent);
+    border: 0.5px solid var(--accent-border); border-radius: 999px; padding: 2px 8px;
+    background: var(--card);
+  }
+  .sim-steps b { color: var(--text); font-weight: 600; }
+  .sim-leave {
+    margin-left: auto; font: inherit; font-size: 11px; font-weight: 600; color: #fff;
+    background: var(--accent); border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer;
+  }
+  .sim-leave:hover { filter: brightness(0.94); }
+  .interstitial {
+    border: 0.5px solid var(--border); background: var(--card); border-radius: 8px;
+    box-shadow: var(--shadow); padding: 56px 24px 60px; text-align: center;
+  }
+  .interstitial h2 { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+  .interstitial p { font-size: 11px; color: var(--muted); margin: 0 0 20px; line-height: 1.7; }
+  .interstitial button {
+    font: inherit; font-size: 12px; font-weight: 600; color: #fff;
+    background: var(--accent); border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer;
+  }
+  .interstitial button:hover { filter: brightness(0.94); }
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; z-index: 50;
+    transform: translateX(-50%) translateY(8px);
+    background: #111827; color: #F9FAFB; font-size: 12px;
+    border: 0.5px solid var(--border); border-radius: 999px; padding: 9px 16px;
+    box-shadow: var(--menu-shadow); opacity: 0; pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+  /* ── 인터랙션 정의 패널 ───────────────────────── */
+  .spec {
+    margin-top: 16px; border: 0.5px dashed var(--border); border-radius: 8px;
+    padding: 14px 16px; background: none;
+  }
+  .spec h2 { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.6px; margin: 0 0 8px; text-transform: uppercase; }
+  .spec ul { margin: 0; padding-left: 16px; color: var(--text-sub); font-size: 11px; display: flex; flex-direction: column; gap: 4px; }
+  .spec li b { color: var(--text); font-weight: 600; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .view-menu.open { animation: pop 0.12s ease-out; }
+    @keyframes pop { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+  }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="simbar">
+    <span class="sim-tag">SIMULATION</span>
+    <span class="sim-steps">① 화면 조작 → ② <b>화면 나가기</b> → ③ 재진입 시 상태 유지 확인 · <b>기본 보기</b> 선택 시 초기화</span>
+    <button class="sim-leave" id="leaveBtn" type="button">화면 나가기 →</button>
+  </div>
+
+  <div id="screen">
+  <div class="topbar">
+    <h1>치료 결과<span class="date">홍길동 · M/58 · 2026-07-13</span></h1>
+    <div class="view-ctl">
+      <button class="view-btn" id="viewBtn" aria-haspopup="true" aria-expanded="false">
+        <span id="viewLabel">기본 보기</span><span class="vcaret">▼</span>
+      </button>
+      <div class="view-menu" id="viewMenu" role="menu">
+        <button data-view="default" class="selected" role="menuitem">기본 보기 <span class="chk">✓</span></button>
+        <button data-view="expand" role="menuitem">모두 펼치기 <span class="chk">✓</span></button>
+        <button data-view="collapse" role="menuitem">모두 접기 <span class="chk">✓</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sections"></div>
+  </div>
+
+  <div class="interstitial" id="interstitial" hidden>
+    <h2>다른 환자 차트 조회 중 — 김영희 (F/45)</h2>
+    <p>치료 결과 화면을 벗어난 상태입니다. 재진입하면 사용자별로 저장된 마지막 펼침 상태가 복원됩니다.<br>
+    저장하지 않은 소견 입력값은 실제 화면과 동일하게 유지되지 않습니다.</p>
+    <button id="reenterBtn" type="button">← 치료 결과 화면 재진입</button>
+  </div>
+
+  <div class="spec">
+    <h2>Interaction Spec</h2>
+    <ul>
+      <li><b>보기 드롭다운(최상단)</b> — 기본 보기: 모든 섹션 카드 열기 + 각 섹션 행을 기본값으로 리셋(기초검사 펼침, 나머지 접힘) · 모두 펼치기: 8개 섹션 카드 모두 열기(행 상태 유지) · 모두 접기: 8개 섹션 카드 모두 닫기(헤더만 표시)</li>
+      <li><b>섹션 헤더 ▼/▶</b> — 해당 섹션 카드 열기/닫기. 테이블 목록 전체가 숨겨지고 헤더만 남음</li>
+      <li><b>타이틀 옆 토글 버튼</b> — 해당 섹션의 행 상세 전체를 펼치기/접기. 레이블은 "펼치기"/"접기"로 표기하며("모두"는 우상단 드롭다운 전용), 행이 하나라도 펼쳐져 있으면 "접기"로 표시. 테이블 목록은 항상 유지</li>
+      <li><b>상태 텍스트</b> — 펼침 기능이 있는 행은 ▶/▼ + 밑줄 텍스트로 표시되며 클릭 시 해당 행의 상세가 열리고 닫힘. 펼침 기능이 없으면(주사·진단의학 단문형/수치형) 색상 텍스트만 표시</li>
+      <li><b>빠른 입력 칩(치료)</b> — 클릭 시 치료 소견에 문구가 추가되고 바이트 카운터가 갱신됨</li>
+      <li><b>기본값 정책</b> — 주사: 펼침 없음 · 진단의학: 단문형/수치형 없음, 장문형 접힘 · 기초검사: 펼쳐짐 · 치료/영상의학/내시경/수술처치/기능검사: 접힘. 저장된 상태가 없는 최초 진입에만 적용되는 초기값</li>
+      <li><b>상태 유지 (TO-BE)</b> — 섹션 카드 열림/닫힘과 행 상세 펼침 상태가 조작 즉시 <b>사용자별</b>로 저장되어, 화면 이탈 후 재진입 시 그대로 복원됨 (환자 단위 아님). 최초 조작 시 1회 안내 토스트 표시. 저장하지 않은 소견 입력값은 유지 대상이 아님</li>
+      <li><b>기본 보기 = 리셋</b> — 저장된 상태와 무관하게 정책 기본값으로 복귀하며, 그 기본값 상태가 새 저장값이 됨. 상태가 낯설어졌을 때의 탈출구 역할</li>
+    </ul>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── 데이터 ─────────────────────────────────── */
+  var ORDER_COLS = ['상태','오더번호','구분','오더명','오더참고사항','소요시간','용량','일투수','일수','수행특이사항','수행자'];
+  var LAB_COLS   = ['상태','오더번호','검사구분','검사명','결과값','참고치','단위','수행자'];
+
+  var CHIPS = ['IR/US/ICT','CRYO','IR/US/TENS','CRYO/Laser','IR/US/Laser','이온치료','IR/Laser/TENS','Paraffin bath/Laser/TENS'];
+
+  var ST = {
+    '결과완료': 'st-blue',
+    '수행완료': 'st-navy',
+    '완료':    'st-navy',
+    '수행중':  'st-gray',
+    '정상':    'st-green',
+    '주의':    'st-amber'
+  };
+
+  function treatDetail(start, end, note) {
+    return { type: 'treat', start: start, end: end, note: note };
+  }
+  function reportDetail(text) { return { type: 'report', text: text }; }
+  function measureDetail(rows) { return { type: 'measure', rows: rows }; }
+
+  var SECTIONS = [
+    {
+      id: 'treat', title: '치료', cols: ORDER_COLS, colHead2: '치료구분',
+      expandable: true, defaultExpanded: false,
+      rows: [
+        { st: '결과완료', cells: ['PT_01','물리치료','ICT (간섭파전류치료)','요추부','15분','1','1','1','—','김민석'],
+          detail: treatDetail('오전 10:21','오전 10:57','요추부 간섭파치료 15분 시행함.\n치료 후 통증 VAS 5 → 3으로 감소, 특이 이상반응 없음.') },
+        { st: '수행중', cells: ['PT_02','물리치료','US (초음파치료)','우측 견관절','10분','1','1','1','—','김민석'],
+          detail: treatDetail('오전 11:05','','') },
+        { st: '수행완료', cells: ['PT_03','물리치료','IR (표층열치료)','경추부','20분','1','1','1','—','이수진'],
+          detail: treatDetail('오전 09:40','오전 10:02','경추부 표층열치료 20분 시행. 국소 발적 없음.') }
+      ]
+    },
+    {
+      id: 'inject', title: '주사', cols: ORDER_COLS, colHead2: '주사구분',
+      expandable: false,
+      rows: [
+        { st: '완료',   cells: ['INJ_01','근육주사','트라마돌 50mg/1mL','좌측 둔부','—','1A','1','1','—','박정현'] },
+        { st: '수행중', cells: ['INJ_02','수액주사','포도당 5% 500mL','정맥로 확보','—','1BT','1','1','—','박정현'] }
+      ]
+    },
+    {
+      id: 'diag', title: '진단의학',
+      subsections: [
+        { label: '단문형결과', cols: LAB_COLS, expandable: false,
+          rows: [
+            { st: '정상', cells: ['LAB_01','요검사','요잠혈 (Occult blood)','음성 (-)','음성','—','자동분석'] },
+            { st: '정상', cells: ['LAB_02','면역혈청','HBsAg','음성 (-)','음성','—','자동분석'] }
+          ] },
+        { label: '수치형결과', cols: LAB_COLS, expandable: false,
+          rows: [
+            { st: '정상', cells: ['LAB_03','일반혈액','혈색소 (Hb)','13.2','13.0 ~ 17.0','g/dL','자동분석'] },
+            { st: '주의', cells: ['LAB_04','일반화학','공복혈당 (FBS)','118','70 ~ 99','mg/dL','자동분석'] },
+            { st: '정상', cells: ['LAB_05','일반화학','AST (GOT)','24','0 ~ 40','U/L','자동분석'] }
+          ] },
+        { label: '장문형결과', cols: LAB_COLS, expandable: true, defaultExpanded: false,
+          rows: [
+            { st: '결과완료', cells: ['LAB_06','병리','조직병리검사 (위 생검)','판독 완료','—','—','정윤아'],
+              detail: reportDetail('<b>[육안 소견]</b>\nReceived in formalin, designated "stomach, antrum biopsy", 0.3 cm gray-white soft tissue.\n\n<b>[현미경 소견]</b>\nChronic gastritis with intestinal metaplasia. H. pylori: negative. No evidence of malignancy.') },
+            { st: '수행중', cells: ['LAB_07','병리','세포병리검사 (객담)','판독 대기','—','—','—'],
+              detail: reportDetail('판독 진행 중 — 결과가 등록되면 표시됩니다.') }
+          ] }
+      ]
+    },
+    {
+      id: 'basic', title: '기초검사', cols: ORDER_COLS, colHead2: '검사구분',
+      expandable: true, defaultExpanded: true,
+      rows: [
+        { st: '결과완료', cells: ['BE_01','생체징후','혈압/맥박 측정','안정 후 측정','5분','—','1','1','—','최은서'],
+          detail: measureDetail([['수축기혈압','120','mmHg','90 ~ 139'],['이완기혈압','80','mmHg','60 ~ 89'],['맥박','72','회/분','60 ~ 100']]) },
+        { st: '결과완료', cells: ['BE_02','신체계측','신장/체중/BMI','—','5분','—','1','1','—','최은서'],
+          detail: measureDetail([['신장','172.4','cm','—'],['체중','74.8','kg','—'],['BMI','25.2','kg/m²','18.5 ~ 22.9']]) }
+      ]
+    },
+    {
+      id: 'xray', title: '영상의학', cols: ORDER_COLS, colHead2: '촬영구분',
+      expandable: true, defaultExpanded: false,
+      rows: [
+        { st: '결과완료', cells: ['XR_01','일반촬영','Chest PA','정면 1매','10분','—','1','1','—','한지훈'],
+          detail: reportDetail('<b>[판독 소견]</b>\nNo active lung lesion. Normal heart size.\nBoth costophrenic angles are clear.\n\n<b>[결론]</b> Unremarkable chest radiograph.') },
+        { st: '수행완료', cells: ['XR_02','일반촬영','L-spine AP/Lat','2매','15분','—','1','1','—','한지훈'],
+          detail: reportDetail('촬영 완료 — 판독 대기 중입니다.') }
+      ]
+    },
+    {
+      id: 'endo', title: '내시경', cols: ORDER_COLS, colHead2: '검사구분',
+      expandable: true, defaultExpanded: false,
+      rows: [
+        { st: '결과완료', cells: ['EN_01','상부내시경','위내시경 (진정)','미다졸람 사용','30분','—','1','1','생검 1건','서민규'],
+          detail: reportDetail('<b>[관찰 소견]</b>\n식도: 특이 소견 없음.\n위: 전정부에 만성 위염 소견, 발적 및 부종 동반. 생검 시행 (antrum ×1).\n십이지장: 특이 소견 없음.\n\n<b>[진단]</b> Chronic superficial gastritis, biopsy taken.') }
+      ]
+    },
+    {
+      id: 'op', title: '수술/처치', cols: ORDER_COLS, colHead2: '처치구분',
+      expandable: true, defaultExpanded: false,
+      rows: [
+        { st: '수행완료', cells: ['OP_01','단순처치','창상 소독 및 드레싱','우측 하퇴부','10분','—','1','1','—','오세라'],
+          detail: reportDetail('<b>[처치 기록]</b>\n우측 하퇴부 열상 부위 생리식염수 세척 후 포비돈 소독.\n멸균 거즈 드레싱 적용. 삼출물 소량, 감염 징후 없음.\n2일 후 드레싱 교체 예정.') }
+      ]
+    },
+    {
+      id: 'func', title: '기능검사', cols: ORDER_COLS, colHead2: '검사구분',
+      expandable: true, defaultExpanded: false,
+      rows: [
+        { st: '결과완료', cells: ['FT_01','순환기','심전도 (EKG, 12유도)','안정 시','10분','—','1','1','—','김도윤'],
+          detail: reportDetail('<b>[판독 결과]</b>\nNormal sinus rhythm, rate 71 bpm.\nNo ST-T change. Normal axis.\n\n<b>[결론]</b> Within normal limits.') },
+        { st: '수행중', cells: ['FT_02','호흡기','폐기능검사 (PFT)','—','20분','—','1','1','—','—'],
+          detail: reportDetail('검사 진행 중 — 결과가 등록되면 표시됩니다.') }
+      ]
+    }
+  ];
+
+  /* ── 유틸 ───────────────────────────────────── */
+  function el(tag, cls, html) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (html != null) n.innerHTML = html;
+    return n;
+  }
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function byteLen(s) {
+    var n = 0;
+    for (var i = 0; i < s.length; i++) n += s.charCodeAt(i) > 127 ? 2 : 1;
+    return n;
+  }
+
+  /* ── 상세 영역 빌더 ─────────────────────────── */
+  function buildDetail(detail, colCount) {
+    var tr = el('tr', 'detail-row');
+    var td = el('td');
+    td.colSpan = colCount;
+    var inner = el('div', 'detail-inner');
+
+    if (detail.type === 'treat') {
+      var time = el('div', 'time-row');
+      time.innerHTML =
+        '시작 <input type="text" value="' + esc(detail.start) + '" aria-label="시작 시간">' +
+        '<span class="time-sep">—</span> 종료 <input type="text" value="' + esc(detail.end) + '" placeholder="미입력" aria-label="종료 시간">';
+      inner.appendChild(time);
+
+      var form = el('div', 'note-form');
+      var chips = el('div', 'chips');
+      CHIPS.forEach(function (c) {
+        var b = el('button', 'chip', esc(c));
+        b.type = 'button';
+        chips.appendChild(b);
+      });
+      var ta = document.createElement('textarea');
+      ta.value = detail.note;
+      ta.setAttribute('aria-label', '치료 소견');
+      var cnt = el('div', 'byte-count');
+      function sync() { cnt.textContent = byteLen(ta.value) + ' / 4000 bytes'; }
+      ta.addEventListener('input', sync);
+      chips.addEventListener('click', function (e) {
+        var chip = e.target.closest('.chip');
+        if (!chip) return;
+        chip.classList.toggle('on');
+        var t = chip.textContent + ' 시행. ';
+        if (chip.classList.contains('on')) {
+          ta.value = (ta.value ? ta.value.replace(/\s*$/, '\n') : '') + t;
+        } else {
+          ta.value = ta.value.replace(t, '').replace(/\n$/, '');
+        }
+        sync();
+      });
+      sync();
+      form.appendChild(chips);
+      form.appendChild(ta);
+      form.appendChild(cnt);
+      inner.appendChild(form);
+    } else if (detail.type === 'report') {
+      inner.appendChild(el('div', 'report-box', detail.text));
+    } else if (detail.type === 'measure') {
+      var box = el('div', 'measure-tbl');
+      var h = '<table><thead><tr><th>항목</th><th>측정값</th><th>단위</th><th>참고치</th></tr></thead><tbody>';
+      detail.rows.forEach(function (r) {
+        h += '<tr><td>' + esc(r[0]) + '</td><td><b>' + esc(r[1]) + '</b></td><td>' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td></tr>';
+      });
+      h += '</tbody></table>';
+      box.innerHTML = h;
+      inner.appendChild(box);
+    }
+    td.appendChild(inner);
+    tr.appendChild(td);
+    return tr;
+  }
+
+  /* ── 테이블 빌더 ────────────────────────────── */
+  function buildTable(cols, colHead2, rows, expandable, group) {
+    var scroll = el('div', 'tbl-scroll');
+    var table = el('table');
+    var thead = el('thead');
+    var hrow = el('tr');
+    hrow.appendChild(el('th', null, '<input type="checkbox" class="chkbox" aria-label="전체 선택">'));
+    cols.forEach(function (c, i) {
+      var label = (c === '구분' && colHead2) ? colHead2 : c;
+      var th = el('th', null, esc(label));
+      if (c === '오더명' || c === '검사명') th.className = 'c-name';
+      hrow.appendChild(th);
+    });
+    thead.appendChild(hrow);
+    table.appendChild(thead);
+
+    var tbody = el('tbody');
+    rows.forEach(function (row) {
+      var tr = el('tr', 'order-row');
+      var tdChk = el('td', null, '<input type="checkbox" class="chkbox" aria-label="선택">');
+      tr.appendChild(tdChk);
+
+      var stCls = ST[row.st] || 'st-gray';
+      var tdSt = el('td');
+      if (expandable) {
+        var btn = el('button', 'status-link st ' + stCls);
+        btn.type = 'button';
+        btn.innerHTML = '<span class="st-caret">▶</span><span class="st-txt">' + esc(row.st) + '</span>';
+        btn.setAttribute('aria-expanded', 'false');
+        tdSt.appendChild(btn);
+      } else {
+        tdSt.appendChild(el('span', 'status-plain st ' + stCls, esc(row.st)));
+      }
+      tr.appendChild(tdSt);
+
+      row.cells.forEach(function (c, i) {
+        var td = el('td', null, esc(c));
+        if (cols[i + 1] === '오더명' || cols[i + 1] === '검사명') td.className = 'c-name';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+
+      if (expandable && row.detail) {
+        var dtr = buildDetail(row.detail, cols.length + 1);
+        tbody.appendChild(dtr);
+        row._tr = tr; row._dtr = dtr; row._btn = tr.querySelector('.status-link');
+        group.push(row);
+      }
+    });
+    table.appendChild(tbody);
+    scroll.appendChild(table);
+    return scroll;
+  }
+
+  /* ── 섹션 빌더 ──────────────────────────────── */
+  var sectionCtls = []; // { root, expRows: [row...], defaults: bool per row, updateToggle }
+
+  function setRow(row, open) {
+    row._dtr.classList.toggle('open', open);
+    row._btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    row._btn.querySelector('.st-caret').textContent = open ? '▼' : '▶';
+  }
+  function isOpen(row) { return row._dtr.classList.contains('open'); }
+
+  function buildSection(spec) {
+    var root = el('section', 'section');
+    root.style.marginBottom = '12px';
+
+    var head = el('div', 'sec-head');
+    var caret = el('button', 'sec-caret');
+    caret.type = 'button';
+    caret.innerHTML = '<span class="c-open">▼</span><span class="c-closed">▶</span>';
+    caret.setAttribute('aria-label', spec.title + ' 섹션 열기/닫기');
+    head.appendChild(caret);
+    head.appendChild(el('span', 'sec-title', esc(spec.title)));
+    head.appendChild(el('span', 'sec-check', '✓'));
+
+    var expRows = [];
+    var hasExpand = spec.expandable || (spec.subsections || []).some(function (s) { return s.expandable; });
+
+    var toggleBtn = null;
+    if (hasExpand) {
+      toggleBtn = el('button', 'row-toggle');
+      toggleBtn.type = 'button';
+      head.appendChild(toggleBtn);
+    }
+
+    var actions = el('div', 'sec-actions');
+    actions.innerHTML =
+      '<button class="btn" type="button">취소</button>' +
+      '<button class="btn" type="button">수행시작</button>' +
+      '<button class="btn filled-blue" type="button">수행완료</button>' +
+      '<button class="btn filled-dark" type="button">결과완료</button>';
+    head.appendChild(actions);
+    root.appendChild(head);
+
+    var body = el('div', 'sec-body');
+    if (spec.subsections) {
+      spec.subsections.forEach(function (sub) {
+        var wrap = el('div', 'subsec');
+        wrap.appendChild(el('div', 'subsec-label', esc(sub.label)));
+        wrap.appendChild(buildTable(sub.cols, null, sub.rows, sub.expandable, expRows));
+        sub.rows.forEach(function (r) { if (r._dtr) r._default = !!sub.defaultExpanded; });
+        body.appendChild(wrap);
+      });
+    } else {
+      body.appendChild(buildTable(spec.cols, spec.colHead2, spec.rows, spec.expandable, expRows));
+      spec.rows.forEach(function (r) { if (r._dtr) r._default = !!spec.defaultExpanded; });
+    }
+    root.appendChild(body);
+
+    function updateToggle() {
+      if (!toggleBtn) return;
+      var any = expRows.some(isOpen);
+      toggleBtn.innerHTML = any
+        ? '<span class="tg-ic">▲</span> 접기'
+        : '<span class="tg-ic">▼</span> 펼치기';
+    }
+
+    caret.addEventListener('click', function () {
+      root.classList.toggle('closed');
+      persist();
+    });
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function () {
+        var any = expRows.some(isOpen);
+        expRows.forEach(function (r) { setRow(r, !any); });
+        updateToggle();
+        firstSaveNotice();
+        persist();
+      });
+    }
+    expRows.forEach(function (r) {
+      r._btn.addEventListener('click', function () {
+        setRow(r, !isOpen(r));
+        updateToggle();
+        firstSaveNotice();
+        persist();
+      });
+      setRow(r, !!r._default);
+    });
+    updateToggle();
+
+    sectionCtls.push({ id: spec.id, root: root, expRows: expRows, updateToggle: updateToggle });
+    return root;
+  }
+
+  var host = document.getElementById('sections');
+  var screenEl = document.getElementById('screen');
+  var interstitial = document.getElementById('interstitial');
+
+  /* ── 사용자별 상태 저장 (시뮬레이션) ─────────── */
+  var STORE_KEY = 'ormchart-proto-user-state';
+  var memoryState = null;
+  var noticeShown = false;
+  var currentMode = 'default';
+
+  function loadState() {
+    if (memoryState) return memoryState;
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+  }
+  function persist() {
+    var st = { mode: currentMode, cards: {}, rows: {} };
+    sectionCtls.forEach(function (s) {
+      st.cards[s.id] = s.root.classList.contains('closed');
+      st.rows[s.id] = s.expRows.map(isOpen);
+    });
+    memoryState = st;
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(st)); } catch (e) {}
+  }
+  function firstSaveNotice() {
+    if (noticeShown) return;
+    noticeShown = true;
+    toast('펼침 상태가 저장되었습니다 — 화면을 나갔다 와도 유지됩니다');
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+
+  /* ── 최상단 보기 드롭다운 ────────────────────── */
+  var viewBtn = document.getElementById('viewBtn');
+  var viewMenu = document.getElementById('viewMenu');
+  var viewLabel = document.getElementById('viewLabel');
+  var LABELS = { default: '기본 보기', expand: '모두 펼치기', collapse: '모두 접기' };
+
+  viewBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = viewMenu.classList.toggle('open');
+    viewBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.addEventListener('click', function () {
+    viewMenu.classList.remove('open');
+    viewBtn.setAttribute('aria-expanded', 'false');
+  });
+
+  function setModeUI(mode) {
+    viewLabel.textContent = LABELS[mode];
+    viewMenu.querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('selected', b.dataset.view === mode);
+    });
+  }
+
+  function applyView(mode) {
+    currentMode = mode;
+    setModeUI(mode);
+    sectionCtls.forEach(function (s) {
+      if (mode === 'collapse') {
+        s.root.classList.add('closed');
+      } else {
+        s.root.classList.remove('closed');
+        if (mode === 'default') {
+          s.expRows.forEach(function (r) { setRow(r, !!r._default); });
+          s.updateToggle();
+        }
+      }
+    });
+    persist();
+    if (mode === 'default') toast('기본 보기로 리셋되었습니다 — 저장된 펼침 상태가 초기화되었습니다');
+  }
+  viewMenu.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-view]');
+    if (!b) return;
+    applyView(b.dataset.view);
+  });
+
+  /* ── 화면 렌더링 + 저장 상태 복원 ────────────── */
+  function renderScreen() {
+    host.innerHTML = '';
+    sectionCtls = [];
+    SECTIONS.forEach(function (s) { host.appendChild(buildSection(s)); });
+    var st = loadState();
+    if (st) {
+      currentMode = st.mode || 'default';
+      sectionCtls.forEach(function (s) {
+        if (st.cards && (s.id in st.cards)) s.root.classList.toggle('closed', !!st.cards[s.id]);
+        if (st.rows && st.rows[s.id]) {
+          st.rows[s.id].forEach(function (open, i) {
+            if (s.expRows[i]) setRow(s.expRows[i], !!open);
+          });
+        }
+        s.updateToggle();
+      });
+    }
+    setModeUI(currentMode);
+  }
+
+  /* ── 화면 이탈 / 재진입 시뮬레이션 ───────────── */
+  document.getElementById('leaveBtn').addEventListener('click', function () {
+    screenEl.hidden = true;
+    interstitial.hidden = false;
+  });
+  document.getElementById('reenterBtn').addEventListener('click', function () {
+    interstitial.hidden = true;
+    screenEl.hidden = false;
+    renderScreen();
+    toast(loadState() ? '재진입 — 마지막 펼침 상태가 복원되었습니다' : '재진입 — 기본 보기로 표시합니다');
+  });
+
+  renderScreen();
+})();
+</script>
+</body>
+</html>
