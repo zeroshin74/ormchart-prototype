@@ -1,0 +1,1518 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ORMCHART CRM · 주소 조건</title>
+<meta name="description" content="법정동코드 기반 발송 지역 조건 컴포넌트 · 인터랙티브 프로토타입" />
+
+<style>
+  :root {
+    /* Brand / accent (CRM spec) */
+    --accent: #2f6fed;
+    --accent-hover: #285cc9;
+    --accent-pressed: #214fae;
+    --accent-subtle: #edf3ff;
+    --accent-stroke: #b9ccf7;
+
+    /* Semantic — include / exclude */
+    --include: #0b8f86;
+    --include-bg: #e7f6f4;
+    --include-stroke: #9fdbd4;
+    --exclude: #d9403f;
+    --exclude-bg: #fdecec;
+    --exclude-stroke: #f2b6b6;
+
+    /* Neutral foreground */
+    --text-1: #2b3140;
+    --text-2: #5c6472;
+    --text-3: #8a91a1;
+    --text-inverse: #ffffff;
+
+    /* Neutral surface (slight cool bias) */
+    --bg-canvas: #eef1f5;
+    --bg-panel: #ffffff;
+    --bg-subtle: #f6f8fb;
+    --bg-muted: #eef1f6;
+    --bg-hover: #f2f5fa;
+    --bg-row-accent: #f8faff;
+
+    /* Stroke */
+    --stroke-1: #dbe0e8;
+    --stroke-2: #e9edf3;
+    --stroke-strong: #c3cad6;
+
+    /* Radius */
+    --r-xs: 4px;
+    --r-sm: 6px;
+    --r-md: 8px;
+    --r-lg: 12px;
+    --r-pill: 999px;
+
+    /* Shadow */
+    --shadow-pop: 0 12px 30px rgba(28, 40, 68, 0.16), 0 2px 6px rgba(28, 40, 68, 0.08);
+    --shadow-modal: 0 28px 80px rgba(22, 30, 50, 0.32);
+    --focus-ring: 0 0 0 3px rgba(47, 111, 237, 0.28);
+
+    /* Type */
+    --font: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+      "Malgun Gothic", "Segoe UI", Roboto, sans-serif;
+
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --accent: #6f9bf5;
+      --accent-hover: #85acf7;
+      --accent-pressed: #5c8bef;
+      --accent-subtle: #1b2a45;
+      --accent-stroke: #33507f;
+
+      --include: #58cabd;
+      --include-bg: #123330;
+      --include-stroke: #245c56;
+      --exclude: #f08484;
+      --exclude-bg: #3a1e1e;
+      --exclude-stroke: #6b3232;
+
+      --text-1: #e7eaf0;
+      --text-2: #a7afbe;
+      --text-3: #737c8c;
+      --text-inverse: #0f1420;
+
+      --bg-canvas: #0f131b;
+      --bg-panel: #171c26;
+      --bg-subtle: #1c222e;
+      --bg-muted: #212836;
+      --bg-hover: #212838;
+      --bg-row-accent: #1a2130;
+
+      --stroke-1: #2c3340;
+      --stroke-2: #232a36;
+      --stroke-strong: #3a4252;
+
+      --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4);
+      --shadow-modal: 0 30px 90px rgba(0, 0, 0, 0.6);
+      --focus-ring: 0 0 0 3px rgba(111, 155, 245, 0.35);
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --accent: #2f6fed; --accent-hover: #285cc9; --accent-pressed: #214fae;
+    --accent-subtle: #edf3ff; --accent-stroke: #b9ccf7;
+    --include: #0b8f86; --include-bg: #e7f6f4; --include-stroke: #9fdbd4;
+    --exclude: #d9403f; --exclude-bg: #fdecec; --exclude-stroke: #f2b6b6;
+    --text-1: #2b3140; --text-2: #5c6472; --text-3: #8a91a1; --text-inverse: #fff;
+    --bg-canvas: #eef1f5; --bg-panel: #fff; --bg-subtle: #f6f8fb; --bg-muted: #eef1f6;
+    --bg-hover: #f2f5fa; --bg-row-accent: #f8faff;
+    --stroke-1: #dbe0e8; --stroke-2: #e9edf3; --stroke-strong: #c3cad6;
+    --shadow-pop: 0 12px 30px rgba(28,40,68,.16), 0 2px 6px rgba(28,40,68,.08);
+    --shadow-modal: 0 28px 80px rgba(22,30,50,.32);
+    --focus-ring: 0 0 0 3px rgba(47,111,237,.28);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --accent: #6f9bf5; --accent-hover: #85acf7; --accent-pressed: #5c8bef;
+    --accent-subtle: #1b2a45; --accent-stroke: #33507f;
+    --include: #58cabd; --include-bg: #123330; --include-stroke: #245c56;
+    --exclude: #f08484; --exclude-bg: #3a1e1e; --exclude-stroke: #6b3232;
+    --text-1: #e7eaf0; --text-2: #a7afbe; --text-3: #737c8c; --text-inverse: #0f1420;
+    --bg-canvas: #0f131b; --bg-panel: #171c26; --bg-subtle: #1c222e; --bg-muted: #212836;
+    --bg-hover: #212838; --bg-row-accent: #1a2130;
+    --stroke-1: #2c3340; --stroke-2: #232a36; --stroke-strong: #3a4252;
+    --shadow-pop: 0 12px 32px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.4);
+    --shadow-modal: 0 30px 90px rgba(0,0,0,.6);
+    --focus-ring: 0 0 0 3px rgba(111,155,245,.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body.__page {
+    margin: 0;
+    font-family: var(--font);
+    color: var(--text-1);
+    background: var(--bg-canvas);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ---- card ---- */
+  .card {
+    background: var(--bg-panel);
+    border: 1px solid var(--stroke-1);
+    border-radius: var(--r-lg);
+    box-shadow: 0 1px 2px rgba(30, 40, 60, 0.04);
+    /* no overflow:hidden — the address popover must extend past the card */
+  }
+  .card-head {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--stroke-2);
+    background: var(--bg-subtle);
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+  }
+  .card-head strong { font-size: 16px; font-weight: 800; }
+  .card-head span { font-size: 13px; color: var(--text-3); }
+
+  .rows { padding: 4px 22px; }
+  .row {
+    display: grid;
+    grid-template-columns: 84px 1fr;
+    align-items: start;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--stroke-2);
+  }
+  .row:last-child { border-bottom: 0; }
+  .row > .label { font-weight: 700; color: var(--text-1); padding-top: 5px; }
+  .row.addr {
+    background: var(--bg-row-accent); margin: 0 -22px; padding: 18px 22px;
+    border-radius: 0 0 var(--r-lg) var(--r-lg); /* card no longer has a footer strip */
+  }
+
+  /* radios / static controls */
+  .radios { display: flex; gap: 22px; align-items: center; padding-top: 4px; }
+  .radio { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+  .radio input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .radio .dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1.5px solid var(--stroke-strong); background: var(--bg-panel);
+    display: inline-grid; place-items: center; transition: border-color .12s;
+  }
+  .radio .dot::after {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); transform: scale(0); transition: transform .12s;
+  }
+  .radio input:checked + .dot { border-color: var(--accent); }
+  .radio input:checked + .dot::after { transform: scale(1); }
+  .radio input:focus-visible + .dot { box-shadow: var(--focus-ring); }
+
+  .age-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 2px; }
+  .pseudo-select, .pseudo-input, .pseudo-not {
+    height: 34px; display: inline-flex; align-items: center; gap: 8px;
+    padding: 0 11px; border: 1px solid var(--stroke-strong);
+    border-radius: var(--r-sm); background: var(--bg-panel);
+    font-size: 14px; color: var(--text-2);
+  }
+  .pseudo-select::after { content: "▾"; color: var(--text-3); font-size: 11px; }
+  .pseudo-input { width: 66px; justify-content: center; color: var(--text-1); font-variant-numeric: tabular-nums; }
+  .pseudo-not { color: var(--text-3); font-weight: 700; font-size: 12px; letter-spacing: .04em; }
+  .age-dash { color: var(--text-3); }
+  .age-unit { color: var(--text-2); }
+
+  /* ---- address control ---- */
+  .addr-control { display: flex; flex-direction: column; gap: 10px; }
+  .addr-top { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+
+  .trigger-wrap { position: relative; flex: 1 1 380px; min-width: 300px; }
+  /* combobox trigger: 누른 자리에서 바로 타이핑 */
+  .trigger {
+    width: 100%; height: 42px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 6px 0 14px; border: 1px solid var(--stroke-strong);
+    border-radius: var(--r-sm); background: var(--bg-panel);
+    cursor: text; transition: border-color .12s, box-shadow .12s;
+  }
+  .trigger:hover { border-color: var(--accent-stroke); }
+  .trigger .pin { color: var(--accent); flex: none; }
+  .trigger input {
+    flex: 1; min-width: 0; border: 0; outline: none; background: transparent;
+    font-family: inherit; font-size: 14px; color: var(--text-1); height: 100%;
+  }
+  .trigger input::placeholder { color: var(--text-2); font-weight: 600; }
+  .trigger .caret-btn2 {
+    flex: none; width: 30px; height: 30px; border: 0; background: transparent;
+    display: inline-grid; place-items: center; cursor: pointer;
+    color: var(--text-3); border-radius: var(--r-xs); font-size: 11px;
+  }
+  .trigger .caret-btn2:hover { background: var(--bg-hover); color: var(--text-1); }
+  .trigger .caret-btn2 span { transition: transform .18s; display: inline-block; }
+  .trigger.open { border-color: var(--accent); box-shadow: var(--focus-ring); }
+  .trigger.open .caret-btn2 span { transform: rotate(180deg); }
+
+  .map-open {
+    height: 42px; display: inline-flex; align-items: center; gap: 8px;
+    padding: 0 16px; border: 1px solid var(--stroke-strong);
+    border-radius: var(--r-sm); background: var(--bg-panel);
+    font-size: 14px; font-weight: 600; color: var(--text-1);
+    font-family: inherit; cursor: pointer; white-space: nowrap;
+  }
+  .map-open:hover { background: var(--bg-hover); border-color: var(--accent-stroke); }
+  .map-open svg { color: var(--accent); }
+  .map-open[disabled] { opacity: .45; cursor: default; }
+  .map-open[disabled]:hover { background: var(--bg-panel); border-color: var(--stroke-strong); }
+
+  /* ---- popover panel ---- */
+  .panel {
+    position: absolute; top: calc(100% + 8px); left: 0;
+    width: 100%; min-width: 360px;
+    background: var(--bg-panel); border: 1px solid var(--stroke-1);
+    border-radius: var(--r-md); box-shadow: var(--shadow-pop);
+    z-index: 40; overflow: hidden;
+    animation: pop .14s ease;
+  }
+  @keyframes pop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .panel, .modal-card { animation: none; } }
+
+  /* breadcrumb drill nav */
+  .crumbs {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 12px; border-bottom: 1px solid var(--stroke-2);
+    font-size: 12.5px; color: var(--text-2); background: var(--bg-subtle);
+  }
+  .crumb-back {
+    width: 24px; height: 24px; flex: none; border: 1px solid var(--stroke-strong);
+    border-radius: var(--r-xs); background: var(--bg-panel); cursor: pointer;
+    display: inline-grid; place-items: center; color: var(--text-2); padding: 0;
+  }
+  .crumb-back:hover { background: var(--bg-hover); color: var(--text-1); }
+  .crumb-back[disabled] { opacity: .35; cursor: default; }
+  .crumb-path { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-width: 0; }
+  .crumb-path .seg { font-weight: 700; color: var(--text-1); }
+  .crumb-path .seg.link { color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; background: none; border: 0; padding: 0; font: inherit; font-weight: 700; }
+  .crumb-path .sep { color: var(--text-3); }
+
+  .tree { max-height: 320px; overflow-y: auto; padding: 6px 6px 8px; }
+  .tree-empty { padding: 22px 12px; text-align: center; color: var(--text-3); font-size: 13px; }
+  .tree-note { padding: 6px 10px 2px; font-size: 11.5px; color: var(--text-3); }
+
+  .lv-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 8px; border-radius: var(--r-sm); cursor: pointer;
+    user-select: none;
+  }
+  .lv-row:hover { background: var(--bg-hover); }
+  .lv-row .node-name { flex: 1; min-width: 0; font-size: 14px; color: var(--text-1); }
+  .lv-row .node-name .strong { font-weight: 700; }
+  .lv-row .node-sub { font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .drill-btn {
+    width: 24px; height: 24px; flex: none; border: 0; background: transparent;
+    display: inline-grid; place-items: center; cursor: pointer; color: var(--text-3);
+    border-radius: var(--r-xs); padding: 0;
+  }
+  .drill-btn:hover { background: var(--bg-muted); color: var(--accent); }
+
+  /* search result rows */
+  .result-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 8px; border-radius: var(--r-sm); cursor: pointer; user-select: none;
+  }
+  .result-row:hover { background: var(--bg-hover); }
+  .result-row .path { flex: 1; min-width: 0; font-size: 13.5px; color: var(--text-2); }
+  .result-row .path b { color: var(--text-1); font-weight: 700; }
+  .result-row .lv-tag {
+    font-size: 10.5px; font-weight: 700; color: var(--text-3);
+    border: 1px solid var(--stroke-1); border-radius: var(--r-xs); padding: 1px 5px; white-space: nowrap;
+  }
+
+  /* checkbox */
+  .cb {
+    width: 18px; height: 18px; flex: none; border-radius: var(--r-xs);
+    border: 1.5px solid var(--stroke-strong); background: var(--bg-panel);
+    display: inline-grid; place-items: center; color: var(--text-inverse);
+  }
+  .cb svg { opacity: 0; transform: scale(.6); transition: .1s; }
+  .cb.all { background: var(--accent); border-color: var(--accent); }
+  .cb.all svg.check { opacity: 1; transform: none; }
+  .cb.some { background: var(--accent); border-color: var(--accent); }
+  .cb.some svg.dash { opacity: 1; transform: none; }
+
+  /* include/exclude toggle */
+  .mode-row {
+    display: none; align-items: center; gap: 10px;
+    padding: 10px 12px; border-top: 1px solid var(--stroke-2); background: var(--bg-subtle);
+  }
+  .mode-row.show { display: flex; }
+  .mode-row .lbl { font-size: 12.5px; color: var(--text-2); font-weight: 600; }
+  .toggle-group { display: inline-flex; border: 1px solid var(--stroke-strong); border-radius: var(--r-sm); overflow: hidden; }
+  .toggle-group button {
+    height: 30px; padding: 0 16px; border: 0; background: var(--bg-panel);
+    font-size: 12px; font-weight: 700; font-family: inherit; color: var(--text-2); cursor: pointer;
+  }
+  .toggle-group button + button { border-left: 1px solid var(--stroke-1); }
+  .toggle-group button[aria-pressed="true"][data-mode="include"] { background: var(--include); color: #fff; }
+  .toggle-group button[aria-pressed="true"][data-mode="exclude"] { background: var(--exclude); color: #fff; }
+
+  /* footer */
+  .panel-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 11px 12px; border-top: 1px solid var(--stroke-2); background: var(--bg-panel);
+  }
+  .foot-count { font-size: 13px; color: var(--text-2); font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+  .foot-count b { color: var(--accent); }
+  .foot-clear {
+    background: none; border: 0; padding: 0; font: inherit; font-size: 12px;
+    color: var(--text-3); cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+  }
+  .foot-clear:hover { color: var(--exclude); }
+  .foot-actions { display: flex; gap: 8px; }
+  .btn {
+    height: 34px; padding: 0 16px; border-radius: var(--r-sm);
+    font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+    border: 1px solid var(--stroke-strong); background: var(--bg-panel); color: var(--text-1);
+  }
+  .btn:hover { background: var(--bg-hover); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hover); }
+
+  /* ---- chips ---- */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .chips:empty { display: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; height: 30px;
+    padding: 0 8px 0 11px; border-radius: var(--r-pill);
+    font-size: 13px; font-weight: 600; border: 1px solid transparent;
+  }
+  .chip .x {
+    width: 18px; height: 18px; border: 0; background: transparent; cursor: pointer;
+    display: inline-grid; place-items: center; border-radius: 50%; color: inherit; opacity: .7; padding: 0;
+  }
+  .chip .x:hover { opacity: 1; background: rgba(0,0,0,.08); }
+  .chip.include { background: var(--include-bg); border-color: var(--include-stroke); color: var(--include); }
+  .chip.exclude {
+    background: var(--exclude-bg); border-color: var(--exclude-stroke); color: var(--exclude);
+    border-width: 1.5px;
+  }
+  .chip.exclude .name { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+  .chip .sign { font-weight: 800; }
+
+  /* ---- helper ---- */
+  .helper { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); flex-wrap: wrap; }
+  .helper:empty { display: none; }
+  /* ---- map modal (view-only) ---- */
+  .backdrop {
+    position: fixed; inset: 0; background: rgba(20, 26, 40, 0.55);
+    display: none; align-items: center; justify-content: center; z-index: 100; padding: 24px;
+  }
+  .backdrop.show { display: flex; }
+  .modal-card {
+    width: min(940px, 100%); max-height: calc(100vh - 48px);
+    background: var(--bg-panel); border-radius: var(--r-lg);
+    box-shadow: var(--shadow-modal); overflow: hidden;
+    display: flex; flex-direction: column; animation: pop .16s ease;
+  }
+  .modal-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px; border-bottom: 1px solid var(--stroke-2);
+  }
+  .modal-head h2 { font-size: 15px; font-weight: 800; margin: 0; }
+  .modal-head .count-note { font-size: 13px; color: var(--text-3); margin-left: auto; }
+  .modal-head .x-close {
+    width: 32px; height: 32px; border: 0; background: transparent; cursor: pointer;
+    border-radius: var(--r-sm); color: var(--text-2); display: grid; place-items: center;
+  }
+  .modal-head .x-close:hover { background: var(--bg-hover); }
+
+  .modal-body { display: grid; grid-template-columns: 1.4fr 1fr; min-height: 0; flex: 1; }
+  .modal-body.no-side { grid-template-columns: 1fr; }
+  .modal-body.no-side .map-side { display: none; }
+  @media (max-width: 760px) { .modal-body { grid-template-columns: 1fr; } .map-stage { min-height: 300px; } }
+
+  .map-stage {
+    position: relative; background:
+      linear-gradient(0deg, var(--bg-muted), var(--bg-muted));
+    border-right: 1px solid var(--stroke-2); overflow: hidden; min-height: 400px;
+  }
+  .map-grid { position: absolute; inset: 0; }
+  .map-road { position: absolute; background: var(--bg-panel); opacity: .9; }
+  .map-road.h { height: 12px; left: 0; right: 0; }
+  .map-road.v { width: 12px; top: 0; bottom: 0; }
+  .road-label { position: absolute; font-size: 10px; color: var(--text-3); }
+
+  /* selection-focused schematic: one bounded zone per 시/군/구, flags per 읍/면/동 */
+  .map-groups {
+    position: absolute; inset: 0; z-index: 2;
+    padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    overflow-y: auto; align-items: flex-start;
+  }
+  .map-group {
+    border: 1.5px dashed var(--stroke-strong); border-radius: var(--r-md);
+    padding: 10px 12px 12px; max-width: 100%;
+  }
+  .map-group.has-sel { border-color: var(--accent-stroke); }
+  .mg-label {
+    display: inline-block; font-size: 11px; font-weight: 800; color: var(--text-2);
+    background: var(--bg-panel); border: 1px solid var(--stroke-1);
+    border-radius: var(--r-pill); padding: 2px 10px; margin-bottom: 9px;
+  }
+  .mg-flags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .flag {
+    display: inline-flex; align-items: center; padding: 5px 11px;
+    border-radius: var(--r-sm); font-size: 12px; font-weight: 700; white-space: nowrap;
+    border: 1.5px solid var(--stroke-strong); background: var(--bg-panel); color: var(--text-2);
+    box-shadow: 0 2px 6px rgba(20,30,50,.12);
+  }
+  .flag.send { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .flag.excl { background: var(--exclude); border-color: var(--exclude); color: #fff; text-decoration: line-through; }
+
+  .map-legend {
+    position: absolute; right: 12px; bottom: 12px; z-index: 3;
+    background: var(--bg-panel); border: 1px solid var(--stroke-1); border-radius: var(--r-sm);
+    padding: 9px 11px; box-shadow: 0 4px 12px rgba(20,30,50,.12); font-size: 11.5px;
+  }
+  .map-legend .lg-title { font-weight: 800; margin-bottom: 6px; color: var(--text-1); }
+  .map-legend .lg-item { display: flex; align-items: center; gap: 7px; margin: 3px 0; color: var(--text-2); }
+  .map-legend .sw { width: 13px; height: 13px; border-radius: 3px; flex: none; }
+  .sw.send { background: var(--accent); }
+  .sw.excl { background: var(--exclude); }
+  .sw.none { background: var(--bg-panel); border: 1.5px solid var(--stroke-strong); }
+
+  .map-side { display: flex; flex-direction: column; min-height: 0; }
+  .map-side h3 {
+    margin: 0; padding: 14px 16px 8px; font-size: 13px; font-weight: 800; color: var(--text-1);
+  }
+  .sel-list { flex: 1; overflow-y: auto; padding: 0 10px 12px; }
+  .sel-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 8px; border-radius: var(--r-sm); font-size: 13px; color: var(--text-2);
+  }
+  .sel-item + .sel-item { border-top: 1px solid var(--stroke-2); }
+  .sel-item .sw { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .sel-item .pathtxt { flex: 1; min-width: 0; }
+  .sel-item .pathtxt b { color: var(--text-1); }
+  .sel-item .lv-tag {
+    font-size: 10.5px; font-weight: 700; color: var(--text-3);
+    border: 1px solid var(--stroke-1); border-radius: var(--r-xs); padding: 1px 5px; white-space: nowrap;
+  }
+
+  .modal-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 13px 20px; border-top: 1px solid var(--stroke-2); background: var(--bg-subtle);
+  }
+  .modal-foot .fc { font-size: 13px; color: var(--text-2); font-weight: 600; }
+  .modal-foot .fc b { color: var(--accent); }
+
+  /* ---- view tabs (우상단) ---- */
+  .tabs-row { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+  .tabs {
+    display: inline-flex; gap: 2px; padding: 3px;
+    background: var(--bg-muted); border: 1px solid var(--stroke-1); border-radius: var(--r-md);
+  }
+  .tab-btn {
+    height: 32px; padding: 0 16px; border: 0; border-radius: var(--r-sm);
+    background: transparent; font-family: inherit; font-size: 13px; font-weight: 700;
+    color: var(--text-2); cursor: pointer;
+  }
+  .tab-btn:hover { color: var(--text-1); }
+  .tab-btn[aria-selected="true"] {
+    background: var(--bg-panel); color: var(--accent);
+    box-shadow: 0 1px 2px rgba(30, 40, 60, 0.1);
+  }
+
+  /* ---- 화면설계서 ---- */
+  .spec { display: flex; flex-direction: column; gap: 18px; }
+  [hidden] { display: none !important; } /* hidden 속성이 .spec의 display:flex에 지지 않도록 */
+  .spec-sec {
+    background: var(--bg-panel); border: 1px solid var(--stroke-1);
+    border-radius: var(--r-lg); padding: 20px 22px;
+  }
+  .spec-sec > h2 {
+    margin: 0 0 4px; font-size: 15px; font-weight: 800; color: var(--text-1);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .spec-sec > h2 .sec-no {
+    font-size: 11px; font-weight: 800; color: var(--accent);
+    background: var(--accent-subtle); border: 1px solid var(--accent-stroke);
+    border-radius: var(--r-xs); padding: 1px 7px;
+  }
+  .spec-sec > p.lede { margin: 0 0 14px; font-size: 13px; color: var(--text-2); }
+  .spec-sec h3 { margin: 18px 0 8px; font-size: 13px; font-weight: 800; color: var(--text-1); }
+
+  .spec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .spec-table th {
+    text-align: left; padding: 8px 10px; background: var(--bg-subtle);
+    border: 1px solid var(--stroke-2); color: var(--text-2); font-weight: 700; white-space: nowrap;
+  }
+  .spec-table td { padding: 8px 10px; border: 1px solid var(--stroke-2); color: var(--text-1); vertical-align: top; line-height: 1.55; }
+  .spec-table td .muted { color: var(--text-3); }
+  .spec-table code, .spec-sec code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px;
+    background: var(--bg-muted); border: 1px solid var(--stroke-2);
+    border-radius: var(--r-xs); padding: 1px 5px; color: var(--text-1); white-space: nowrap;
+  }
+  .tbl-scroll { overflow-x: auto; }
+
+  .n {
+    display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none;
+    border-radius: 50%; background: var(--accent); color: #fff;
+    font-size: 11px; font-weight: 800; font-style: normal;
+  }
+  .kbd {
+    display: inline-block; font-family: inherit; font-size: 11.5px; font-weight: 700;
+    border: 1px solid var(--stroke-strong); border-bottom-width: 2px; border-radius: var(--r-xs);
+    padding: 1px 7px; background: var(--bg-panel); color: var(--text-1); white-space: nowrap;
+  }
+  .quote {
+    margin: 6px 0 0; padding: 8px 12px; border-left: 3px solid var(--accent-stroke);
+    background: var(--bg-subtle); border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    font-size: 12px; color: var(--text-2);
+  }
+  .quote b { color: var(--text-1); }
+
+  /* anatomy wireframe */
+  .anat {
+    border: 1px dashed var(--stroke-strong); border-radius: var(--r-md);
+    padding: 16px; background: var(--bg-subtle); font-size: 12px; color: var(--text-2);
+    display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;
+  }
+  .a-line { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .a-box {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1.5px solid var(--stroke-strong); border-radius: var(--r-sm);
+    background: var(--bg-panel); padding: 7px 11px; font-weight: 600; color: var(--text-1);
+  }
+  .a-box.grow { flex: 1 1 220px; justify-content: space-between; }
+  .a-box.dim { border-style: dashed; color: var(--text-3); font-weight: 500; }
+  .a-panel {
+    border: 1.5px solid var(--accent-stroke); border-radius: var(--r-md);
+    background: var(--bg-panel); padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 7px; max-width: 560px;
+  }
+  .a-panel .a-inner {
+    border: 1px dashed var(--stroke-strong); border-radius: var(--r-sm);
+    padding: 6px 10px; color: var(--text-2); display: flex; align-items: center; gap: 6px; font-size: 12px;
+  }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .trigger:focus-visible, .btn:focus-visible { outline: none; }
+</style>
+
+<div class="wrap">
+  <div class="tabs-row">
+    <div class="tabs" role="tablist" aria-label="보기 전환">
+      <button class="tab-btn" id="tabProto" role="tab" aria-selected="true" aria-controls="viewProto" type="button">프로토타입</button>
+      <button class="tab-btn" id="tabSpec" role="tab" aria-selected="false" aria-controls="viewSpec" type="button">화면설계서</button>
+    </div>
+  </div>
+
+  <div id="viewProto" role="tabpanel" aria-labelledby="tabProto">
+  <section class="card" aria-label="환자정보 발송 조건">
+    <div class="card-head">
+      <strong>환자정보</strong>
+      <span>발송 대상 조건을 설정하세요</span>
+    </div>
+
+    <div class="rows">
+      <div class="row">
+        <div class="label">성별</div>
+        <div class="radios" role="radiogroup" aria-label="성별">
+          <label class="radio"><input type="radio" name="sex" checked><span class="dot"></span>전체</label>
+          <label class="radio"><input type="radio" name="sex"><span class="dot"></span>남자</label>
+          <label class="radio"><input type="radio" name="sex"><span class="dot"></span>여자</label>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="label">연령 기준</div>
+        <div class="age-controls">
+          <span class="pseudo-select">만 나이</span>
+          <span class="pseudo-not">NOT</span>
+          <span class="pseudo-select">연령</span>
+          <span class="pseudo-input">9</span>
+          <span class="age-dash">–</span>
+          <span class="pseudo-input">120</span>
+          <span class="age-unit">세</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="label">출생연도</div>
+        <div class="radios" role="radiogroup" aria-label="출생연도">
+          <label class="radio"><input type="radio" name="birth" checked><span class="dot"></span>전체</label>
+          <label class="radio"><input type="radio" name="birth"><span class="dot"></span>짝수</label>
+          <label class="radio"><input type="radio" name="birth"><span class="dot"></span>홀수</label>
+        </div>
+      </div>
+
+      <div class="row addr">
+        <div class="label">주소</div>
+        <div class="addr-control">
+          <div class="addr-top">
+            <div class="trigger-wrap">
+              <div class="trigger" id="trigger">
+                <span class="pin" aria-hidden="true">📍</span>
+                <input type="text" id="triggerInput"
+                  placeholder="발송 지역 선택 — 지역명 검색해서 추가 (예: 강남구, 역삼동)"
+                  role="combobox" aria-expanded="false" aria-autocomplete="list"
+                  aria-label="발송 지역 선택" autocomplete="off">
+                <button class="caret-btn2" id="caretBtn" type="button" aria-label="지역 목록 열기" tabindex="-1"><span>▾</span></button>
+              </div>
+              <!-- popover injected here -->
+            </div>
+            <button class="map-open" id="mapOpen" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+              지도로 확인
+            </button>
+          </div>
+          <div class="chips" id="chips" aria-live="polite"></div>
+          <div class="helper" id="helper"></div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+  </div><!-- /viewProto -->
+
+  <div id="viewSpec" class="spec" role="tabpanel" aria-labelledby="tabSpec" hidden>
+
+    <section class="spec-sec">
+      <h2><span class="sec-no">00</span>문서 정보</h2>
+      <div class="tbl-scroll"><table class="spec-table">
+        <tr><th style="width:120px">화면명</th><td>CRM 조건 지정 발송 › 환자정보 › <b>주소 조건</b></td></tr>
+        <tr><th>목적</th><td>발송 대상을 지역(법정동코드) 기준으로 좁힌다. 전국 약 3,500개 읍·면·동을 <b>검색해서 추가</b> 또는 <b>드릴다운</b>으로 다중 선택하고, 포함/제외를 지정한다.</td></tr>
+        <tr><th>데이터 기준</th><td>행정표준코드관리시스템 법정동코드 10자리 = 시·도 2 + 시·군·구 3 + 읍·면·동 3 + 리 2 <span class="muted">(리 단위는 스코프 아웃)</span></td></tr>
+        <tr><th>핵심 제약</th><td>조건 설정 중 <b>지역별·전체 인원수를 실시간 표시하지 않는다</b>. 대상 인원은 대상자 확인·발송 단계에서 조회된다. <span class="muted">(근거: 08 결정 로그 D1)</span></td></tr>
+      </table></div>
+    </section>
+
+    <section class="spec-sec">
+      <h2><span class="sec-no">01</span>화면 구조 · 구성요소 정의</h2>
+      <p class="lede">주소 행의 해부도. 번호는 아래 구성요소 표와 대응합니다.</p>
+      <div class="anat">
+        <div class="a-line">
+          <span class="a-box dim">주소 <i class="n">1</i></span>
+          <span class="a-box grow"><span>📍 발송 지역 선택 — 지역명 검색해서 추가 <i class="n">2</i></span><span>▾ <i class="n">3</i></span></span>
+          <span class="a-box">🗺 지도로 확인 <i class="n">4</i></span>
+        </div>
+        <div class="a-line">
+          <span class="a-box dim">칩 영역 — 역삼동 ✕ · 성남시 분당구 전체 ✕ <i class="n">6</i></span>
+          <span class="a-box dim">범위 요약 — "…에 발송" <i class="n">7</i></span>
+        </div>
+        <div class="a-panel">
+          <div class="a-inner">‹ 전국 › 서울특별시 › 강남구 (브레드크럼) <i class="n">5a</i></div>
+          <div class="a-inner">☐ 역삼동 · ☐ 개포동 · ⊟ 강남구 … (목록: 드릴/검색결과) <i class="n">5b</i></div>
+          <div class="a-inner">선택 지역을 [포함|제외] <i class="n">5c</i></div>
+          <div class="a-inner">선택 N곳 · 모두 지우기 | [취소] [적용] <i class="n">5d</i></div>
+        </div>
+        <div class="a-line"><span class="a-box dim">지도 모달 (확인 전용) <i class="n">8</i></span></div>
+      </div>
+      <div class="tbl-scroll"><table class="spec-table">
+        <tr><th style="width:36px">No</th><th style="width:170px">구성요소</th><th style="width:150px">노출 조건</th><th>동작 정의</th></tr>
+        <tr><td><i class="n">1</i></td><td>행 라벨 "주소"</td><td>항상</td><td>라벨 84px 고정. 성별·연령 기준·출생연도 행과 동일 그리드.</td></tr>
+        <tr><td><i class="n">2</i></td><td>콤보박스 트리거 (입력형)</td><td>항상</td><td>placeholder <code>발송 지역 선택 — 지역명 검색해서 추가 (예: 강남구, 역삼동)</code>. 클릭·포커스·타이핑 즉시 패널 <i class="n">5</i> 열림 — <b>누른 자리에서 바로 검색</b>. 닫힐 때 검색어 자동 초기화(선택 결과는 칩이 표현). <code>role="combobox"</code> <code>aria-expanded</code> <code>aria-autocomplete="list"</code></td></tr>
+        <tr><td><i class="n">3</i></td><td>캐럿 토글 ▾</td><td>항상</td><td>패널 열기/닫기 토글. 입력창 클릭은 열기만 하고 닫지 않으므로(텍스트 편집과 충돌) 마우스 닫기는 캐럿·바깥 클릭·취소·적용으로.</td></tr>
+        <tr><td><i class="n">4</i></td><td>지도로 확인 버튼</td><td>항상 <span class="muted">(적용 선택 0곳이면 disabled)</span></td><td>적용된(committed) 선택의 범위를 지도 모달 <i class="n">8</i>로 확인. 확인할 범위가 없으면 비활성 + title 안내.</td></tr>
+        <tr><td><i class="n">5a</i></td><td>브레드크럼</td><td>패널 열림 + 검색어 없음</td><td><code>‹</code> 상위 복귀 · <code>전국 › 시/도 › 시/군/구</code> 세그먼트 클릭으로 해당 깊이 점프. 검색 중에는 숨김.</td></tr>
+        <tr><td><i class="n">5b</i></td><td>지역 목록</td><td>패널 열림</td><td><b>드릴 모드</b>(검색어 없음): 현재 깊이의 하위 목록. 체크박스=그 지역 전체 선택, 행/›=하위 진입. <b>검색 모드</b>: 전체 경로 대상 토큰 매칭 결과를 평면 나열(경로+단위 태그), 행 클릭=선택 토글. tri-state: 전체 ☑ / 부분 ⊟(<code>aria-checked="mixed"</code>) / 없음 ☐. 항목을 선택해도 패널은 닫히지 않는다.</td></tr>
+        <tr><td><i class="n">5c</i></td><td>포함/제외 토글</td><td>초안 선택 ≥ 1곳</td><td>포함=선택 지역에 발송, 제외=선택 지역만 빼고 발송. 선택이 모두 해제되면 포함으로 리셋 후 숨김.</td></tr>
+        <tr><td><i class="n">5d</i></td><td>패널 푸터</td><td>패널 열림</td><td>좌: <code>선택 N곳</code>(축약 단위 기준) + 모두 지우기. 우: 취소(초안 폐기)/적용(확정). <b>적용을 눌러야만</b> 칩·요약에 반영.</td></tr>
+        <tr><td><i class="n">6</i></td><td>칩 영역</td><td>적용 선택 ≥ 1곳</td><td>선택 단위별 칩. 상위 단위는 <code>강남구 전체</code>로 축약(하위 전부 선택 시 자동 승격). 제외 모드: 빨강 + 취소선 + −. ✕=개별 제거(즉시 반영). hover 시 전체 경로+법정동코드 툴팁. <b>인원수 미표기.</b></td></tr>
+        <tr><td><i class="n">7</i></td><td>범위 요약</td><td>적용 선택 ≥ 1곳</td><td>자연어 한 줄: <code>서초구 전체 · 강남구 2개 동 제외하고 발송</code>. 같은 구의 동들은 <code>N개 동</code>으로 묶고, 4구 초과 시 <code>외 N곳</code> 축약.</td></tr>
+        <tr><td><i class="n">8</i></td><td>지도 모달</td><td>버튼 <i class="n">4</i> 클릭</td><td><b>확인 전용 — 지도에서 선택 불가.</b> 선택과 관련된 시/군/구만 점선 구역으로 자동 구성(팬/줌 불필요). 포함: 선택 동=파랑, 같은 구 나머지=중립. 제외: 선택 동=빨강, 같은 구 나머지=파랑(실제 발송 대상). 우측: 적용 선택의 전체 경로 목록(지도 표기 밖 지역 보완). 닫기: 버튼·✕·Esc·바깥 클릭.</td></tr>
+      </table></div>
+    </section>
+
+    <section class="spec-sec">
+      <h2><span class="sec-no">02</span>상태 정의</h2>
+      <div class="tbl-scroll"><table class="spec-table">
+        <tr><th style="width:60px">상태</th><th style="width:150px">이름</th><th style="width:220px">진입 조건</th><th>화면</th></tr>
+        <tr><td><b>S0</b></td><td>기본 (조건 없음)</td><td>초기 / 칩 전부 제거</td><td>칩·요약 없음(빈 안내 문구도 없음). 지도 버튼 disabled. 주소 조건 미적용 = 다른 환자정보 조건만으로 발송.</td></tr>
+        <tr><td><b>S1</b></td><td>패널 · 드릴 모드</td><td><i class="n">2</i> 클릭/포커스 (검색어 없음)</td><td>브레드크럼 + 현재 깊이 목록. 초안(draft)은 확정본 복제에서 시작.</td></tr>
+        <tr><td><b>S2</b></td><td>패널 · 검색 모드</td><td>검색어 1자 이상</td><td>브레드크럼 숨김, 경로 매칭 결과 평면 목록. 결과 1건이면 <span class="kbd">Enter</span>로 즉시 선택+검색어 초기화(연속 추가).</td></tr>
+        <tr><td><b>S3</b></td><td>패널 · 선택 진행</td><td>초안 선택 ≥ 1곳</td><td>S1/S2에 포함/제외 토글 <i class="n">5c</i> 추가 노출. 상위 tri-state ⊟ 연동. 패널은 계속 열림.</td></tr>
+        <tr><td><b>S4</b></td><td>적용됨</td><td>적용 클릭</td><td>패널 닫힘 + 칩 <i class="n">6</i> + 요약 <i class="n">7</i> 갱신 + 지도 버튼 활성. 취소/Esc는 초안 폐기(S0 또는 이전 S4 유지).</td></tr>
+        <tr><td><b>S5</b></td><td>지도 확인</td><td>S4에서 <i class="n">4</i> 클릭</td><td>모달 <i class="n">8</i>. 조작 불가(보기 전용), 닫기만 가능.</td></tr>
+      </table></div>
+    </section>
+
+    <section class="spec-sec">
+      <h2><span class="sec-no">03</span>선택 모델 규칙 (개발 구현 기준)</h2>
+      <div class="tbl-scroll"><table class="spec-table">
+        <tr><th style="width:160px">규칙</th><th>정의</th></tr>
+        <tr><td>선택 단위</td><td>법정동코드 prefix의 집합 <code>Set&lt;code&gt;</code> (레벨 혼합 허용: 2/5/10자리)</td></tr>
+        <tr><td>커버 판정</td><td>노드가 선택됨 = 자기 코드 또는 조상 코드가 집합에 존재 (<code>code.startsWith(prefix)</code>)</td></tr>
+        <tr><td>축약 (collapse-up)</td><td>어떤 부모의 <b>모든 자식</b>이 선택되면 자식들을 제거하고 부모 코드 1개로 치환 → 칩 <code>강남구 전체</code>. 상위로 반복 적용.</td></tr>
+        <tr><td>분해 (explode)</td><td>부모가 선택된 상태에서 하위 1개를 해제하면, 부모를 제거하고 해제 경로를 제외한 형제들을 선택으로 재구성.</td></tr>
+        <tr><td>발송 대상 계산</td><td>포함 = 환자 법정동코드가 선택 prefix 중 하나로 시작(OR). 제외 = NOT(OR). 성별·연령·출생연도와 <b>AND</b> 결합.</td></tr>
+        <tr><td>미선택</td><td>집합이 비면 주소 조건 자체가 없음(모드는 포함으로 리셋).</td></tr>
+      </table></div>
+    </section>
+
+    <section class="spec-sec">
+      <h2><span class="sec-no">04</span>마우스 인터랙션</h2>
+      <div class="tbl-scroll"><table class="spec-table">
+        <tr><th style="width:220px">조작</th><th>결과</th></tr>
+        <tr><td>입력창 <i class="n">2</i> 클릭/포커스</td><td>패널 열림(드릴 모드). 이미 열려 있으면 유지.</td></tr>
+        <tr><td>타이핑</td><td>즉시 검색 모드 전환·실시간 필터.</td></tr>
+        <tr><td>목록 행 클릭 (상위 단위)</td><td>하위로 드릴다운. <b>체크박스 클릭</b>은 드릴 없이 그 지역 전체 선택.</td></tr>
+        <tr><td>목록 행 클릭 (읍/면/동·검색결과)</td><td>선택 토글. 패널 유지.</td></tr>
+        <tr><td>캐럿 <i class="n">3</i> 클릭</td><td>열기/닫기 토글 (닫기 = 초안 폐기).</td></tr>
+        <tr><td>바깥 클릭</td><td>패널 닫힘 (초안 폐기).</td></tr>
+        <tr><td>취소 / 적용</td><td>폐기 / 확정 후 닫힘. 두 경우 모두 포커스는 입력창 복귀.</td></tr>
+        <tr><td>칩 ✕</td><td>해당 단위 즉시 제거. 마지막 칩 제거 시 S0.</td></tr>
+      </table></div>
+    </section>
+
+    <section class="spec-sec">
+      <h2><span class="sec-no">05</span>키보드 인터랙션</h2>
+      <div class="tbl-scroll"><table class="spec-table">
+        <tr><th style="width:180px">키</th><th style="width:170px">위치</th><th>동작</th></tr>
+        <tr><td><span class="kbd">↓</span></td><td>입력창(닫힘)</td><td>패널 열기</td></tr>
+        <tr><td><span class="kbd">↓</span></td><td>입력창(열림)</td><td>목록 첫 행으로 진입</td></tr>
+        <tr><td><span class="kbd">↓</span> <span class="kbd">↑</span></td><td>목록</td><td>행 간 이동 (roving tabindex — <span class="kbd">Tab</span>은 목록을 한 덩어리로 건너뜀). 첫 행에서 ↑ = 입력창 복귀</td></tr>
+        <tr><td><span class="kbd">Home</span> <span class="kbd">End</span></td><td>목록</td><td>첫 / 마지막 행</td></tr>
+        <tr><td><span class="kbd">Space</span></td><td>목록</td><td><b>선택 ↔ 선택취소 토글 — 모든 행에서 동일</b> (예측 가능성 기준 키). 토글 후 포커스 그 행에 유지</td></tr>
+        <tr><td><span class="kbd">Enter</span></td><td>목록</td><td>행의 기본 동작: 시/도·시/군/구 = 하위 진입, 읍/면/동·검색결과 = 선택 토글 (마우스 클릭과 동일 결과)</td></tr>
+        <tr><td><span class="kbd">→</span> <span class="kbd">←</span></td><td>목록</td><td>하위 진입 / 상위 복귀. ← 복귀 시 방금 있던 상위 행으로 포커스 복원</td></tr>
+        <tr><td><span class="kbd">Enter</span></td><td>입력창 · 결과 1건</td><td>즉시 선택 + 검색어 초기화 → 연속 추가 ("역삼 → Enter → 분당구 → Enter")</td></tr>
+        <tr><td>문자 입력</td><td>목록</td><td>입력창으로 자동 포커스 이동 (typeahead)</td></tr>
+        <tr><td><span class="kbd">Esc</span></td><td>패널 / 모달</td><td>초안 폐기 후 닫힘 → 입력창으로 포커스 복귀(자동 재오픈 억제) / 모달 닫기</td></tr>
+      </table></div>
+    </section>
+
+    <section class="spec-sec">
+      <h2><span class="sec-no">06</span>검색 명세</h2>
+      <div class="tbl-scroll"><table class="spec-table">
+        <tr><th style="width:220px">입력 예</th><th>매칭 결과</th></tr>
+        <tr><td><code>역삼동</code></td><td>서울특별시 강남구 역삼동</td></tr>
+        <tr><td><code>서울특별시 강남구 역삼동</code></td><td>동일 — <b>전체 경로 문자열 대상, 공백 토큰 전부 포함 시 매칭</b></td></tr>
+        <tr><td><code>강남구 역삼동</code> / <code>강남구역삼동</code></td><td>동일 (붙여쓰기는 무공백 비교로 처리)</td></tr>
+        <tr><td><code>서울 강남</code></td><td>강남구(구 단위) + 하위 동 전체 — 상위 단위가 목록 상단</td></tr>
+      </table></div>
+      <p class="lede" style="margin-top:10px">서버 전환 시 <code>GET /regions/search?q</code>에 "경로(상위 지역명 포함) 대상 토큰 매칭" 계약을 명시할 것. 지역 트리는 <code>GET /regions?parentCode</code>로 지연 로드.</p>
+    </section>
+
+    <section class="spec-sec">
+      <h2><span class="sec-no">07</span>접근성 체크리스트</h2>
+      <div class="tbl-scroll"><table class="spec-table">
+        <tr><th style="width:220px">항목</th><th>구현</th></tr>
+        <tr><td>콤보박스</td><td><code>role="combobox"</code>, <code>aria-expanded</code>, <code>aria-autocomplete="list"</code>, <code>aria-label</code></td></tr>
+        <tr><td>tri-state 체크박스</td><td><code>aria-checked="true | mixed | false"</code></td></tr>
+        <tr><td>목록 포커스</td><td>roving tabindex(활성 행만 0), 재렌더 후 포커스 복원</td></tr>
+        <tr><td>칩 제거</td><td>✕ 버튼에 <code>aria-label="{전체 경로} 제거"</code></td></tr>
+        <tr><td>포커스 링</td><td><code>:focus-visible</code> 2px accent 아웃라인</td></tr>
+        <tr><td>모션 감소</td><td><code>prefers-reduced-motion</code> 시 팝 애니메이션 제거</td></tr>
+      </table></div>
+    </section>
+
+    <section class="spec-sec">
+      <h2><span class="sec-no">08</span>정책 결정 로그</h2>
+      <div class="tbl-scroll"><table class="spec-table">
+        <tr><th style="width:44px">ID</th><th>결정</th></tr>
+        <tr><td>D1</td><td>인원수 실시간 미표시 → 대상자 확인·발송 단계에서 조회</td></tr>
+        <tr><td>D2</td><td>표준 법정동코드 + prefix 매칭 (자유텍스트 area1/2/3 매칭 금지)</td></tr>
+        <tr><td>D3</td><td>검색-추가 + 시/도→시/군/구 드릴다운 (전국 트리 일괄 펼침 금지)</td></tr>
+        <tr><td>D4</td><td>지도는 확인 전용 (선택 수단 아님)</td></tr>
+        <tr><td>D5</td><td>트리거 = 입력형 콤보박스 (누른 자리에서 즉시 검색, 검색어는 닫힘/선택 시 자동 초기화)</td></tr>
+        <tr><td>D6</td><td>검색은 전체 경로 대상 토큰 매칭 ("서울특별시 강남구 역삼동" · "강남구 역삼동" 모두 매칭)</td></tr>
+      </table></div>
+      <h3>스코프 아웃</h3>
+      <p class="lede" style="margin:0">지도에서 직접 선택 · 실지도 타일/정밀 경계 · 리(里) 이하 단위 · 주소 미입력 환자 처리(발송 직전 단계로 분리) · 성별/연령 기준/출생연도 행의 실제 동작(시각 재현만) · 조건 설정 중 실시간 대상 수</p>
+    </section>
+
+  </div><!-- /viewSpec -->
+
+</div>
+
+<!-- Map modal — view-only range confirmation -->
+<div class="backdrop" id="mapBackdrop" role="dialog" aria-modal="true" aria-label="선택 범위 확인 · 지도">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>선택 범위 확인 · 지도</h2>
+      <span class="count-note" id="mapSelCount"></span>
+      <button class="x-close" id="mapClose" type="button" aria-label="닫기">✕</button>
+    </div>
+
+    <div class="modal-body" id="modalBody">
+      <div class="map-stage" id="mapStage">
+        <div class="map-grid" id="mapGridBg"></div>
+        <div class="map-legend" aria-hidden="true">
+          <div class="lg-title">지도 표시</div>
+          <div class="lg-item"><span class="sw send"></span>발송 지역</div>
+          <div class="lg-item"><span class="sw excl"></span>제외 지역</div>
+          <div class="lg-item"><span class="sw none"></span>미포함</div>
+        </div>
+        <!-- pins injected -->
+      </div>
+
+      <div class="map-side" id="mapSide">
+        <h3>적용된 선택 지역</h3>
+        <div class="sel-list" id="selList"></div>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <span class="fc" id="mapFootText"></span>
+      <div class="foot-actions">
+        <button class="btn primary" id="mapDone" type="button">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  document.body.classList.add("__page");
+
+  /* ---------------- data ----------------
+     법정동코드 표준 구조의 샘플 서브셋. 실서비스는 지역 API로 대체:
+     TODO GET /regions?parentCode · GET /regions/search?q
+     `n`(환자 수)은 서버 측 개념 — UI에는 노출하지 않는다.
+     대상 인원은 대상자 확인·발송 단계에서 조회된다. */
+  var DB = [
+    { code: "11", name: "서울특별시", children: [
+      { code: "11110", name: "종로구", children: [
+        { code: "1111010100", name: "청운동", n: 1 },
+        { code: "1111010200", name: "신교동", n: 1 },
+        { code: "1111010300", name: "궁정동", n: 0 },
+        { code: "1111010400", name: "효자동", n: 2 },
+      ]},
+      { code: "11650", name: "서초구", children: [
+        { code: "1165010100", name: "방배동", n: 6 },
+        { code: "1165010200", name: "양재동", n: 4 },
+        { code: "1165010600", name: "잠원동", n: 4 },
+        { code: "1165010700", name: "반포동", n: 10 },
+        { code: "1165010800", name: "서초동", n: 18 },
+        { code: "1165010900", name: "내곡동", n: 2 },
+      ]},
+      { code: "11680", name: "강남구", children: [
+        { code: "1168010100", name: "역삼동", n: 44 },
+        { code: "1168010300", name: "개포동", n: 5 },
+        { code: "1168010400", name: "청담동", n: 12 },
+        { code: "1168010500", name: "삼성동", n: 20 },
+        { code: "1168010600", name: "대치동", n: 31 },
+        { code: "1168010700", name: "신사동", n: 3 },
+        { code: "1168010800", name: "논현동", n: 9 },
+        { code: "1168011800", name: "도곡동", n: 8 },
+      ]},
+    ]},
+    { code: "41", name: "경기도", children: [
+      { code: "41135", name: "성남시 분당구", children: [
+        { code: "4113510100", name: "분당동", n: 4 },
+        { code: "4113510200", name: "수내동", n: 8 },
+        { code: "4113510300", name: "정자동", n: 12 },
+        { code: "4113510700", name: "구미동", n: 3 },
+        { code: "4113510800", name: "판교동", n: 5 },
+        { code: "4113511000", name: "서현동", n: 6 },
+      ]},
+      { code: "41465", name: "용인시 수지구", children: [
+        { code: "4146510100", name: "풍덕천동", n: 4 },
+        { code: "4146510300", name: "죽전동", n: 6 },
+        { code: "4146510400", name: "동천동", n: 2 },
+        { code: "4146510600", name: "상현동", n: 3 },
+      ]},
+    ]},
+    { code: "26", name: "부산광역시", children: [
+      { code: "26350", name: "해운대구", children: [
+        { code: "2635010100", name: "우동", n: 2 },
+        { code: "2635010200", name: "중동", n: 1 },
+        { code: "2635010300", name: "좌동", n: 1 },
+        { code: "2635010400", name: "송정동", n: 0 },
+      ]},
+    ]},
+    { code: "30", name: "대전광역시", children: [
+      { code: "30170", name: "서구", children: [
+        { code: "3017010100", name: "복수동", n: 0 },
+        { code: "3017010400", name: "둔산동", n: 2 },
+        { code: "3017010700", name: "갈마동", n: 1 },
+        { code: "3017011000", name: "월평동", n: 1 },
+      ]},
+    ]},
+  ];
+
+  // index: code → node / parent lookups (prefix lengths 2 / 5 / 10)
+  var byCode = {}, parentCode = {};
+  DB.forEach(function (sido) {
+    byCode[sido.code] = sido;
+    sido.children.forEach(function (gu) {
+      byCode[gu.code] = gu; parentCode[gu.code] = sido.code;
+      gu.children.forEach(function (d) { byCode[d.code] = d; parentCode[d.code] = gu.code; });
+    });
+  });
+  function levelOf(code) { return code.length === 2 ? 0 : code.length === 5 ? 1 : 2; }
+  function pathNames(code) {
+    var out = [byCode[code].name], p = parentCode[code];
+    while (p) { out.unshift(byCode[p].name); p = parentCode[p]; }
+    return out;
+  }
+  var LV_LABEL = ["시/도", "시/군/구", "읍/면/동"];
+
+  /* ---------------- state ---------------- */
+  // selection = Set of 법정동코드 prefix (mixed levels). empty = 조건 없음(전체 환자)
+  var committed = { set: new Set(), mode: "include" };
+  var draft = { set: new Set(), mode: "include" };
+  var drillPath = [];                 // [] | [sido] | [sido, gu]
+  var openPanelFlag = false;
+  var panelSearch = "";
+
+  function cloneToDraft() { draft.set = new Set(committed.set); draft.mode = committed.mode; }
+
+  /* ---------------- prefix selection logic ---------------- */
+  function coveredBy(code, set) {
+    var hit = null;
+    set.forEach(function (s) { if (code === s || code.indexOf(s) === 0) hit = s; });
+    return hit;
+  }
+  function nodeState(code, set) {
+    if (coveredBy(code, set)) return "all";
+    var some = false;
+    set.forEach(function (s) { if (s !== code && s.indexOf(code) === 0) some = true; });
+    return some ? "some" : "none";
+  }
+  function childOnPathTo(curCode, targetCode) {
+    var len = curCode.length === 2 ? 5 : 10;
+    return targetCode.slice(0, len);
+  }
+  // remove `anc` from set, re-adding every branch except the one toward `target`
+  function explode(anc, target, set) {
+    set.delete(anc);
+    var cur = anc;
+    while (cur !== target) {
+      var next = childOnPathTo(cur, target);
+      byCode[cur].children.forEach(function (ch) { if (ch.code !== next) set.add(ch.code); });
+      cur = next;
+    }
+  }
+  function collapseUp(code, set) {
+    var p = parentCode[code];
+    while (p) {
+      var kids = byCode[p].children;
+      var all = kids.every(function (k) { return set.has(k.code); });
+      if (!all) break;
+      kids.forEach(function (k) { set.delete(k.code); });
+      set.add(p);
+      code = p; p = parentCode[p];
+    }
+  }
+  function toggleCode(code) {
+    var set = draft.set;
+    var cover = coveredBy(code, set);
+    if (cover) {
+      if (cover === code) set.delete(code);
+      else explode(cover, code, set);
+    } else {
+      Array.from(set).forEach(function (s) { if (s.indexOf(code) === 0) set.delete(s); });
+      set.add(code);
+      collapseUp(code, set);
+    }
+    if (set.size === 0) draft.mode = "include";
+  }
+  function removeUnit(code, sel) {
+    // chips remove exact selected units only
+    sel.set.delete(code);
+    if (sel.set.size === 0) sel.mode = "include";
+  }
+
+  // selected units sorted by code (mixed levels)
+  function units(set) {
+    return Array.from(set).sort().map(function (c) {
+      return { code: c, name: byCode[c].name, level: levelOf(c), path: pathNames(c) };
+    });
+  }
+
+  /* ---- natural-language range summary (no counts) ---- */
+  function rangeSummary(sel) {
+    if (sel.set.size === 0) return "";
+    var us = units(sel.set), phrases = [], guGroups = {};
+    us.forEach(function (u) {
+      if (u.level === 0 || u.level === 1) phrases.push(u.name + " 전체");
+      else {
+        var gu = u.code.slice(0, 5);
+        (guGroups[gu] = guGroups[gu] || []).push(u);
+      }
+    });
+    Object.keys(guGroups).sort().forEach(function (gu) {
+      var arr = guGroups[gu], guName = byCode[gu].name;
+      phrases.push(arr.length === 1 ? guName + " " + arr[0].name : guName + " " + arr.length + "개 동");
+    });
+    var txt = phrases.length > 3
+      ? phrases.slice(0, 2).join(" · ") + " 외 " + (phrases.length - 2) + "곳"
+      : phrases.join(" · ");
+    return txt + (sel.mode === "exclude" ? " 제외하고 발송" : "에 발송");
+  }
+
+  /* ---------------- svg bits ---------------- */
+  var CHECK = '<svg class="check" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  var DASH  = '<svg class="dash" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  var CHEV  = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>';
+  var BACK  = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+  var XICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+  function cbHTML(state) {
+    var cls = "cb" + (state === "all" ? " all" : state === "some" ? " some" : "");
+    return '<span class="' + cls + '" aria-hidden="true">' + (state === "all" ? CHECK : state === "some" ? DASH : "") + "</span>";
+  }
+
+  /* ---------------- popover panel ---------------- */
+  var triggerWrap = document.querySelector(".trigger-wrap");
+  var trigger = document.getElementById("trigger");
+  var triggerInput = document.getElementById("triggerInput");
+  var caretBtn = document.getElementById("caretBtn");
+  var panelEl = null;
+  var pendingFocus = null; // 재렌더 후 포커스 복원: {code} | {first} | {search}
+  var suppressOpenOnFocus = false; // 닫은 직후 포커스 복귀가 패널을 재오픈하지 않도록
+
+  /* ---- keyboard policy (풀다운) ----
+     ↓/↑  검색창 ↔ 목록, 목록 행 간 이동 (roving tabindex — Tab은 목록을 건너뜀)
+     Space 선택/선택취소 토글 (모든 행에서 동일)
+     Enter 행의 기본 동작: 시/도·시/군/구 = 하위 진입, 읍/면/동·검색결과 = 선택 토글
+     →/←  하위 진입 / 상위 복귀 (드릴 계층)
+     문자  목록에서 입력 시 검색창으로 자동 이동
+     Esc  변경 폐기 후 닫기 → 트리거로 포커스 복귀 */
+  function listRows() { return Array.from(panelEl.querySelectorAll("[data-code]")); }
+  function focusSearch() { triggerInput.focus(); }
+  function rowNav(e, code, drillable) {
+    var rows = listRows(), i = rows.indexOf(e.currentTarget);
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault(); if (i < rows.length - 1) rows[i + 1].focus(); break;
+      case "ArrowUp":
+        e.preventDefault(); if (i > 0) rows[i - 1].focus(); else focusSearch(); break;
+      case "Home": e.preventDefault(); if (rows[0]) rows[0].focus(); break;
+      case "End": e.preventDefault(); if (rows.length) rows[rows.length - 1].focus(); break;
+      case " ":
+        e.preventDefault(); pendingFocus = { code: code }; toggleCode(code); renderPanel(); break;
+      case "Enter":
+        e.preventDefault();
+        if (drillable) { pendingFocus = { first: true }; drillPath.push(code); renderPanel(); }
+        else { pendingFocus = { code: code }; toggleCode(code); renderPanel(); }
+        break;
+      case "ArrowRight":
+        if (drillable) { e.preventDefault(); pendingFocus = { first: true }; drillPath.push(code); renderPanel(); }
+        break;
+      case "ArrowLeft":
+        if (!panelSearch.trim() && drillPath.length) {
+          e.preventDefault();
+          var popped = drillPath.pop();
+          pendingFocus = { code: popped };
+          renderPanel();
+        }
+        break;
+      default:
+        // 목록 위에서 바로 타이핑 → 검색창으로 (typeahead)
+        if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) focusSearch();
+    }
+  }
+  function applyPendingFocus() {
+    if (!pendingFocus || !panelEl) return;
+    var pf = pendingFocus; pendingFocus = null;
+    if (pf.search) { focusSearch(); return; }
+    var target = pf.code ? panelEl.querySelector('[data-code="' + pf.code + '"]') : null;
+    if (!target) { var rows = listRows(); target = rows[0] || null; }
+    if (target) target.focus(); else focusSearch();
+  }
+
+  function openPanel() {
+    cloneToDraft();
+    openPanelFlag = true;
+    drillPath = [];
+    panelSearch = triggerInput.value;
+    trigger.classList.add("open");
+    triggerInput.setAttribute("aria-expanded", "true");
+    panelEl = document.createElement("div");
+    panelEl.className = "panel";
+    panelEl.setAttribute("role", "dialog");
+    panelEl.setAttribute("aria-label", "발송 지역 선택");
+    panelEl.innerHTML =
+      '<div class="crumbs" id="crumbs"></div>' +
+      '<div class="tree" id="panelTree" role="listbox" aria-label="지역 목록"></div>' +
+      '<div class="mode-row" id="panelMode">' +
+        '<span class="lbl">선택 지역을</span>' +
+        '<div class="toggle-group" role="group" aria-label="포함 제외 선택">' +
+          '<button type="button" data-mode="include">포함</button>' +
+          '<button type="button" data-mode="exclude">제외</button>' +
+        '</div></div>' +
+      '<div class="panel-foot"><span class="foot-count" id="panelFoot"></span>' +
+        '<div class="foot-actions"><button class="btn" id="panelCancel" type="button">취소</button>' +
+        '<button class="btn primary" id="panelApply" type="button">적용</button></div></div>';
+    triggerWrap.appendChild(panelEl);
+
+    panelEl.querySelector("#panelMode").querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () { draft.mode = b.dataset.mode; renderPanel(); });
+    });
+    panelEl.querySelector("#panelCancel").addEventListener("click", function () { closePanel(true); });
+    panelEl.querySelector("#panelApply").addEventListener("click", function () { commit(); closePanel(true); });
+    renderPanel();
+  }
+
+  function closePanel(focusBack) {
+    if (panelEl) { panelEl.remove(); panelEl = null; }
+    trigger.classList.remove("open");
+    triggerInput.setAttribute("aria-expanded", "false");
+    openPanelFlag = false;
+    panelSearch = ""; triggerInput.value = ""; // 선택은 칩이 표현 — 잔여 검색어는 정리
+    if (focusBack) { // 키보드로 닫으면 입력으로 포커스 복귀 (재오픈은 억제)
+      suppressOpenOnFocus = true;
+      triggerInput.focus();
+      setTimeout(function () { suppressOpenOnFocus = false; }, 120);
+    }
+  }
+
+  function renderPanel() {
+    if (!panelEl) return;
+    var treeEl = panelEl.querySelector("#panelTree");
+    var crumbsEl = panelEl.querySelector("#crumbs");
+    var q = panelSearch.trim();
+
+    crumbsEl.style.display = q ? "none" : "flex";
+    if (q) renderSearchResults(treeEl, q);
+    else { renderCrumbs(crumbsEl); renderDrillList(treeEl); }
+
+    var modeRow = panelEl.querySelector("#panelMode");
+    modeRow.classList.toggle("show", draft.set.size > 0);
+    modeRow.querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", draft.mode === b.dataset.mode ? "true" : "false");
+    });
+
+    var foot = panelEl.querySelector("#panelFoot");
+    var n = draft.set.size;
+    foot.innerHTML = n === 0
+      ? "선택 없음"
+      : "선택 <b>" + units(draft.set).length + "곳</b>" +
+        ' <button class="foot-clear" id="footClear" type="button">모두 지우기</button>';
+    var clr = foot.querySelector("#footClear");
+    if (clr) clr.addEventListener("click", function () { draft.set.clear(); draft.mode = "include"; renderPanel(); });
+
+    applyPendingFocus();
+  }
+
+  /* breadcrumb: ‹ back + 전국 › 서울특별시 › 강남구 */
+  function renderCrumbs(el) {
+    el.innerHTML = "";
+    var back = document.createElement("button");
+    back.type = "button"; back.className = "crumb-back"; back.innerHTML = BACK;
+    back.setAttribute("aria-label", "상위 단계로");
+    if (drillPath.length === 0) back.disabled = true;
+    back.addEventListener("click", function () { drillPath.pop(); renderPanel(); });
+    el.appendChild(back);
+
+    var path = document.createElement("div");
+    path.className = "crumb-path";
+    function seg(label, depth) {
+      if (depth < drillPath.length || (depth === 0 && drillPath.length > 0)) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "seg link"; b.textContent = label;
+        b.addEventListener("click", function () { drillPath = drillPath.slice(0, depth); renderPanel(); });
+        return b;
+      }
+      var s = document.createElement("span"); s.className = "seg"; s.textContent = label; return s;
+    }
+    path.appendChild(seg("전국", 0));
+    drillPath.forEach(function (c, i) {
+      var sp = document.createElement("span"); sp.className = "sep"; sp.textContent = "›";
+      path.appendChild(sp);
+      path.appendChild(seg(byCode[c].name, i + 1));
+    });
+    el.appendChild(path);
+  }
+
+  /* drill list: children of current path. checkbox=선택 · 행/화살표=드릴다운 */
+  function renderDrillList(container) {
+    container.innerHTML = "";
+    var items, depth = drillPath.length;
+    if (depth === 0) items = DB;
+    else items = byCode[drillPath[depth - 1]].children;
+
+    if (depth === 0) {
+      var note = document.createElement("div");
+      note.className = "tree-note";
+      note.textContent = "체크 = 해당 지역 전체 선택 · 이름 클릭 = 하위로 이동";
+      container.appendChild(note);
+    }
+
+    items.forEach(function (node, idx) {
+      var st = nodeState(node.code, draft.set);
+      var hasKids = levelOf(node.code) < 2;
+      var row = document.createElement("div");
+      row.className = "lv-row";
+      row.setAttribute("role", "option");
+      row.setAttribute("tabindex", idx === 0 ? "0" : "-1"); // roving: Tab은 목록을 한 덩어리로 건너뜀
+      row.setAttribute("data-code", node.code);
+      row.setAttribute("aria-checked", st === "all" ? "true" : st === "some" ? "mixed" : "false");
+      row.setAttribute("aria-label", node.name);
+
+      var cbWrap = document.createElement("span");
+      cbWrap.innerHTML = cbHTML(st);
+      var cbEl = cbWrap.firstChild;
+      cbEl.style.cursor = "pointer";
+      cbEl.addEventListener("click", function (e) { e.stopPropagation(); toggleCode(node.code); renderPanel(); });
+
+      var nm = document.createElement("span");
+      nm.className = "node-name";
+      nm.innerHTML = '<span class="' + (hasKids ? "strong" : "") + '">' + node.name + "</span>";
+
+      var sub = document.createElement("span");
+      sub.className = "node-sub";
+      sub.textContent = hasKids ? node.children.length + "개 " + LV_LABEL[levelOf(node.code) + 1] : node.code;
+
+      row.appendChild(cbEl); row.appendChild(nm); row.appendChild(sub);
+
+      if (hasKids) {
+        var dr = document.createElement("button");
+        dr.type = "button"; dr.className = "drill-btn"; dr.innerHTML = CHEV;
+        dr.setAttribute("aria-label", node.name + " 하위 보기");
+        dr.setAttribute("tabindex", "-1"); // 행 자체가 키보드 단위
+        row.appendChild(dr);
+        row.addEventListener("click", function () { drillPath.push(node.code); renderPanel(); });
+      } else {
+        row.addEventListener("click", function () { toggleCode(node.code); renderPanel(); });
+      }
+      row.addEventListener("keydown", function (e) { rowNav(e, node.code, hasKids); });
+      container.appendChild(row);
+    });
+  }
+
+  /* search-and-add: 모든 단위 평면 검색, 클릭 = 즉시 선택 토글 (패널 유지)
+     매칭은 개별 지역명이 아니라 전체 경로("서울특별시 강남구 역삼동") 대상:
+     - 공백 구분 토큰이 모두 경로에 포함되면 매칭 → "강남구 역삼동", "서울 역삼" 가능
+     - 공백 없이 붙여 써도("강남구역삼동") 경로 무공백 비교로 매칭 */
+  function renderSearchResults(container, q) {
+    container.innerHTML = "";
+    var tokens = q.split(/\s+/).filter(Boolean);
+    var qFlat = q.replace(/\s+/g, "");
+    var results = [];
+    Object.keys(byCode).forEach(function (code) {
+      var path = pathNames(code).join(" ");
+      var ok = tokens.every(function (t) { return path.indexOf(t) > -1; }) ||
+               (qFlat.length > 0 && path.replace(/\s+/g, "").indexOf(qFlat) > -1);
+      if (ok) results.push(code);
+    });
+    results.sort();
+    if (!results.length) {
+      container.innerHTML = '<div class="tree-empty">검색 결과가 없습니다<br><small>샘플 데이터: 서울(종로·서초·강남) · 경기(분당·수지) · 부산(해운대) · 대전(서구)</small></div>';
+      return;
+    }
+    results.forEach(function (code, idx) {
+      var st = nodeState(code, draft.set);
+      var row = document.createElement("div");
+      row.className = "result-row";
+      row.setAttribute("role", "option");
+      row.setAttribute("tabindex", idx === 0 ? "0" : "-1");
+      row.setAttribute("data-code", code);
+      row.setAttribute("aria-checked", st === "all" ? "true" : st === "some" ? "mixed" : "false");
+      var names = pathNames(code);
+      var pathHtml = names.map(function (nm, i) {
+        return i === names.length - 1 ? "<b>" + nm + "</b>" : nm;
+      }).join(" ");
+      row.innerHTML = cbHTML(st) +
+        '<span class="path">' + pathHtml + "</span>" +
+        '<span class="lv-tag">' + LV_LABEL[levelOf(code)] + "</span>";
+      row.addEventListener("click", function () { toggleCode(code); renderPanel(); });
+      row.addEventListener("keydown", function (e) { rowNav(e, code, false); });
+      container.appendChild(row);
+    });
+  }
+
+  // combobox: 입력 포커스/클릭/타이핑 = 열기 · 캐럿 = 토글 · 닫기는 Esc/취소/적용/바깥클릭
+  triggerInput.addEventListener("focus", function () {
+    if (!openPanelFlag && !suppressOpenOnFocus) openPanel();
+  });
+  triggerInput.addEventListener("click", function () {
+    if (!openPanelFlag) openPanel();
+  });
+  triggerInput.addEventListener("input", function (e) {
+    if (!openPanelFlag) openPanel();
+    panelSearch = e.target.value;
+    renderPanel();
+  });
+  triggerInput.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!openPanelFlag) openPanel();
+      else { var rows = listRows(); if (rows[0]) rows[0].focus(); }
+    } else if (e.key === "Enter") {             // 결과가 하나뿐이면 바로 선택, 검색어 비움(연속 추가)
+      if (!openPanelFlag) return;
+      var rows2 = listRows();
+      if (panelSearch.trim() && rows2.length === 1) {
+        e.preventDefault();
+        toggleCode(rows2[0].getAttribute("data-code"));
+        panelSearch = ""; triggerInput.value = "";
+        renderPanel();
+      }
+    }
+  });
+  caretBtn.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력 blur 방지
+  caretBtn.addEventListener("click", function () {
+    if (openPanelFlag) closePanel(); else { openPanel(); triggerInput.focus(); }
+  });
+  trigger.addEventListener("click", function (e) {
+    if (e.target === trigger) triggerInput.focus(); // 박스 여백 클릭도 입력으로
+  });
+  document.addEventListener("mousedown", function (e) {
+    if (openPanelFlag && panelEl && !triggerWrap.contains(e.target)) closePanel();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      if (openPanelFlag) closePanel(true);
+      else if (backdrop.classList.contains("show")) closeMap();
+    }
+  });
+
+  /* ---------------- commit + external render ---------------- */
+  function commit() { committed.set = new Set(draft.set); committed.mode = draft.mode; renderExternal(); }
+
+  var chipsEl = document.getElementById("chips");
+  var helperEl = document.getElementById("helper");
+
+  function renderExternal() {
+    chipsEl.innerHTML = "";
+    units(committed.set).forEach(function (u) {
+      var kind = committed.mode === "exclude" ? "exclude" : "include";
+      var label = u.level === 2 ? u.name : u.name + " 전체";
+      var c = document.createElement("span");
+      c.className = "chip " + kind;
+      c.title = u.path.join(" ") + " (" + u.code + ")";
+      var sign = kind === "exclude" ? '<span class="sign" aria-hidden="true">−</span>' : "";
+      c.innerHTML = sign + '<span class="name">' + label + "</span>" +
+        '<button class="x" type="button" aria-label="' + u.path.join(" ") + ' 제거">' + XICON + "</button>";
+      c.querySelector(".x").addEventListener("click", function () {
+        removeUnit(u.code, committed); renderExternal();
+      });
+      chipsEl.appendChild(c);
+    });
+    // 확인할 범위가 없으면 지도 확인 비활성화
+    var mapBtn = document.getElementById("mapOpen");
+    mapBtn.disabled = committed.set.size === 0;
+    mapBtn.title = mapBtn.disabled ? "지역을 선택·적용하면 지도로 범위를 확인할 수 있습니다" : "";
+    renderHelper();
+  }
+
+  function renderHelper() {
+    helperEl.textContent = rangeSummary(committed);
+  }
+
+  /* ---------------- map modal (view-only) ---------------- */
+  var backdrop = document.getElementById("mapBackdrop");
+  var mapStage = document.getElementById("mapStage");
+
+  /* 선택 지역 중심의 개략도 구성:
+     선택에 관련된 시/군/구만 지도에 올린다 (팬·줌 없이 항상 선택에 포커스).
+     - 동 단위 선택 → 그 구의 모든 동을 표기, 선택 동만 색칠 (같은 구 나머지는 맥락)
+     - 구/시도 단위 선택 → 하위 전체 색칠
+     - 포함 모드: 선택=파랑, 나머지=미포함(중립)
+     - 제외 모드: 선택=빨강, 같은 구 나머지=파랑(실제 발송 대상이므로) */
+  function sceneGroups() {
+    var us = units(committed.set);
+    var groups = [], guMap = {};
+    us.forEach(function (u) {
+      if (u.level === 0) {
+        groups.push({
+          label: u.name + " 전체", allSelected: true,
+          items: byCode[u.code].children.map(function (g) { return { name: g.name + " 전체", sel: true }; }),
+        });
+      } else if (u.level === 1) {
+        groups.push({
+          label: u.path.join(" ") + " 전체", allSelected: true,
+          items: byCode[u.code].children.map(function (d) { return { name: d.name, sel: true }; }),
+        });
+      } else {
+        var gu = u.code.slice(0, 5);
+        if (!guMap[gu]) {
+          guMap[gu] = {
+            label: pathNames(gu).join(" "), allSelected: false,
+            items: byCode[gu].children.map(function (d) { return { name: d.name, sel: false, code: d.code }; }),
+          };
+          groups.push(guMap[gu]);
+        }
+        guMap[gu].items.forEach(function (it) { if (it.code === u.code) it.sel = true; });
+      }
+    });
+    return groups;
+  }
+
+  function buildMapBg() {
+    var bg = document.getElementById("mapGridBg");
+    bg.innerHTML = "";
+    var roads = [
+      { c: "h", top: "38%" }, { c: "h", top: "72%" },
+      { c: "v", left: "24%" }, { c: "v", left: "45%" }, { c: "v", left: "63%" }, { c: "v", left: "83%" },
+    ];
+    roads.forEach(function (r) {
+      var el = document.createElement("div");
+      el.className = "map-road " + r.c;
+      if (r.c === "h") el.style.top = r.top; else el.style.left = r.left;
+      bg.appendChild(el);
+    });
+  }
+
+  function openMap() {
+    if (openPanelFlag) closePanel();
+    backdrop.classList.add("show");
+    buildMapBg();
+    renderMap();
+  }
+  function closeMap() { backdrop.classList.remove("show"); }
+
+  function renderMap() {
+    // the map reflects the APPLIED selection (확인 전용)
+    var old = mapStage.querySelector(".map-groups");
+    if (old) old.remove();
+    var wrap = document.createElement("div");
+    wrap.className = "map-groups";
+    sceneGroups().forEach(function (g) {
+      var box = document.createElement("div");
+      box.className = "map-group has-sel";
+      var flags = g.items.map(function (it) {
+        var cls = "flag", sign = "";
+        if (it.sel) {
+          cls += committed.mode === "exclude" ? " excl" : " send";
+          if (committed.mode === "exclude") sign = "− ";
+        } else if (committed.mode === "exclude") {
+          cls += " send"; // 제외 모드: 선택 안 된 나머지 동이 실제 발송 대상
+        }
+        return '<span class="' + cls + '">' + sign + it.name + "</span>";
+      }).join("");
+      box.innerHTML = '<span class="mg-label">' + g.label + "</span>" +
+        '<div class="mg-flags">' + flags + "</div>";
+      wrap.appendChild(box);
+    });
+    mapStage.appendChild(wrap);
+
+    var us = units(committed.set);
+    document.getElementById("mapSelCount").textContent =
+      us.length === 0 ? "" : us.length + "곳 " + (committed.mode === "exclude" ? "제외" : "선택");
+
+    // 우측 목록은 선택이 있을 때만 — 샘플 지도 범위 밖 선택(분당·부산 등) 확인용
+    document.getElementById("modalBody").classList.toggle("no-side", us.length === 0);
+    var list = document.getElementById("selList");
+    list.innerHTML = "";
+    us.forEach(function (u) {
+      var it = document.createElement("div");
+      it.className = "sel-item";
+      var swCls = committed.mode === "exclude" ? "excl" : "send";
+      var names = u.path.map(function (nm, i) {
+        return i === u.path.length - 1 ? "<b>" + nm + (u.level < 2 ? " 전체" : "") + "</b>" : nm;
+      }).join(" ");
+      it.innerHTML = '<span class="sw ' + swCls + '"></span>' +
+        '<span class="pathtxt">' + names + "</span>" +
+        '<span class="lv-tag">' + LV_LABEL[u.level] + "</span>";
+      list.appendChild(it);
+    });
+
+    document.getElementById("mapFootText").textContent = rangeSummary(committed);
+  }
+
+  document.getElementById("mapOpen").addEventListener("click", openMap);
+  document.getElementById("mapClose").addEventListener("click", closeMap);
+  document.getElementById("mapDone").addEventListener("click", closeMap);
+  backdrop.addEventListener("mousedown", function (e) { if (e.target === backdrop) closeMap(); });
+
+  /* ---------------- view tabs ---------------- */
+  var tabProto = document.getElementById("tabProto");
+  var tabSpec = document.getElementById("tabSpec");
+  var viewProto = document.getElementById("viewProto");
+  var viewSpec = document.getElementById("viewSpec");
+  function selectTab(which) {
+    var proto = which === "proto";
+    tabProto.setAttribute("aria-selected", proto ? "true" : "false");
+    tabSpec.setAttribute("aria-selected", proto ? "false" : "true");
+    viewProto.hidden = !proto;
+    viewSpec.hidden = proto;
+    if (!proto) { // 설계서로 전환 시 떠 있는 패널/모달 정리
+      if (openPanelFlag) closePanel();
+      closeMap();
+    }
+  }
+  tabProto.addEventListener("click", function () { selectTab("proto"); });
+  tabSpec.addEventListener("click", function () { selectTab("spec"); });
+
+  renderExternal();
+})();
+</script>
