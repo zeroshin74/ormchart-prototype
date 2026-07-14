@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">
+<title>예약 캘린더 좌측 패널 — 리사이즈 인터랙션 프로토타입</title>
+<style>
+  :root{
+    --bg:#eef0f4;
+    --card:#ffffff;
+    --line:#e4e7ee;
+    --txt:#23272f;
+    --sub:#8b93a3;
+    --dim:#c9cfda;
+    --blue:#2b5ce6;
+    --blue-soft:#eaf0ff;
+    --red:#e8442e;
+    --navy:#20293e;
+    --navy-txt:#ffffff;
+    --handle:#cdd5e3;
+    --handle-on:#2b5ce6;
+    --chip:#f2f4f8;
+    --dkgy:#4e5560;
+    --shadow:0 1px 3px rgba(30,40,70,.06);
+    --focus:#2b5ce6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#17191d;
+      --card:#23262b;
+      --line:#33373f;
+      --txt:#e8ebf1;
+      --sub:#8f97a6;
+      --dim:#4a505b;
+      --blue:#6188ff;
+      --blue-soft:#293350;
+      --red:#ff6a55;
+      --navy:#33415f;
+      --navy-txt:#eef1f8;
+      --handle:#494f5b;
+      --handle-on:#6188ff;
+      --chip:#2c3038;
+      --dkgy:#b3bac6;
+      --shadow:0 1px 3px rgba(0,0,0,.35);
+      --focus:#6188ff;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#eef0f4; --card:#ffffff; --line:#e4e7ee; --txt:#23272f; --sub:#8b93a3;
+    --dim:#c9cfda; --blue:#2b5ce6; --blue-soft:#eaf0ff; --red:#e8442e;
+    --navy:#20293e; --navy-txt:#ffffff; --handle:#cdd5e3; --handle-on:#2b5ce6;
+    --chip:#f2f4f8; --dkgy:#4e5560; --shadow:0 1px 3px rgba(30,40,70,.06); --focus:#2b5ce6;
+  }
+  :root[data-theme="dark"]{
+    --bg:#17191d; --card:#23262b; --line:#33373f; --txt:#e8ebf1; --sub:#8f97a6;
+    --dim:#4a505b; --blue:#6188ff; --blue-soft:#293350; --red:#ff6a55;
+    --navy:#33415f; --navy-txt:#eef1f8; --handle:#494f5b; --handle-on:#6188ff;
+    --chip:#2c3038; --dkgy:#b3bac6; --shadow:0 1px 3px rgba(0,0,0,.35); --focus:#6188ff;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--txt);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",-apple-system,sans-serif;
+    font-size:14px;
+    line-height:1.45;
+    overflow:hidden;
+  }
+
+  .stage{height:100dvh; display:flex; flex-direction:column; align-items:center;}
+
+  .hint{
+    flex:none; width:100%;
+    display:flex; flex-wrap:wrap; gap:4px 14px; justify-content:center;
+    padding:8px 16px;
+    font-size:12px; color:var(--sub);
+    border-bottom:1px solid var(--line);
+    background:var(--card);
+  }
+  .hint b{color:var(--txt); font-weight:600;}
+  .hint span{white-space:nowrap;}
+
+  .panel{
+    flex:1; min-height:0;
+    width:min(420px,100%);
+    display:flex; flex-direction:column;
+    padding:10px 10px 0;
+    gap:8px;
+  }
+
+  .card{
+    background:var(--card);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+  }
+
+  /* ---------- top toggle bar ---------- */
+  .top-toggles{
+    flex:none; display:flex; align-items:center; gap:16px;
+    background:var(--card); border-radius:12px; box-shadow:var(--shadow);
+    padding:9px 14px;
+    font-size:12.5px; font-weight:600;
+  }
+  .switch{
+    font:inherit; display:inline-flex; align-items:center; gap:7px;
+    background:none; border:none; padding:0; cursor:pointer;
+    color:var(--sub);
+  }
+  .switch .knob{
+    flex:none; position:relative;
+    width:30px; height:17px; border-radius:9px;
+    background:var(--dim); transition:background .15s;
+  }
+  .switch .knob::after{
+    content:""; position:absolute; top:2px; left:2px;
+    width:13px; height:13px; border-radius:50%;
+    background:#fff; transition:left .15s;
+  }
+  .switch.on{color:var(--txt);}
+  .switch.on .knob{background:var(--blue);}
+  .switch.on .knob::after{left:15px;}
+  .switch:focus-visible{outline:2px solid var(--focus); outline-offset:2px; border-radius:6px;}
+  @media (prefers-reduced-motion: reduce){
+    .switch .knob, .switch .knob::after{transition:none;}
+  }
+
+  /* ---------- fixed calendar ---------- */
+  .cal{flex:none; padding:10px 14px 12px; position:relative;}
+  .cal-toggle{
+    position:absolute; top:10px; right:12px; z-index:1;
+    display:flex; border:1px solid var(--line); border-radius:6px; overflow:hidden;
+  }
+  .cal-toggle .tg{
+    font:inherit; font-size:11px; font-weight:600;
+    padding:3px 9px; background:var(--card); color:var(--sub);
+    border:none; cursor:pointer;
+  }
+  .cal-toggle .tg.on{background:var(--blue); color:#fff; font-weight:700;}
+  .cal-toggle .tg:focus-visible{outline:2px solid var(--focus); outline-offset:-2px;}
+  #cal2{border-top:1px solid var(--line); margin-top:8px; padding-top:4px;}
+  .cal-head{
+    display:flex; align-items:baseline; justify-content:center; gap:8px;
+    padding:2px 0 6px; font-weight:800; font-size:16px;
+    font-variant-numeric:tabular-nums;
+  }
+  .cal-head .today{font-size:12px; font-weight:600; color:var(--sub); text-decoration:underline;}
+  .cal table{width:100%; border-collapse:collapse; table-layout:fixed; font-variant-numeric:tabular-nums;}
+  .cal th{font-size:11px; font-weight:600; color:var(--sub); padding:2px 0;}
+  .cal th:first-child{color:var(--red);}
+  .cal td{
+    text-align:center; font-size:12px; padding:3px 0; color:var(--txt);
+  }
+  .cal td.out{color:var(--dim);}
+  .cal td.sun{color:var(--red);}
+  .cal td.sun.out{color:var(--dim);}
+  .cal td .sel{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:24px; height:22px; border-radius:5px;
+    background:var(--blue); color:#fff; font-weight:700;
+  }
+
+  /* ---------- flexible area ---------- */
+  .flex-area{
+    flex:1; min-height:0;
+    display:flex; flex-direction:column;
+    /* 세 모듈 최소 합보다 창이 작아지면 가변 영역 자체가 스크롤되는 fallback */
+    overflow-y:auto; overflow-x:hidden;
+  }
+
+  .mod{
+    flex:none;
+    display:flex; flex-direction:column;
+    min-height:0; overflow:hidden;
+  }
+  .mod-head{
+    flex:none;
+    display:flex; align-items:center; gap:6px;
+    padding:10px 14px 6px;
+  }
+  .mod-head h2{font-size:15px; font-weight:800;}
+  .cnt{
+    font-size:11px; font-weight:700; color:var(--blue);
+    background:var(--blue-soft); border-radius:9px;
+    padding:1px 7px; font-variant-numeric:tabular-nums;
+  }
+  .mod-head .sp{margin-left:auto;}
+  .act{
+    font:inherit; font-size:12px; font-weight:700;
+    color:var(--blue); background:none;
+    border:1px solid var(--blue); border-radius:6px;
+    padding:0 10px; height:24px;
+    display:inline-flex; align-items:center;
+    cursor:pointer;
+  }
+  .act.ghost{color:var(--dim); border-color:var(--dim); cursor:default;}
+  .icon-btn{
+    font:inherit; font-size:14px; line-height:1;
+    color:var(--sub); background:none; border:none;
+    padding:4px 5px; cursor:pointer; border-radius:6px;
+  }
+  .icon-btn:hover{background:var(--chip); color:var(--txt);}
+  .icon-btn:focus-visible, .act:focus-visible{outline:2px solid var(--focus); outline-offset:1px;}
+  .max-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; padding:0; margin-left:2px;
+    color:var(--card); background:var(--dkgy);
+    border:none; border-radius:50%;
+    flex:none; cursor:pointer;
+  }
+  .max-btn:hover{opacity:.8;}
+  .max-btn svg{width:9px; height:9px; display:block;}
+  .max-btn .ic-max{width:10px; height:10px;}   /* 확대 글리프만 110% */
+  .max-btn .ic-min{display:none;}
+  .mod.is-max .max-btn .ic-max{display:none;}
+  .mod.is-max .max-btn .ic-min{display:block;}
+
+  .mod-body{
+    flex:1; min-height:0; position:relative;
+  }
+  .scroll{
+    height:100%; overflow-y:auto;
+    scrollbar-gutter:stable;       /* 스크롤 유무와 무관하게 폭 고정 → 줄바꿈 불변 */
+    padding:0 8px 10px 14px;
+    scrollbar-width:thin;
+    scrollbar-color:var(--dim) transparent;
+  }
+  .scroll::-webkit-scrollbar{width:6px;}
+  .scroll::-webkit-scrollbar-thumb{background:var(--dim); border-radius:3px; min-height:24px;}
+  .scroll::-webkit-scrollbar-track{background:transparent;}
+
+  /* bottom fade = "잘림 힌트" */
+  .fade-b, .fade-t{
+    position:absolute; left:0; right:8px; height:22px;
+    pointer-events:none; opacity:0; transition:opacity .15s;
+  }
+  .fade-b{bottom:0; background:linear-gradient(to bottom, transparent, var(--card));}
+  .fade-t{top:0; background:linear-gradient(to top, transparent, var(--card));}
+  .mod.can-down .fade-b{opacity:1;}
+  .mod.can-up .fade-t{opacity:1;}
+
+  .notice-txt{font-size:13.5px; line-height:1.65; padding-top:2px;}
+
+  .row{
+    display:flex; align-items:center; gap:8px;
+    min-height:34px; font-size:13.5px;
+  }
+  .row input[type="checkbox"]{
+    width:16px; height:16px; accent-color:var(--blue); flex:none;
+  }
+  .row .name{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .row .name.link{text-decoration:underline; text-underline-offset:2px;}
+  .badge{
+    flex:none; font-size:10.5px; color:var(--sub);
+    border:1px solid var(--line); border-radius:4px; padding:1px 5px;
+  }
+  .dot{flex:none; margin-left:auto; width:16px; height:16px; border-radius:50%;}
+
+  /* ---------- splitter ---------- */
+  .splitter{
+    flex:none; height:12px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:row-resize; touch-action:none;
+    border-radius:6px;
+  }
+  .splitter i{
+    width:44px; height:4px; border-radius:2px;
+    background:var(--handle); opacity:0;
+    transition:opacity .12s, background .12s;
+  }
+  .splitter:hover i, .splitter:focus-visible i{opacity:1;}
+  .splitter.active i{opacity:1; background:var(--handle-on);}
+  .splitter.limit i{background:var(--red);}
+  .splitter:focus-visible{outline:2px solid var(--focus); outline-offset:-2px;}
+
+  /* ---------- bottom bar ---------- */
+  .bottom{
+    flex:none;
+    display:flex; gap:8px;
+    padding:10px 0 12px;
+  }
+  .btn{
+    flex:1; height:44px;
+    font:inherit; font-size:14px; font-weight:700;
+    border-radius:10px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .btn.dark{background:var(--navy); color:var(--navy-txt); border:none;}
+  .btn.dark .n{
+    width:16px; height:16px; border-radius:50%;
+    background:var(--red); color:#fff;
+    font-size:10px; font-weight:800;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .btn.ghost{background:var(--card); color:var(--txt); border:1px solid var(--line);}
+  .btn:focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+
+  @media (prefers-reduced-motion: reduce){
+    .fade-b,.fade-t,.splitter i{transition:none;}
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="hint">
+    <span><b>모듈 사이 여백 드래그</b> = 높이 조절</span>
+    <span><b>더블클릭</b> = 균등 분배</span>
+    <span><b>타이틀 옆 아이콘</b> = 확대/복원</span>
+    <span><b>상단 스위치</b> = 공지사항·숨긴 목록 ON/OFF</span>
+    <span><b>캘린더 우측 토글</b> = 1개/2개</span>
+  </div>
+
+  <div class="panel">
+
+    <!-- 0) 모듈 표시 설정 : 공지사항 / 숨긴 캘린더 목록 ON·OFF -->
+    <div class="top-toggles">
+      <button class="switch on" id="tgNotice" type="button" aria-pressed="true"><span class="knob"></span>공지사항</button>
+      <button class="switch on" id="tgHidden" type="button" aria-pressed="true"><span class="knob"></span>숨긴 캘린더 목록</button>
+    </div>
+
+    <!-- 1) 캘린더 : 고정 -->
+    <section class="card cal" aria-label="캘린더 (고정 영역)">
+      <div class="cal-toggle" role="group" aria-label="캘린더 표시 개수">
+        <button type="button" class="tg on" data-n="1">1개</button>
+        <button type="button" class="tg" data-n="2">2개</button>
+      </div>
+      <div class="cal-head">‹ &nbsp;2021.08&nbsp; <span class="today">오늘</span> &nbsp;›</div>
+      <table>
+        <thead><tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead>
+        <tbody>
+          <tr><td class="sun out">26</td><td class="out">27</td><td class="out">28</td><td class="out">29</td><td class="out">30</td><td class="out">31</td><td>1</td></tr>
+          <tr><td class="sun">2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td></tr>
+          <tr><td class="sun">9</td><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>15</td></tr>
+          <tr><td class="sun">16</td><td>17</td><td>18</td><td>19</td><td>20</td><td>21</td><td>22</td></tr>
+          <tr><td class="sun">23</td><td>24</td><td>25</td><td><span class="sel">26</span></td><td>27</td><td>28</td><td>29</td></tr>
+          <tr><td class="sun">30</td><td>31</td><td class="out">1</td><td class="out">2</td><td class="out">3</td><td class="out">4</td><td class="out">5</td></tr>
+        </tbody>
+      </table>
+      <div id="cal2" hidden>
+        <div class="cal-head">&nbsp;2021.09&nbsp; <span class="today">오늘</span> &nbsp;›</div>
+        <table>
+          <thead><tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead>
+          <tbody>
+            <tr><td class="sun out">30</td><td class="out">31</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr>
+            <tr><td class="sun">6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td></tr>
+            <tr><td class="sun">13</td><td>14</td><td>15</td><td>16</td><td>17</td><td>18</td><td>19</td></tr>
+            <tr><td class="sun">20</td><td>21</td><td>22</td><td>23</td><td>24</td><td>25</td><td>26</td></tr>
+            <tr><td class="sun">27</td><td>28</td><td>29</td><td class="sun">30</td><td class="out">1</td><td class="out">2</td><td class="out">3</td></tr>
+            <tr><td class="sun out">4</td><td class="out">5</td><td class="out">6</td><td class="out">7</td><td class="out">8</td><td class="out">9</td><td class="out">10</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 2~4) 가변 영역 -->
+    <div class="flex-area" id="flexArea">
+
+      <section class="card mod" id="mod0" aria-label="공지사항">
+        <div class="mod-head">
+          <h2>공지사항</h2>
+          <button class="max-btn" type="button" data-i="0" aria-label="공지사항 확대/복원">
+            <svg class="ic-max" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><g fill="currentColor"><polygon points="5.6,3 10,3 10,7.4"/><polygon points="3,5.6 3,10 7.4,10"/></g></svg>
+            <svg class="ic-min" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><line x1="3.5" y1="6.5" x2="9.5" y2="6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+          <span class="sp"></span>
+          <button class="act" type="button">편집</button>
+          <button class="icon-btn" type="button" aria-label="더보기">⋮</button>
+        </div>
+        <div class="mod-body">
+          <div class="scroll">
+            <p class="notice-txt">공지사항 등록 설정을 하게되면 병원 전체가 해당 공유사항 영역을 모두 볼 수 있고, 항상 영역이 표시됩니다. 내용은 당일에만 유지되며 다음 날 자동 삭제됩니다.</p>
+            <p class="notice-txt">· 금일 14시 소아청소년과 예방접종 물량 입고 예정입니다.</p>
+            <p class="notice-txt">· 내과 오후 진료는 17시 30분 접수 마감입니다.</p>
+          </div>
+          <div class="fade-t"></div><div class="fade-b"></div>
+        </div>
+      </section>
+
+      <div class="splitter" data-i="0" tabindex="0" role="separator" aria-orientation="horizontal" aria-label="공지사항과 캘린더 설정 크기 조절"><i></i></div>
+
+      <section class="card mod" id="mod1" aria-label="캘린더 설정">
+        <div class="mod-head">
+          <h2>캘린더 설정</h2>
+          <button class="max-btn" type="button" data-i="1" aria-label="캘린더 설정 확대/복원">
+            <svg class="ic-max" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><g fill="currentColor"><polygon points="5.6,3 10,3 10,7.4"/><polygon points="3,5.6 3,10 7.4,10"/></g></svg>
+            <svg class="ic-min" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><line x1="3.5" y1="6.5" x2="9.5" y2="6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+          <span class="sp"></span>
+          <button class="act" type="button">추가</button>
+          <button class="icon-btn" type="button" aria-label="더보기">⋮</button>
+        </div>
+        <div class="mod-body">
+          <div class="scroll">
+            <label class="row"><input type="checkbox" checked><span class="name link">김의사(소아청소년과)</span><span class="dot" style="background:#ff5546"></span></label>
+            <label class="row"><input type="checkbox"><span class="name">박의사(내과)</span><span class="dot" style="background:#ff9832"></span></label>
+            <label class="row"><input type="checkbox"><span class="name">이의사(소아청소년과)</span><span class="dot" style="background:#ffc927"></span></label>
+            <label class="row"><input type="checkbox"><span class="name">정의사(내과)</span><span class="dot" style="background:#2fd463"></span></label>
+            <label class="row"><input type="checkbox"><span class="name">안의사(내과)</span><span class="dot" style="background:#25aaf5"></span></label>
+            <label class="row"><input type="checkbox"><span class="name">최의사(소아청소년과)</span><span class="dot" style="background:#8038e8"></span></label>
+            <label class="row"><input type="checkbox"><span class="name">차의사(소아청소년과)</span><span class="badge">비활성</span><span class="dot" style="background:#2e3d66"></span></label>
+          </div>
+          <div class="fade-t"></div><div class="fade-b"></div>
+        </div>
+      </section>
+
+      <div class="splitter" data-i="1" tabindex="0" role="separator" aria-orientation="horizontal" aria-label="캘린더 설정과 숨긴 캘린더 목록 크기 조절"><i></i></div>
+
+      <section class="card mod" id="mod2" aria-label="숨긴 캘린더 목록">
+        <div class="mod-head">
+          <h2>숨긴 캘린더 목록</h2>
+          <button class="max-btn" type="button" data-i="2" aria-label="숨긴 캘린더 목록 확대/복원">
+            <svg class="ic-max" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><g fill="currentColor"><polygon points="5.6,3 10,3 10,7.4"/><polygon points="3,5.6 3,10 7.4,10"/></g></svg>
+            <svg class="ic-min" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><line x1="3.5" y1="6.5" x2="9.5" y2="6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+          <span class="sp"></span>
+          <button class="act ghost" type="button">숨김해제</button>
+        </div>
+        <div class="mod-body">
+          <div class="scroll">
+            <label class="row"><input type="checkbox"><span class="name">차의사(소아청소년과)</span></label>
+            <label class="row"><input type="checkbox"><span class="name">오의사(내과)</span></label>
+            <label class="row"><input type="checkbox"><span class="name">주의사(이비인후과)</span></label>
+            <label class="row"><input type="checkbox"><span class="name">김의사(내과)</span></label>
+          </div>
+          <div class="fade-t"></div><div class="fade-b"></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 5) 하단 버튼 : 고정 -->
+    <footer class="bottom">
+      <button class="btn dark" type="button">예약 미확정 환자(99) <span class="n">N</span></button>
+      <button class="btn ghost" type="button">취소/부도내역</button>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var area = document.getElementById('flexArea');
+  var mods = [document.getElementById('mod0'), document.getElementById('mod1'), document.getElementById('mod2')];
+  var splitters = Array.prototype.slice.call(area.querySelectorAll('.splitter'));
+  var SP = 12;                       // splitter height
+  var HEAD = 40, ROW = 34, PAD = 6;  // 최소 = 타이틀 + 콘텐츠 1줄
+  var MIN = HEAD + ROW + PAD;        // 80px
+  var H = [0,0,0];
+  var visible = [true, true, true];   // [공지사항, 캘린더 설정, 숨긴 캘린더 목록]
+
+  function visIdx(){ return [0,1,2].filter(function(i){ return visible[i]; }); }
+  // 보이는 모듈 연속 쌍마다 뒤 모듈 바로 앞의 스플리터 하나만 노출
+  function shownSplitters(){
+    var v = visIdx(), out = [];
+    for (var k=1;k<v.length;k++) out.push(v[k]-1);
+    return out;
+  }
+  function avail(){ return area.clientHeight - SP * shownSplitters().length; }
+
+  function syncVisibility(){
+    for (var i=0;i<3;i++) mods[i].style.display = visible[i] ? '' : 'none';
+    var shown = shownSplitters();
+    splitters.forEach(function(sp){
+      sp.style.display = shown.indexOf(+sp.dataset.i) >= 0 ? '' : 'none';
+    });
+  }
+
+  // 모듈 콘텐츠 자연 높이(헤더 + 목록 전체)
+  function contentH(i){
+    var m = mods[i];
+    return m.querySelector('.mod-head').offsetHeight + m.querySelector('.scroll').scrollHeight;
+  }
+
+  // 캘린더 1개(한 달) 높이 = 공지사항의 default 높이 기준
+  function oneCalH(){
+    var cal = document.querySelector('.cal');
+    var c2 = document.getElementById('cal2');
+    var h = cal.offsetHeight;
+    if (c2 && !c2.hidden) h -= c2.offsetHeight;
+    return h;
+  }
+
+  function equalize(){
+    var v = visIdx();
+    if (v.length){
+      var a = avail();
+      H = [0,0,0];
+      // 공지사항 default: 상단 캘린더 1개 높이로 등장
+      if (visible[0] && v.length > 1){
+        var t = Math.min(Math.max(oneCalH(), MIN), a - MIN * (v.length - 1));
+        H[0] = t;
+        var rest = v.filter(function(i){ return i !== 0; });
+        rest.forEach(function(i){ H[i] = (a - t) / rest.length; });
+      } else {
+        v.forEach(function(i){ H[i] = a / v.length; });
+      }
+      // 숨긴 캘린더 목록 default: 콘텐츠 높이 초과분(하단 여백)은 다른 모듈로 이관
+      if (visible[2] && v.length > 1){
+        var cap = Math.max(MIN, contentH(2));
+        if (H[2] > cap){
+          var surplus = H[2] - cap;
+          H[2] = cap;
+          var others = v.filter(function(i){ return i !== 2 && i !== 0; });
+          if (!others.length) others = v.filter(function(i){ return i !== 2; });
+          others.forEach(function(i){ H[i] += surplus / others.length; });
+        }
+      }
+      fit();
+    }
+    apply();
+  }
+
+  function apply(){
+    for (var i=0;i<3;i++) mods[i].style.height = Math.max(0, Math.floor(H[i])) + 'px';
+    updateMaxIcons();
+    requestAnimationFrame(updateFades);
+  }
+
+  // 드래그로 최대에 도달해도 아이콘이 □ → ─ 로 바뀌어야 하므로 상태 기반 판정
+  function isMaxed(i){
+    if (!visible[i]) return false;
+    var v = visIdx();
+    if (v.length < 2) return false;
+    if (H[i] <= MIN + 1) return false;
+    for (var k=0;k<v.length;k++){ var j=v[k]; if (j !== i && H[j] > MIN + 1) return false; }
+    return true;
+  }
+  function updateMaxIcons(){
+    for (var i=0;i<3;i++) mods[i].classList.toggle('is-max', isMaxed(i));
+  }
+
+  // 보이는 모듈의 합계를 avail에 맞추되 각 모듈은 MIN 미만으로 줄이지 않음
+  function fit(){
+    var v = visIdx();
+    if (!v.length) return;
+    var a = avail();
+    for (var i=0;i<3;i++) if (!visible[i]) H[i] = 0;
+    if (a <= MIN * v.length){ v.forEach(function(i){ H[i] = MIN; }); return; }
+    var sum = 0; v.forEach(function(i){ sum += H[i]; });
+    if (sum <= 0){ v.forEach(function(i){ H[i] = a / v.length; }); sum = a; }
+    v.forEach(function(i){ H[i] = H[i] * a / sum; });
+    for (var k=0;k<4;k++){
+      var deficit = 0, pool = 0;
+      v.forEach(function(i){ if (H[i] < MIN){ deficit += MIN - H[i]; H[i] = MIN; } });
+      if (deficit <= 0) break;
+      v.forEach(function(i){ if (H[i] > MIN) pool += H[i] - MIN; });
+      if (pool <= 0) break;
+      v.forEach(function(i){ if (H[i] > MIN) H[i] -= deficit * (H[i] - MIN) / pool; });
+    }
+    var sum2 = 0; v.forEach(function(i){ sum2 += H[i]; });
+    var big = v[0]; v.forEach(function(i){ if (H[i] > H[big]) big = i; });
+    H[big] += a - sum2;
+  }
+
+  function takeFrom(order, amount){
+    var taken = 0;
+    for (var k=0;k<order.length;k++){
+      var i = order[k];
+      var give = Math.min(H[i]-MIN, amount-taken);
+      if (give > 0){ H[i] -= give; taken += give; }
+      if (taken >= amount) break;
+    }
+    return taken;
+  }
+
+  function moveSplitter(s, d, el){
+    var v = visIdx();
+    var above = v.filter(function(i){ return i <= s; });
+    var below = v.filter(function(i){ return i > s; });
+    if (!above.length || !below.length || !d) return;
+    var t = 0;
+    if (d > 0){
+      t = takeFrom(below, d);
+      H[above[above.length-1]] += t;
+    } else {
+      t = takeFrom(above.slice().reverse(), -d);
+      H[below[0]] += t;
+    }
+    if (el){ el.classList.toggle('limit', Math.abs(d) > 0.5 && t < Math.abs(d)*0.5); }
+    apply();
+  }
+
+  splitters.forEach(function(sp){
+    var s = +sp.dataset.i, lastY = 0, dragging = false;
+    sp.addEventListener('pointerdown', function(e){
+      dragging = true; lastY = e.clientY;
+      sp.setPointerCapture(e.pointerId);
+      sp.classList.add('active');
+      e.preventDefault();
+    });
+    sp.addEventListener('pointermove', function(e){
+      if (!dragging) return;
+      var d = e.clientY - lastY; lastY = e.clientY;
+      moveSplitter(s, d, sp);
+    });
+    function end(e){
+      dragging = false;
+      sp.classList.remove('active','limit');
+      try{ sp.releasePointerCapture(e.pointerId); }catch(_){}
+    }
+    sp.addEventListener('pointerup', end);
+    sp.addEventListener('pointercancel', end);
+    sp.addEventListener('dblclick', function(){ equalize(); });
+    sp.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowUp'){ moveSplitter(s, -16, sp); e.preventDefault(); }
+      if (e.key === 'ArrowDown'){ moveSplitter(s, 16, sp); e.preventDefault(); }
+      setTimeout(function(){ sp.classList.remove('limit'); }, 250);
+    });
+  });
+
+  // □ 확대 : 해당 모듈 최대화(나머지 최소) / ─ 복원 : 확대 직전 상태로
+  var restoreH = null;
+  Array.prototype.forEach.call(document.querySelectorAll('.max-btn'), function(b){
+    b.addEventListener('click', function(){
+      var i = +b.dataset.i;
+      if (!visible[i]) return;
+      var v = visIdx();
+      if (v.length < 2) return;
+      var a = avail();
+      if (isMaxed(i)){
+        if (restoreH){ H = restoreH.slice(); restoreH = null; fit(); apply(); }
+        else { equalize(); }
+      } else {
+        restoreH = H.slice();
+        v.forEach(function(j){ H[j] = MIN; });
+        H[i] = Math.max(MIN, a - MIN * (v.length - 1));
+        apply();
+      }
+    });
+  });
+
+  // 캘린더 1개 / 2개 토글 — 캘린더 영역 높이가 바뀌면 가변 영역은 ResizeObserver가 재배분
+  var calBtns = Array.prototype.slice.call(document.querySelectorAll('.cal-toggle .tg'));
+  calBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      calBtns.forEach(function(x){ x.classList.toggle('on', x === b); });
+      document.getElementById('cal2').hidden = b.dataset.n !== '2';
+    });
+  });
+
+  // 잘림 힌트(페이드) 갱신
+  function updateFades(){
+    mods.forEach(function(m){
+      var sc = m.querySelector('.scroll');
+      var canDown = sc.scrollHeight - sc.clientHeight - sc.scrollTop > 2;
+      var canUp = sc.scrollTop > 2;
+      m.classList.toggle('can-down', canDown);
+      m.classList.toggle('can-up', canUp);
+    });
+  }
+  mods.forEach(function(m){
+    m.querySelector('.scroll').addEventListener('scroll', updateFades, {passive:true});
+  });
+
+  if (window.ResizeObserver){
+    new ResizeObserver(function(){ fit(); apply(); }).observe(area);
+  } else {
+    window.addEventListener('resize', function(){ fit(); apply(); });
+  }
+
+  // 상단 ON/OFF 스위치 : 공지사항(mod0) / 숨긴 캘린더 목록(mod2)
+  // 토글 시 보이는 모듈들을 균일한 크기로 재배분
+  function bindSwitch(id, idx){
+    var btn = document.getElementById(id);
+    btn.addEventListener('click', function(){
+      visible[idx] = !visible[idx];
+      btn.classList.toggle('on', visible[idx]);
+      btn.setAttribute('aria-pressed', String(visible[idx]));
+      restoreH = null;
+      syncVisibility();
+      equalize();
+    });
+  }
+  bindSwitch('tgNotice', 0);
+  bindSwitch('tgHidden', 2);
+
+  syncVisibility();
+  equalize();
+})();
+</script>
+</body>
+</html>
