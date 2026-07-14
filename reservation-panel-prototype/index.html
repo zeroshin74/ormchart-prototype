@@ -69,7 +69,24 @@
     overflow:hidden;
   }
 
-  .stage{height:100dvh; display:flex; flex-direction:column; align-items:center;}
+  .app{height:100dvh; display:flex; flex-direction:column;}
+  .tabs{
+    flex:none; display:flex; gap:2px; padding:6px 16px 0;
+    background:var(--card); border-bottom:1px solid var(--line);
+  }
+  .tab{
+    font:inherit; font-size:13px; font-weight:700;
+    padding:9px 18px 10px; background:none; border:none;
+    border-bottom:2px solid transparent; margin-bottom:-1px;
+    color:var(--sub); cursor:pointer;
+  }
+  .tab.on{color:var(--blue); border-bottom-color:var(--blue);}
+  .tab:focus-visible{outline:2px solid var(--focus); outline-offset:-2px;}
+  .view{flex:1; min-height:0;}
+  .view[hidden]{display:none;}
+  #view-spec{overflow-y:auto;}
+
+  .stage{height:100%; display:flex; flex-direction:column; align-items:center;}
 
   .hint{
     flex:none; width:100%;
@@ -299,10 +316,40 @@
   @media (prefers-reduced-motion: reduce){
     .fade-b,.fade-t,.splitter i{transition:none;}
   }
+
+  /* ---------- 화면설계서 ---------- */
+  .doc{max-width:900px; margin:0 auto; padding:28px 24px 90px;}
+  .doc h1{font-size:21px; font-weight:800; margin-bottom:4px;}
+  .doc .meta{font-size:12px; color:var(--sub); margin-bottom:26px;}
+  .doc h2{font-size:16px; font-weight:800; margin:34px 0 12px; padding-top:22px; border-top:1px solid var(--line);}
+  .doc h3{font-size:13.5px; font-weight:700; margin:18px 0 8px;}
+  .doc p, .doc li{font-size:13.5px; line-height:1.7;}
+  .doc ul{padding-left:18px; margin:6px 0;}
+  .doc table{width:100%; border-collapse:collapse; font-size:13px; margin:10px 0 4px;}
+  .doc th{background:var(--chip); font-weight:700; text-align:left;}
+  .doc th, .doc td{border:1px solid var(--line); padding:7px 10px; vertical-align:top; line-height:1.55;}
+  .doc .tbl-wrap{overflow-x:auto;}
+  .doc code{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12px; background:var(--chip); border-radius:4px; padding:1px 5px;}
+  .tag-fixed, .tag-flex{font-size:11px; font-weight:700; border-radius:4px; padding:1px 7px; white-space:nowrap;}
+  .tag-fixed{color:var(--sub); background:var(--chip);}
+  .tag-flex{color:var(--blue); background:var(--blue-soft);}
+  .wire{display:flex; gap:26px; align-items:flex-start; flex-wrap:wrap; margin:12px 0;}
+  .wire-col{flex:none; width:232px; display:flex; flex-direction:column; gap:5px;}
+  .wbox{border:1.5px solid var(--dkgy); border-radius:8px; padding:9px 11px; font-size:12.5px; font-weight:700; background:var(--card);}
+  .wbox small{display:block; font-weight:500; font-size:11px; color:var(--sub); margin-top:2px;}
+  .wsplit{border-top:2px dashed var(--dim); margin:2px 10px;}
+  .wire-note{flex:1; min-width:280px;}
 </style>
 </head>
 <body>
-<div class="stage">
+<div class="app">
+  <nav class="tabs" role="tablist" aria-label="문서 전환">
+    <button class="tab on" id="tabProto" type="button" role="tab" aria-selected="true">프로토타입</button>
+    <button class="tab" id="tabSpec" type="button" role="tab" aria-selected="false">화면설계서</button>
+  </nav>
+
+  <div class="view" id="view-proto" role="tabpanel">
+  <div class="stage">
   <div class="hint">
     <span><b>모듈 사이 여백 드래그</b> = 높이 조절</span>
     <span><b>더블클릭</b> = 균등 분배</span>
@@ -435,6 +482,122 @@
       <button class="btn ghost" type="button">취소/부도내역</button>
     </footer>
 
+  </div>
+  </div>
+  </div>
+
+  <div class="view" id="view-spec" role="tabpanel" hidden>
+    <div class="doc">
+      <h1>예약설정 좌측 패널 — UX/UI 화면설계서</h1>
+      <p class="meta">화면 ID: RSV-LEFT-01 · Ver 1.0 · 작성일 2026-07-14 · 본 설계서는 [프로토타입] 탭과 동일 사양이며, 프로토타입에서 모든 인터랙션을 직접 확인할 수 있습니다.</p>
+
+      <h2>1. 개요</h2>
+      <table>
+        <tr><th style="width:120px">목적</th><td>예약설정 화면 좌측 패널의 모듈 구성과 세로 리사이즈 인터랙션 정의 (기획·개발 공용)</td></tr>
+        <tr><th>적용 범위</th><td>좌측 패널 내 ① 모듈 표시 스위치 ② 캘린더 ③ 공지사항 ④ 캘린더 설정 ⑤ 숨긴 캘린더 목록 ⑥ 하단 고정 버튼</td></tr>
+        <tr><th>전제 조건</th><td>공지사항은 설정 ON 시에만 노출됩니다. 숨긴 캘린더 목록은 항목이 없을 수 있습니다(영역 미노출 가능).</td></tr>
+      </table>
+
+      <h2>2. 화면 구성</h2>
+      <div class="wire">
+        <div class="wire-col" aria-hidden="true">
+          <div class="wbox">① 모듈 표시 스위치<small>공지사항 · 숨긴 캘린더 목록 ON/OFF</small></div>
+          <div class="wbox">② 캘린더<small>고정 영역 · 1개/2개 토글</small></div>
+          <div class="wbox">③ 공지사항<small>가변 모듈 · 내부 스크롤</small></div>
+          <div class="wsplit"></div>
+          <div class="wbox">④ 캘린더 설정<small>가변 모듈 · 내부 스크롤</small></div>
+          <div class="wsplit"></div>
+          <div class="wbox">⑤ 숨긴 캘린더 목록<small>가변 모듈 · 내부 스크롤</small></div>
+          <div class="wbox">⑥ 하단 버튼 2개<small>항상 고정</small></div>
+        </div>
+        <div class="wire-note">
+          <div class="tbl-wrap">
+          <table>
+            <tr><th style="width:36px">No</th><th style="width:150px">영역</th><th style="width:64px">타입</th><th>정의</th></tr>
+            <tr><td>①</td><td>모듈 표시 스위치</td><td><span class="tag-fixed">고정</span></td><td>공지사항·숨긴 캘린더 목록의 노출 여부를 토글. 변경 시 가변 모듈은 §3 규칙으로 재분배.</td></tr>
+            <tr><td>②</td><td>캘린더</td><td><span class="tag-fixed">고정</span></td><td>세로 크기 고정, 드래그 리사이즈 대상 아님. 우상단 토글로 1개월/2개월 전환하며, 전환 시 가변 영역이 남은 높이로 재계산.</td></tr>
+            <tr><td>③</td><td>공지사항</td><td><span class="tag-flex">가변</span></td><td>설정 ON 시에만 노출. 텍스트 공지, 내부 세로 스크롤.</td></tr>
+            <tr><td>④</td><td>캘린더 설정</td><td><span class="tag-flex">가변</span></td><td>의사별 체크 목록(색상 라벨). 항상 노출되는 기준 모듈.</td></tr>
+            <tr><td>⑤</td><td>숨긴 캘린더 목록</td><td><span class="tag-flex">가변</span></td><td>숨김 처리된 캘린더 목록. 0개면 영역 자체 미노출.</td></tr>
+            <tr><td>⑥</td><td>하단 버튼</td><td><span class="tag-fixed">고정</span></td><td>'예약 미확정 환자(99)', '취소/부도내역'. 항상 노출, 크기 불변.</td></tr>
+          </table>
+          </div>
+        </div>
+      </div>
+
+      <h2>3. Default 높이 분배 규칙</h2>
+      <p>적용 시점: <b>최초 진입</b>, <b>① 스위치 ON/OFF</b>, <b>스플리터 더블클릭(리셋)</b>.</p>
+      <div class="tbl-wrap">
+      <table>
+        <tr><th style="width:160px">모듈</th><th>Default 높이</th></tr>
+        <tr><td>③ 공지사항</td><td>상단 캘린더 <b>1개(한 달) 높이</b>와 동일하게 등장</td></tr>
+        <tr><td>⑤ 숨긴 캘린더 목록</td><td><b>콘텐츠 높이</b>(목록 전체가 보이는 높이, 하단 여백 0). 목록 4개 기준 스크롤 없음</td></tr>
+        <tr><td>④ 캘린더 설정</td><td>위 두 모듈 배분 후 <b>나머지 공간 전부</b></td></tr>
+      </table>
+      </div>
+      <ul>
+        <li>노출 모듈이 2개 이하일 때도 동일 규칙 적용, 규칙 대상이 아닌 조합(예: 공지 OFF)은 균등 분배 후 잉여를 캘린더 설정에 배분.</li>
+        <li>공간이 부족하면 <b>모듈 최소 높이(80px)</b> 확보가 항상 우선합니다.</li>
+      </ul>
+
+      <h2>4. 인터랙션 명세</h2>
+      <div class="tbl-wrap">
+      <table>
+        <tr><th style="width:64px">ID</th><th style="width:170px">트리거</th><th>동작</th><th style="width:220px">제약 · 예외</th></tr>
+        <tr><td>INT-01</td><td>모듈 사이 여백(스플리터) 드래그</td><td>경계 위/아래 모듈 높이 증감. hover 시 핸들(44×4px)과 <code>row-resize</code> 커서 표시. 인접 모듈이 최소 높이에 도달하면 그 다음 모듈에서 마저 차감(캐스케이드) → 한 모듈을 최대까지 확장 가능.</td><td>모든 모듈이 최소(80px)면 더 줄지 않음. 한계 도달 시 핸들 색상 경고(레드).</td></tr>
+        <tr><td>INT-02</td><td>스플리터 더블클릭</td><td>§3 Default 분배로 리셋.</td><td>—</td></tr>
+        <tr><td>INT-03</td><td>타이틀 우측 원형 버튼 클릭</td><td>해당 모듈 <b>최대화</b>(나머지 모듈은 최소 80px). 재클릭 시 확대 직전 레이아웃으로 <b>복원</b>. 아이콘: 삼각형(확대) ↔ ─(복원).</td><td>아이콘 상태는 높이 기반 판정 — 드래그로 최대에 도달해도 ─ 로 동기화(이때 복원은 Default 분배). 노출 모듈이 1개면 동작 없음.</td></tr>
+        <tr><td>INT-04</td><td>① 스위치 ON/OFF</td><td>해당 모듈 노출/숨김 + 노출 모듈을 §3 규칙으로 재분배. 스플리터는 인접한 노출 모듈 사이에만 1개씩 표시.</td><td>마지막 남은 모듈이 가변 영역 전체 사용.</td></tr>
+        <tr><td>INT-05</td><td>캘린더 1개/2개 토글</td><td>캘린더 카드 높이 변경 → 가변 영역이 남은 높이로 재계산(기존 비율 유지).</td><td>—</td></tr>
+        <tr><td>INT-06</td><td>모듈 내부 휠/트랙패드 스크롤</td><td>콘텐츠 세로 스크롤. 위/아래 잘린 내용이 있으면 페이드 그라데이션으로 힌트 표시.</td><td>최소 상태(1줄)에서도 스크롤 동작. 스크롤바 영역은 상시 확보(<code>scrollbar-gutter: stable</code>)하여 스크롤바 유무로 줄바꿈이 변하지 않음.</td></tr>
+        <tr><td>INT-07</td><td>스플리터 키보드 조작</td><td>Tab으로 포커스 → ↑/↓ 키로 16px 단위 조절.</td><td><code>role="separator"</code>, 포커스 링 표시.</td></tr>
+        <tr><td>INT-08</td><td>창 높이 부족(모든 모듈 최소 합 초과 불가)</td><td>모든 모듈 최소(80px) 고정, 가변 영역 자체에 fallback 세로 스크롤 발생.</td><td>캘린더 2개 + 낮은 해상도 조합 등.</td></tr>
+      </table>
+      </div>
+
+      <h2>5. 상태 정의</h2>
+      <h3>5-1. 가변 모듈 상태</h3>
+      <div class="tbl-wrap">
+      <table>
+        <tr><th style="width:110px">상태</th><th>정의</th></tr>
+        <tr><td>Default</td><td>§3 규칙으로 배분된 초기 상태</td></tr>
+        <tr><td>Custom</td><td>사용자가 드래그로 조정한 상태 (INT-01)</td></tr>
+        <tr><td>Min</td><td>최소 높이 80px = 타이틀 + 콘텐츠 1줄. 더 이상 축소 불가</td></tr>
+        <tr><td>Max</td><td>해당 모듈 외 모든 노출 모듈이 Min인 상태. 확대/복원 아이콘이 ─ 로 전환</td></tr>
+        <tr><td>Hidden</td><td>① 스위치 OFF. 모듈·인접 스플리터 미노출</td></tr>
+      </table>
+      </div>
+      <h3>5-2. 확대/복원 버튼 상태</h3>
+      <ul>
+        <li><b>확대(삼각형 2개)</b>: 모듈이 Max가 아닐 때. 클릭 → 최대화</li>
+        <li><b>복원(─)</b>: 모듈이 Max일 때. 클릭 → 직전 레이아웃(드래그로 Max 도달한 경우는 Default 분배)</li>
+      </ul>
+
+      <h2>6. 수치 · 스타일 스펙</h2>
+      <div class="tbl-wrap">
+      <table>
+        <tr><th style="width:220px">항목</th><th>값</th></tr>
+        <tr><td>모듈 최소 높이</td><td>80px (타이틀 40 + 목록 1행 34 + 여백 6)</td></tr>
+        <tr><td>목록 1행 높이</td><td>34px</td></tr>
+        <tr><td>스플리터</td><td>히트 영역 12px / 핸들 표시 44×4px(hover·드래그 시) / 한계 시 레드</td></tr>
+        <tr><td>확대·복원 버튼</td><td>원형 16px(타이틀 15px과 정렬), 다크 그레이 <code>#4E5560</code>(다크 테마 <code>#B3BAC6</code>), 글리프: 확대 10px(110%)·복원 9px, 카드색</td></tr>
+        <tr><td>텍스트 버튼(편집·추가·숨김해제)</td><td>높이 24px, 라운드 6px, Primary 1px 테두리</td></tr>
+        <tr><td>모듈 카드</td><td>라운드 12px, 카드 간 간격 8px</td></tr>
+        <tr><td>스크롤바</td><td>thin(6px), 썸 최소 높이 24px, <code>scrollbar-gutter: stable</code></td></tr>
+        <tr><td>ON/OFF 스위치</td><td>트랙 30×17px, 노브 13px, ON = Primary</td></tr>
+        <tr><td>주요 색상</td><td>Primary <code>#2B5CE6</code> · 배경 <code>#EEF0F4</code> · 카드 <code>#FFFFFF</code> · 텍스트 <code>#23272F</code> · 보조 <code>#8B93A3</code> · 일요일/경고 <code>#E8442E</code> (다크 테마 토큰 별도 정의)</td></tr>
+      </table>
+      </div>
+
+      <h2>7. 접근성 · 개발 참고</h2>
+      <ul>
+        <li>스플리터: <code>role="separator"</code> + <code>aria-orientation="horizontal"</code>, Tab 포커스 및 방향키 조절(INT-07)</li>
+        <li>스위치: <code>button</code> + <code>aria-pressed</code>, 확대/복원: <code>aria-label</code>로 모듈명 포함</li>
+        <li>모든 조작 요소에 2px 포커스 링, <code>prefers-reduced-motion</code> 시 트랜지션 제거</li>
+        <li>라이트/다크 테마: <code>prefers-color-scheme</code> 기본 + <code>data-theme</code> 오버라이드(토큰 단위)</li>
+        <li>구현 참고: 컨테이너 <code>ResizeObserver</code>로 재배분, 드래그는 pointer capture, 높이 합은 floor로 픽셀 스냅하여 1px 오버플로 방지</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -674,6 +837,23 @@
   }
   bindSwitch('tgNotice', 0);
   bindSwitch('tgHidden', 2);
+
+  // 상단 탭 : 프로토타입 / 화면설계서
+  var tabProto = document.getElementById('tabProto');
+  var tabSpec = document.getElementById('tabSpec');
+  var viewProto = document.getElementById('view-proto');
+  var viewSpec = document.getElementById('view-spec');
+  function selectTab(proto){
+    tabProto.classList.toggle('on', proto);
+    tabSpec.classList.toggle('on', !proto);
+    tabProto.setAttribute('aria-selected', String(proto));
+    tabSpec.setAttribute('aria-selected', String(!proto));
+    viewProto.hidden = !proto;
+    viewSpec.hidden = proto;
+    if (proto){ fit(); apply(); }   // 숨김 동안 크기 변화 대비 재계산
+  }
+  tabProto.addEventListener('click', function(){ selectTab(true); });
+  tabSpec.addEventListener('click', function(){ selectTab(false); });
 
   syncVisibility();
   equalize();
