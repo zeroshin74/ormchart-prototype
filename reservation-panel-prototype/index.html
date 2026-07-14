@@ -157,6 +157,10 @@
   .cal-toggle .tg.on{background:var(--blue); color:#fff; font-weight:700;}
   .cal-toggle .tg:focus-visible{outline:2px solid var(--focus); outline-offset:-2px;}
   #cal2{border-top:1px solid var(--line); margin-top:8px; padding-top:4px;}
+  /* 한 달 높이는 JS(layoutCal)가 계산 — 1개/2개 모드 동일, 2개 모드 = 패널 높이의 1/2 */
+  .month{height:220px; display:flex; flex-direction:column;}
+  .month[hidden]{display:none;}
+  .month table{flex:1;}
   .cal-head{
     display:flex; align-items:baseline; justify-content:center; gap:8px;
     padding:2px 0 6px; font-weight:800; font-size:16px;
@@ -182,8 +186,8 @@
   .flex-area{
     flex:1; min-height:0;
     display:flex; flex-direction:column;
-    /* 세 모듈 최소 합보다 창이 작아지면 가변 영역 자체가 스크롤되는 fallback */
-    overflow-y:auto; overflow-x:hidden;
+    /* 모듈 전체를 감싸는 외부 스크롤은 제공하지 않음 */
+    overflow:hidden;
   }
 
   .mod{
@@ -372,6 +376,7 @@
         <button type="button" class="tg on" data-n="1">1개</button>
         <button type="button" class="tg" data-n="2">2개</button>
       </div>
+      <div class="month">
       <div class="cal-head">‹ &nbsp;2021.08&nbsp; <span class="today">오늘</span> &nbsp;›</div>
       <table>
         <thead><tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead>
@@ -384,7 +389,8 @@
           <tr><td class="sun">30</td><td>31</td><td class="out">1</td><td class="out">2</td><td class="out">3</td><td class="out">4</td><td class="out">5</td></tr>
         </tbody>
       </table>
-      <div id="cal2" hidden>
+      </div>
+      <div id="cal2" class="month" hidden>
         <div class="cal-head">&nbsp;2021.09&nbsp; <span class="today">오늘</span> &nbsp;›</div>
         <table>
           <thead><tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead>
@@ -417,8 +423,6 @@
         <div class="mod-body">
           <div class="scroll">
             <p class="notice-txt">공지사항 등록 설정을 하게되면 병원 전체가 해당 공유사항 영역을 모두 볼 수 있고, 항상 영역이 표시됩니다. 내용은 당일에만 유지되며 다음 날 자동 삭제됩니다.</p>
-            <p class="notice-txt">· 금일 14시 소아청소년과 예방접종 물량 입고 예정입니다.</p>
-            <p class="notice-txt">· 내과 오후 진료는 17시 30분 접수 마감입니다.</p>
           </div>
           <div class="fade-t"></div><div class="fade-b"></div>
         </div>
@@ -526,33 +530,34 @@
         </div>
       </div>
 
-      <h2>3. Default 높이 분배 규칙</h2>
-      <p>적용 시점: <b>최초 진입</b>, <b>① 스위치 ON/OFF</b>, <b>스플리터 더블클릭(리셋)</b>.</p>
+      <h2>3. Default 높이 분배 정책</h2>
+      <p>적용 시점: <b>최초 진입</b>, <b>① 스위치 ON/OFF</b>, <b>스플리터 더블클릭(리셋)</b>. 아래는 상대 비율 기반의 동작 정책이며, 기준이 되는 절대 수치(캘린더 한 달 높이 등)는 GUI 가이드를 따릅니다.</p>
       <div class="tbl-wrap">
       <table>
-        <tr><th style="width:160px">모듈</th><th>Default 높이</th></tr>
-        <tr><td>③ 공지사항</td><td>상단 캘린더 <b>1개(한 달) 높이</b>와 동일하게 등장</td></tr>
-        <tr><td>⑤ 숨긴 캘린더 목록</td><td><b>콘텐츠 높이</b>(목록 전체가 보이는 높이, 하단 여백 0). 목록 4개 기준 스크롤 없음</td></tr>
+        <tr><th style="width:160px">모듈</th><th>Default 높이 정책</th></tr>
+        <tr><td>③ 공지사항</td><td>공지 최대 입력 글자 수(<b>100자</b>)가 모두 보이는 높이로 등장. 이 높이가 공지사항의 <b>최대 높이</b>이기도 함 — 콘텐츠 상한이 있는 유일한 모듈이므로 그 이상 확장되지 않음</td></tr>
+        <tr><td>⑤ 숨긴 캘린더 목록</td><td><b>콘텐츠 높이</b>(목록 전체가 보이는 높이, 하단 여백 0)</td></tr>
         <tr><td>④ 캘린더 설정</td><td>위 두 모듈 배분 후 <b>나머지 공간 전부</b></td></tr>
       </table>
       </div>
       <ul>
         <li>노출 모듈이 2개 이하일 때도 동일 규칙 적용, 규칙 대상이 아닌 조합(예: 공지 OFF)은 균등 분배 후 잉여를 캘린더 설정에 배분.</li>
         <li>공간이 부족하면 <b>모듈 최소 높이(타이틀 + 콘텐츠 1줄)</b> 확보가 항상 우선합니다.</li>
+        <li><b>공지사항 최대 높이 정책</b>: 축소·드래그·더블클릭 등 조작 문법은 다른 모듈과 동일하되, 확장만 100자 표시 높이에서 정지합니다. 콘텐츠 상한이 있는 모듈에 의미 없는 여백을 허용하면 내용 제약이 없는 모듈(캘린더 설정 등)의 공간을 잠식하기 때문입니다.</li>
       </ul>
 
       <h2>4. 인터랙션 명세</h2>
       <div class="tbl-wrap">
       <table>
         <tr><th style="width:64px">ID</th><th style="width:170px">트리거</th><th>동작</th><th style="width:220px">제약 · 예외</th></tr>
-        <tr><td>INT-01</td><td>모듈 사이 여백(스플리터) 드래그</td><td>경계 위/아래 모듈 높이 증감. hover 시 드래그 핸들과 리사이즈 커서 노출로 조절 가능함을 인지시킴. 인접 모듈이 최소 높이에 도달하면 그 다음 모듈에서 마저 차감(캐스케이드) → 한 모듈을 최대까지 확장 가능.</td><td>모든 모듈이 최소 높이면 더 줄지 않음. 한계 도달 시 핸들 상태 변화로 피드백.</td></tr>
+        <tr><td>INT-01</td><td>모듈 사이 여백(스플리터) 드래그</td><td>경계 위/아래 모듈 높이 증감. hover 시 드래그 핸들과 리사이즈 커서 노출로 조절 가능함을 인지시킴. 인접 모듈이 최소 높이에 도달하면 그 다음 모듈에서 마저 차감(캐스케이드) → 한 모듈을 최대까지 확장 가능.</td><td>모든 모듈이 최소 높이면 더 줄지 않음. 공지사항은 <b>최대 높이(100자 표시 높이)</b> 이상으로 확장되지 않음. 두 한계 모두 도달 시 핸들 상태 변화로 피드백.</td></tr>
         <tr><td>INT-02</td><td>스플리터 더블클릭</td><td>§3 Default 분배로 리셋.</td><td>—</td></tr>
-        <tr><td>INT-03</td><td>타이틀 우측 확대/복원 버튼 클릭</td><td>해당 모듈 <b>최대화</b>(나머지 모듈은 최소 높이). 재클릭 시 확대 직전 레이아웃으로 <b>복원</b>. 아이콘: 확대 ↔ 복원 상태 전환.</td><td>아이콘 상태는 높이 기반 판정 — 드래그로 최대에 도달해도 복원 아이콘으로 동기화(이때 복원은 Default 분배). 노출 모듈이 1개면 동작 없음.</td></tr>
+        <tr><td>INT-03</td><td>타이틀 우측 확대/복원 버튼 클릭</td><td>해당 모듈 <b>최대화</b>(나머지 모듈은 최소 높이). 재클릭 시 확대 직전 레이아웃으로 <b>복원</b>. 아이콘: 확대 ↔ 복원 상태 전환. <b>공지사항의 최대화는 100자 표시 높이까지</b>이며, 남는 공간은 다른 모듈이 나눠 가짐.</td><td>아이콘 상태는 높이 기반 판정 — 드래그로 최대에 도달해도 복원 아이콘으로 동기화(이때 복원은 Default 분배). 공지사항은 default가 곧 최대이므로 기본 상태에서 복원 아이콘으로 표시됨. 노출 모듈이 1개면 동작 없음.</td></tr>
         <tr><td>INT-04</td><td>① 스위치 ON/OFF</td><td>해당 모듈 노출/숨김 + 노출 모듈을 §3 규칙으로 재분배. 스플리터는 인접한 노출 모듈 사이에만 1개씩 표시.</td><td>마지막 남은 모듈이 가변 영역 전체 사용.</td></tr>
-        <tr><td>INT-05</td><td>캘린더 1개/2개 토글</td><td>캘린더 카드 높이 변경 → 가변 영역이 남은 높이로 재계산(기존 비율 유지).</td><td>—</td></tr>
+        <tr><td>INT-05</td><td>캘린더 1개/2개 토글</td><td>한 달 캘린더의 높이는 <b>1개/2개 모드에서 동일</b>. 2개 모드에서는 캘린더 영역이 좌측 패널 <b>전체 높이의 1/2</b>을 차지하며, 1개 모드는 그 절반(약 1/4)만 차지. 전환 시 가변 영역이 남은 높이로 재계산(기존 비율 유지).</td><td>공지사항 default 크기는 캘린더 표시 모드와 무관하게 동일.</td></tr>
         <tr><td>INT-06</td><td>모듈 내부 휠/트랙패드 스크롤</td><td>콘텐츠 세로 스크롤. 위/아래 잘린 내용이 있으면 페이드로 힌트 표시.</td><td>최소 상태(1줄)에서도 스크롤 동작. 스크롤바 영역은 상시 확보하여 스크롤바 유무로 본문 줄바꿈이 변하지 않아야 함.</td></tr>
         <tr><td>INT-07</td><td>스플리터 키보드 조작</td><td>Tab으로 포커스 → ↑/↓ 키로 일정 단위 조절.</td><td>포커스 상태를 시각적으로 표시.</td></tr>
-        <tr><td>INT-08</td><td>창 높이 부족(모든 모듈 최소 합 초과 불가)</td><td>모든 모듈을 최소 높이로 고정하고, 가변 영역 자체에 fallback 세로 스크롤 발생.</td><td>캘린더 2개 + 낮은 해상도 조합 등.</td></tr>
+        <tr><td>INT-08</td><td>창 높이 부족(모든 모듈 최소 합 초과 불가)</td><td>모든 모듈을 최소 높이(타이틀+1줄)로 고정. 모듈 전체를 감싸는 별도 스크롤은 제공하지 않으며, 콘텐츠 접근은 각 모듈 내부 스크롤(INT-06)로 처리.</td><td>최소 지원 해상도는 GUI 가이드에서 정의.</td></tr>
       </table>
       </div>
 
@@ -619,23 +624,31 @@
     return m.querySelector('.mod-head').offsetHeight + m.querySelector('.scroll').scrollHeight;
   }
 
-  // 캘린더 1개(한 달) 높이 = 공지사항의 default 높이 기준
-  function oneCalH(){
-    var cal = document.querySelector('.cal');
-    var c2 = document.getElementById('cal2');
-    var h = cal.offsetHeight;
-    if (c2 && !c2.hidden) h -= c2.offsetHeight;
-    return h;
+  // 공지사항은 최대 100자 입력 — 100자가 모두 보이는 높이가 default이자 '최대 높이'
+  var NOTICE_MAX = Infinity;
+  function measureNoticeMax(){
+    if (!visible[0]) return NOTICE_MAX;
+    var sc = mods[0].querySelector('.scroll');
+    var probe = document.createElement('p');
+    probe.className = 'notice-txt';
+    probe.style.cssText = 'position:absolute; visibility:hidden; width:' + Math.max(0, sc.clientWidth - 22) + 'px;';
+    var s = ''; for (var k = 0; k < 100; k++) s += '가';
+    probe.textContent = s;
+    sc.appendChild(probe);
+    NOTICE_MAX = HEAD + probe.offsetHeight + 12;
+    sc.removeChild(probe);
+    return NOTICE_MAX;
   }
+  function maxOf(i){ return i === 0 ? NOTICE_MAX : Infinity; }
 
   function equalize(){
     var v = visIdx();
     if (v.length){
       var a = avail();
       H = [0,0,0];
-      // 공지사항 default: 상단 캘린더 1개 높이로 등장
+      // 공지사항 default: 100자(최대 입력)가 모두 보이는 높이로 등장 = 공지사항의 최대 높이
       if (visible[0] && v.length > 1){
-        var t = Math.min(Math.max(oneCalH(), MIN), a - MIN * (v.length - 1));
+        var t = Math.min(Math.max(measureNoticeMax(), MIN), a - MIN * (v.length - 1));
         H[0] = t;
         var rest = v.filter(function(i){ return i !== 0; });
         rest.forEach(function(i){ H[i] = (a - t) / rest.length; });
@@ -669,6 +682,8 @@
     if (!visible[i]) return false;
     var v = visIdx();
     if (v.length < 2) return false;
+    // 공지사항은 100자 표시 높이 도달 = 최대 (다른 모듈 상태와 무관)
+    if (i === 0 && isFinite(NOTICE_MAX)) return H[0] >= NOTICE_MAX - 1;
     if (H[i] <= MIN + 1) return false;
     for (var k=0;k<v.length;k++){ var j=v[k]; if (j !== i && H[j] > MIN + 1) return false; }
     return true;
@@ -695,8 +710,18 @@
       if (pool <= 0) break;
       v.forEach(function(i){ if (H[i] > MIN) H[i] -= deficit * (H[i] - MIN) / pool; });
     }
+    // 공지사항 최대 높이(100자 표시 높이) 초과분은 다른 모듈로 이관
+    if (visible[0] && isFinite(NOTICE_MAX) && H[0] > NOTICE_MAX && v.length > 1){
+      var ex = H[0] - NOTICE_MAX;
+      H[0] = NOTICE_MAX;
+      var recv = -1;
+      v.forEach(function(i){ if (i !== 0 && (recv < 0 || H[i] > H[recv])) recv = i; });
+      if (recv >= 0) H[recv] += ex;
+    }
     var sum2 = 0; v.forEach(function(i){ sum2 += H[i]; });
-    var big = v[0]; v.forEach(function(i){ if (H[i] > H[big]) big = i; });
+    var big = -1;
+    v.forEach(function(i){ if (i !== 0 && (big < 0 || H[i] > H[big])) big = i; });
+    if (big < 0) big = v[0];
     H[big] += a - sum2;
   }
 
@@ -716,13 +741,14 @@
     var above = v.filter(function(i){ return i <= s; });
     var below = v.filter(function(i){ return i > s; });
     if (!above.length || !below.length || !d) return;
+    // 확장을 받는 모듈의 최대 높이(공지사항 = 100자 표시 높이)까지만 이동
+    var recv = d > 0 ? above[above.length-1] : below[0];
+    var room = Math.max(0, maxOf(recv) - H[recv]);
+    var want = Math.min(Math.abs(d), room);
     var t = 0;
-    if (d > 0){
-      t = takeFrom(below, d);
-      H[above[above.length-1]] += t;
-    } else {
-      t = takeFrom(above.slice().reverse(), -d);
-      H[below[0]] += t;
+    if (want > 0){
+      t = takeFrom(d > 0 ? below : above.slice().reverse(), want);
+      H[recv] += t;
     }
     if (el){ el.classList.toggle('limit', Math.abs(d) > 0.5 && t < Math.abs(d)*0.5); }
     apply();
@@ -768,6 +794,15 @@
       if (isMaxed(i)){
         if (restoreH){ H = restoreH.slice(); restoreH = null; fit(); apply(); }
         else { equalize(); }
+      } else if (i === 0 && isFinite(NOTICE_MAX)){
+        // 공지사항 확대 = 100자 표시 높이까지. 남는 공간은 다른 모듈이 기존 비율로 나눔
+        restoreH = H.slice();
+        var t0 = Math.min(NOTICE_MAX, a - MIN * (v.length - 1));
+        var rest = v.filter(function(j){ return j !== 0; });
+        var sumR = rest.reduce(function(s2, j){ return s2 + H[j]; }, 0);
+        H[0] = Math.max(MIN, t0);
+        rest.forEach(function(j){ H[j] = sumR > 0 ? (a - H[0]) * H[j] / sumR : (a - H[0]) / rest.length; });
+        fit(); apply();
       } else {
         restoreH = H.slice();
         v.forEach(function(j){ H[j] = MIN; });
@@ -777,14 +812,26 @@
     });
   });
 
-  // 캘린더 1개 / 2개 토글 — 캘린더 영역 높이가 바뀌면 가변 영역은 ResizeObserver가 재배분
+  // 캘린더 1개 / 2개 토글 — 캘린더 영역 높이가 바뀌면 가변 영역이 재배분
+  // 한 달 높이는 1개/2개 모드에서 동일: 2개 모드에서 캘린더 영역 = 패널 전체 높이의 1/2
+  // (따라서 1개 모드의 캘린더 영역은 패널 높이의 약 1/4)
+  var panelEl = document.querySelector('.panel');
+  function layoutCal(){
+    var months = Array.prototype.slice.call(document.querySelectorAll('.cal .month'));
+    var inner = panelEl.clientHeight * 0.5 - 22 - 13;   // 카드 상하 패딩 + 2번째 달 구분 여백
+    var each = Math.max(150, inner / 2);
+    months.forEach(function(m){ m.style.height = each + 'px'; });
+  }
   var calBtns = Array.prototype.slice.call(document.querySelectorAll('.cal-toggle .tg'));
   calBtns.forEach(function(b){
     b.addEventListener('click', function(){
       calBtns.forEach(function(x){ x.classList.toggle('on', x === b); });
       document.getElementById('cal2').hidden = b.dataset.n !== '2';
+      layoutCal();
+      fit(); apply();
     });
   });
+  window.addEventListener('resize', function(){ layoutCal(); measureNoticeMax(); fit(); apply(); });
 
   // 잘림 힌트(페이드) 갱신
   function updateFades(){
@@ -800,10 +847,10 @@
     m.querySelector('.scroll').addEventListener('scroll', updateFades, {passive:true});
   });
 
+  var areaRO = null;
   if (window.ResizeObserver){
-    new ResizeObserver(function(){ fit(); apply(); }).observe(area);
-  } else {
-    window.addEventListener('resize', function(){ fit(); apply(); });
+    areaRO = new ResizeObserver(function(){ fit(); apply(); });
+    areaRO.observe(area);
   }
 
   // 상단 ON/OFF 스위치 : 공지사항(mod0) / 숨긴 캘린더 목록(mod2)
@@ -839,6 +886,7 @@
   tabProto.addEventListener('click', function(){ selectTab(true); });
   tabSpec.addEventListener('click', function(){ selectTab(false); });
 
+  layoutCal();
   syncVisibility();
   equalize();
 })();
