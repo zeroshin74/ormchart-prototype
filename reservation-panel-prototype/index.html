@@ -552,7 +552,7 @@
         <tr><th style="width:64px">ID</th><th style="width:170px">트리거</th><th>동작</th><th style="width:220px">제약 · 예외</th></tr>
         <tr><td>INT-01</td><td>모듈 사이 여백(스플리터) 드래그</td><td>경계 위/아래 모듈 높이 증감. hover 시 드래그 핸들과 리사이즈 커서 노출로 조절 가능함을 인지시킴. 인접 모듈이 최소 높이에 도달하면 그 다음 모듈에서 마저 차감(캐스케이드) → 한 모듈을 최대까지 확장 가능.</td><td>모든 모듈이 최소 높이면 더 줄지 않음. 공지사항은 <b>최대 높이(100자 표시 높이)</b> 이상으로 확장되지 않음. 두 한계 모두 도달 시 핸들 상태 변화로 피드백.</td></tr>
         <tr><td>INT-02</td><td>스플리터 더블클릭</td><td>§3 Default 분배로 리셋.</td><td>—</td></tr>
-        <tr><td>INT-03</td><td>타이틀 우측 확대/복원 버튼 클릭</td><td>해당 모듈 <b>최대화</b>(나머지 모듈은 최소 높이). 재클릭 시 확대 직전 레이아웃으로 <b>복원</b>. 아이콘: 확대 ↔ 복원 상태 전환. <b>공지사항의 최대화는 100자 표시 높이까지</b>이며, 남는 공간은 다른 모듈이 나눠 가짐.</td><td>아이콘 상태는 높이 기반 판정 — 드래그로 최대에 도달해도 복원 아이콘으로 동기화(이때 복원은 Default 분배). 공지사항은 default가 곧 최대이므로 기본 상태에서 복원 아이콘으로 표시됨. 노출 모듈이 1개면 동작 없음.</td></tr>
+        <tr><td>INT-03</td><td>타이틀 우측 확대/복원 버튼 클릭</td><td>해당 모듈 <b>최대화</b>(나머지 모듈은 최소 높이). 재클릭 시 확대 직전 레이아웃으로 <b>복원</b>. 아이콘: 확대 ↔ 복원 상태 전환. <b>공지사항은 '펼치기 ↔ 접기' 토글</b>로 동작 — 확대 = 100자 표시 높이로 펼침, ─ = 최소(타이틀+1줄)로 접힘. 양쪽 모두 증감분은 다른 모듈이 기존 비율로 나눠 가짐.</td><td>아이콘 상태는 높이 기반 판정 — 드래그로 최대에 도달해도 복원 아이콘으로 동기화(이때 복원은 Default 분배). 공지사항은 default가 곧 최대이므로 최초 진입 시 ─(접기) 아이콘으로 표시됨. 노출 모듈이 1개면 동작 없음.</td></tr>
         <tr><td>INT-04</td><td>① 스위치 ON/OFF</td><td>해당 모듈 노출/숨김 + 노출 모듈을 §3 규칙으로 재분배. 스플리터는 인접한 노출 모듈 사이에만 1개씩 표시.</td><td>마지막 남은 모듈이 가변 영역 전체 사용.</td></tr>
         <tr><td>INT-05</td><td>캘린더 1개/2개 토글</td><td>한 달 캘린더의 높이는 <b>1개/2개 모드에서 동일</b>. 2개 모드에서는 캘린더 영역이 좌측 패널 <b>전체 높이의 1/2</b>을 차지하며, 1개 모드는 그 절반(약 1/4)만 차지. 전환 시 가변 영역이 남은 높이로 재계산(기존 비율 유지).</td><td>공지사항 default 크기는 캘린더 표시 모드와 무관하게 동일.</td></tr>
         <tr><td>INT-06</td><td>모듈 내부 휠/트랙패드 스크롤</td><td>콘텐츠 세로 스크롤. 위/아래 잘린 내용이 있으면 페이드로 힌트 표시.</td><td>최소 상태(1줄)에서도 스크롤 동작. 스크롤바 영역은 상시 확보하여 스크롤바 유무로 본문 줄바꿈이 변하지 않아야 함.</td></tr>
@@ -577,6 +577,7 @@
       <ul>
         <li><b>확대</b>: 모듈이 Max가 아닐 때. 클릭 → 최대화</li>
         <li><b>복원</b>: 모듈이 Max일 때. 클릭 → 직전 레이아웃(드래그로 Max 도달한 경우는 Default 분배)</li>
+        <li><b>공지사항 예외</b>: 콘텐츠 상한(100자) 때문에 default가 곧 최대이므로, 버튼은 <b>펼치기(100자 높이) ↔ 접기(타이틀+1줄)</b> 토글로 동작</li>
       </ul>
 
       <h2>6. 접근성 · 개발 참고</h2>
@@ -791,18 +792,26 @@
       var v = visIdx();
       if (v.length < 2) return;
       var a = avail();
-      if (isMaxed(i)){
-        if (restoreH){ H = restoreH.slice(); restoreH = null; fit(); apply(); }
-        else { equalize(); }
-      } else if (i === 0 && isFinite(NOTICE_MAX)){
-        // 공지사항 확대 = 100자 표시 높이까지. 남는 공간은 다른 모듈이 기존 비율로 나눔
-        restoreH = H.slice();
-        var t0 = Math.min(NOTICE_MAX, a - MIN * (v.length - 1));
+      if (i === 0 && isFinite(NOTICE_MAX)){
+        // 공지사항은 '펼치기(100자 높이) ↔ 접기(타이틀+1줄)' 토글
         var rest = v.filter(function(j){ return j !== 0; });
         var sumR = rest.reduce(function(s2, j){ return s2 + H[j]; }, 0);
-        H[0] = Math.max(MIN, t0);
-        rest.forEach(function(j){ H[j] = sumR > 0 ? (a - H[0]) * H[j] / sumR : (a - H[0]) / rest.length; });
+        if (isMaxed(0)){
+          // ─ : 최소(타이틀+1줄)로 접고, 남는 공간은 다른 모듈이 기존 비율로 나눔
+          restoreH = null;
+          var freed = H[0] - MIN;
+          H[0] = MIN;
+          rest.forEach(function(j){ H[j] += sumR > 0 ? freed * H[j] / sumR : freed / rest.length; });
+        } else {
+          // 확대 : 100자 표시 높이로 펼침
+          var t0 = Math.min(NOTICE_MAX, a - MIN * (v.length - 1));
+          H[0] = Math.max(MIN, t0);
+          rest.forEach(function(j){ H[j] = sumR > 0 ? (a - H[0]) * H[j] / sumR : (a - H[0]) / rest.length; });
+        }
         fit(); apply();
+      } else if (isMaxed(i)){
+        if (restoreH){ H = restoreH.slice(); restoreH = null; fit(); apply(); }
+        else { equalize(); }
       } else {
         restoreH = H.slice();
         v.forEach(function(j){ H[j] = MIN; });
