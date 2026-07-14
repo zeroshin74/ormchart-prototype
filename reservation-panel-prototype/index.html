@@ -488,14 +488,15 @@
 
   <div class="view" id="view-spec" role="tabpanel" hidden>
     <div class="doc">
-      <h1>예약설정 좌측 패널 — UX/UI 화면설계서</h1>
-      <p class="meta">화면 ID: RSV-LEFT-01 · Ver 1.0 · 작성일 2026-07-14 · 본 설계서는 [프로토타입] 탭과 동일 사양이며, 프로토타입에서 모든 인터랙션을 직접 확인할 수 있습니다.</p>
+      <h1>예약설정 좌측 패널 — UX · Interaction 동작 가이드</h1>
+      <p class="meta">화면 ID: RSV-LEFT-01 · Ver 1.1 · 작성일 2026-07-14 · 본 가이드는 [프로토타입] 탭과 동일 사양이며, 프로토타입에서 모든 인터랙션을 직접 확인할 수 있습니다.</p>
 
       <h2>1. 개요</h2>
       <table>
-        <tr><th style="width:120px">목적</th><td>예약설정 화면 좌측 패널의 모듈 구성과 세로 리사이즈 인터랙션 정의 (기획·개발 공용)</td></tr>
+        <tr><th style="width:120px">목적</th><td>예약설정 화면 좌측 패널의 모듈 구성과 세로 리사이즈 인터랙션 <b>동작</b> 정의 (기획·개발 공용)</td></tr>
         <tr><th>적용 범위</th><td>좌측 패널 내 ① 모듈 표시 스위치 ② 캘린더 ③ 공지사항 ④ 캘린더 설정 ⑤ 숨긴 캘린더 목록 ⑥ 하단 고정 버튼</td></tr>
         <tr><th>전제 조건</th><td>공지사항은 설정 ON 시에만 노출됩니다. 숨긴 캘린더 목록은 항목이 없을 수 있습니다(영역 미노출 가능).</td></tr>
+        <tr><th>비고</th><td>간격·크기·형태·색상 등 GUI 상세 수치는 본 문서에서 다루지 않으며, <b>별도 GUI 디자인 가이드에서 제공 예정</b>입니다.</td></tr>
       </table>
 
       <h2>2. 화면 구성</h2>
@@ -537,21 +538,21 @@
       </div>
       <ul>
         <li>노출 모듈이 2개 이하일 때도 동일 규칙 적용, 규칙 대상이 아닌 조합(예: 공지 OFF)은 균등 분배 후 잉여를 캘린더 설정에 배분.</li>
-        <li>공간이 부족하면 <b>모듈 최소 높이(80px)</b> 확보가 항상 우선합니다.</li>
+        <li>공간이 부족하면 <b>모듈 최소 높이(타이틀 + 콘텐츠 1줄)</b> 확보가 항상 우선합니다.</li>
       </ul>
 
       <h2>4. 인터랙션 명세</h2>
       <div class="tbl-wrap">
       <table>
         <tr><th style="width:64px">ID</th><th style="width:170px">트리거</th><th>동작</th><th style="width:220px">제약 · 예외</th></tr>
-        <tr><td>INT-01</td><td>모듈 사이 여백(스플리터) 드래그</td><td>경계 위/아래 모듈 높이 증감. hover 시 핸들(44×4px)과 <code>row-resize</code> 커서 표시. 인접 모듈이 최소 높이에 도달하면 그 다음 모듈에서 마저 차감(캐스케이드) → 한 모듈을 최대까지 확장 가능.</td><td>모든 모듈이 최소(80px)면 더 줄지 않음. 한계 도달 시 핸들 색상 경고(레드).</td></tr>
+        <tr><td>INT-01</td><td>모듈 사이 여백(스플리터) 드래그</td><td>경계 위/아래 모듈 높이 증감. hover 시 드래그 핸들과 리사이즈 커서 노출로 조절 가능함을 인지시킴. 인접 모듈이 최소 높이에 도달하면 그 다음 모듈에서 마저 차감(캐스케이드) → 한 모듈을 최대까지 확장 가능.</td><td>모든 모듈이 최소 높이면 더 줄지 않음. 한계 도달 시 핸들 상태 변화로 피드백.</td></tr>
         <tr><td>INT-02</td><td>스플리터 더블클릭</td><td>§3 Default 분배로 리셋.</td><td>—</td></tr>
-        <tr><td>INT-03</td><td>타이틀 우측 원형 버튼 클릭</td><td>해당 모듈 <b>최대화</b>(나머지 모듈은 최소 80px). 재클릭 시 확대 직전 레이아웃으로 <b>복원</b>. 아이콘: 삼각형(확대) ↔ ─(복원).</td><td>아이콘 상태는 높이 기반 판정 — 드래그로 최대에 도달해도 ─ 로 동기화(이때 복원은 Default 분배). 노출 모듈이 1개면 동작 없음.</td></tr>
+        <tr><td>INT-03</td><td>타이틀 우측 확대/복원 버튼 클릭</td><td>해당 모듈 <b>최대화</b>(나머지 모듈은 최소 높이). 재클릭 시 확대 직전 레이아웃으로 <b>복원</b>. 아이콘: 확대 ↔ 복원 상태 전환.</td><td>아이콘 상태는 높이 기반 판정 — 드래그로 최대에 도달해도 복원 아이콘으로 동기화(이때 복원은 Default 분배). 노출 모듈이 1개면 동작 없음.</td></tr>
         <tr><td>INT-04</td><td>① 스위치 ON/OFF</td><td>해당 모듈 노출/숨김 + 노출 모듈을 §3 규칙으로 재분배. 스플리터는 인접한 노출 모듈 사이에만 1개씩 표시.</td><td>마지막 남은 모듈이 가변 영역 전체 사용.</td></tr>
         <tr><td>INT-05</td><td>캘린더 1개/2개 토글</td><td>캘린더 카드 높이 변경 → 가변 영역이 남은 높이로 재계산(기존 비율 유지).</td><td>—</td></tr>
-        <tr><td>INT-06</td><td>모듈 내부 휠/트랙패드 스크롤</td><td>콘텐츠 세로 스크롤. 위/아래 잘린 내용이 있으면 페이드 그라데이션으로 힌트 표시.</td><td>최소 상태(1줄)에서도 스크롤 동작. 스크롤바 영역은 상시 확보(<code>scrollbar-gutter: stable</code>)하여 스크롤바 유무로 줄바꿈이 변하지 않음.</td></tr>
-        <tr><td>INT-07</td><td>스플리터 키보드 조작</td><td>Tab으로 포커스 → ↑/↓ 키로 16px 단위 조절.</td><td><code>role="separator"</code>, 포커스 링 표시.</td></tr>
-        <tr><td>INT-08</td><td>창 높이 부족(모든 모듈 최소 합 초과 불가)</td><td>모든 모듈 최소(80px) 고정, 가변 영역 자체에 fallback 세로 스크롤 발생.</td><td>캘린더 2개 + 낮은 해상도 조합 등.</td></tr>
+        <tr><td>INT-06</td><td>모듈 내부 휠/트랙패드 스크롤</td><td>콘텐츠 세로 스크롤. 위/아래 잘린 내용이 있으면 페이드로 힌트 표시.</td><td>최소 상태(1줄)에서도 스크롤 동작. 스크롤바 영역은 상시 확보하여 스크롤바 유무로 본문 줄바꿈이 변하지 않아야 함.</td></tr>
+        <tr><td>INT-07</td><td>스플리터 키보드 조작</td><td>Tab으로 포커스 → ↑/↓ 키로 일정 단위 조절.</td><td>포커스 상태를 시각적으로 표시.</td></tr>
+        <tr><td>INT-08</td><td>창 높이 부족(모든 모듈 최소 합 초과 불가)</td><td>모든 모듈을 최소 높이로 고정하고, 가변 영역 자체에 fallback 세로 스크롤 발생.</td><td>캘린더 2개 + 낮은 해상도 조합 등.</td></tr>
       </table>
       </div>
 
@@ -562,40 +563,23 @@
         <tr><th style="width:110px">상태</th><th>정의</th></tr>
         <tr><td>Default</td><td>§3 규칙으로 배분된 초기 상태</td></tr>
         <tr><td>Custom</td><td>사용자가 드래그로 조정한 상태 (INT-01)</td></tr>
-        <tr><td>Min</td><td>최소 높이 80px = 타이틀 + 콘텐츠 1줄. 더 이상 축소 불가</td></tr>
-        <tr><td>Max</td><td>해당 모듈 외 모든 노출 모듈이 Min인 상태. 확대/복원 아이콘이 ─ 로 전환</td></tr>
+        <tr><td>Min</td><td>최소 높이 = 타이틀 + 콘텐츠 1줄. 더 이상 축소 불가</td></tr>
+        <tr><td>Max</td><td>해당 모듈 외 모든 노출 모듈이 Min인 상태. 버튼이 복원 아이콘으로 전환</td></tr>
         <tr><td>Hidden</td><td>① 스위치 OFF. 모듈·인접 스플리터 미노출</td></tr>
       </table>
       </div>
       <h3>5-2. 확대/복원 버튼 상태</h3>
       <ul>
-        <li><b>확대(삼각형 2개)</b>: 모듈이 Max가 아닐 때. 클릭 → 최대화</li>
-        <li><b>복원(─)</b>: 모듈이 Max일 때. 클릭 → 직전 레이아웃(드래그로 Max 도달한 경우는 Default 분배)</li>
+        <li><b>확대</b>: 모듈이 Max가 아닐 때. 클릭 → 최대화</li>
+        <li><b>복원</b>: 모듈이 Max일 때. 클릭 → 직전 레이아웃(드래그로 Max 도달한 경우는 Default 분배)</li>
       </ul>
 
-      <h2>6. 수치 · 스타일 스펙</h2>
-      <div class="tbl-wrap">
-      <table>
-        <tr><th style="width:220px">항목</th><th>값</th></tr>
-        <tr><td>모듈 최소 높이</td><td>80px (타이틀 40 + 목록 1행 34 + 여백 6)</td></tr>
-        <tr><td>목록 1행 높이</td><td>34px</td></tr>
-        <tr><td>스플리터</td><td>히트 영역 12px / 핸들 표시 44×4px(hover·드래그 시) / 한계 시 레드</td></tr>
-        <tr><td>확대·복원 버튼</td><td>원형 16px(타이틀 15px과 정렬), 다크 그레이 <code>#4E5560</code>(다크 테마 <code>#B3BAC6</code>), 글리프: 확대 10px(110%)·복원 9px, 카드색</td></tr>
-        <tr><td>텍스트 버튼(편집·추가·숨김해제)</td><td>높이 24px, 라운드 6px, Primary 1px 테두리</td></tr>
-        <tr><td>모듈 카드</td><td>라운드 12px, 카드 간 간격 8px</td></tr>
-        <tr><td>스크롤바</td><td>thin(6px), 썸 최소 높이 24px, <code>scrollbar-gutter: stable</code></td></tr>
-        <tr><td>ON/OFF 스위치</td><td>트랙 30×17px, 노브 13px, ON = Primary</td></tr>
-        <tr><td>주요 색상</td><td>Primary <code>#2B5CE6</code> · 배경 <code>#EEF0F4</code> · 카드 <code>#FFFFFF</code> · 텍스트 <code>#23272F</code> · 보조 <code>#8B93A3</code> · 일요일/경고 <code>#E8442E</code> (다크 테마 토큰 별도 정의)</td></tr>
-      </table>
-      </div>
-
-      <h2>7. 접근성 · 개발 참고</h2>
+      <h2>6. 접근성 · 개발 참고</h2>
       <ul>
         <li>스플리터: <code>role="separator"</code> + <code>aria-orientation="horizontal"</code>, Tab 포커스 및 방향키 조절(INT-07)</li>
-        <li>스위치: <code>button</code> + <code>aria-pressed</code>, 확대/복원: <code>aria-label</code>로 모듈명 포함</li>
-        <li>모든 조작 요소에 2px 포커스 링, <code>prefers-reduced-motion</code> 시 트랜지션 제거</li>
-        <li>라이트/다크 테마: <code>prefers-color-scheme</code> 기본 + <code>data-theme</code> 오버라이드(토큰 단위)</li>
-        <li>구현 참고: 컨테이너 <code>ResizeObserver</code>로 재배분, 드래그는 pointer capture, 높이 합은 floor로 픽셀 스냅하여 1px 오버플로 방지</li>
+        <li>스위치: <code>button</code> + <code>aria-pressed</code>, 확대/복원 버튼: <code>aria-label</code>로 모듈명 포함</li>
+        <li>모든 조작 요소에 키보드 포커스 표시 제공, 모션 최소화 설정(<code>prefers-reduced-motion</code>) 대응</li>
+        <li>구현 참고: 컨테이너 리사이즈 감지(<code>ResizeObserver</code>)로 재배분, 드래그는 pointer capture 사용, 모듈 높이 합계가 가변 영역을 넘지 않도록 정수 스냅 처리</li>
       </ul>
     </div>
   </div>
