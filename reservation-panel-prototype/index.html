@@ -158,7 +158,7 @@
   .cal-toggle .tg:focus-visible{outline:2px solid var(--focus); outline-offset:-2px;}
   #cal2{border-top:1px solid var(--line); margin-top:8px; padding-top:4px;}
   /* 한 달 높이는 JS(layoutCal)가 계산 — 1개/2개 모드 동일, 2개 모드 = 패널 높이의 1/2 */
-  .month{height:220px; display:flex; flex-direction:column;}
+  .month{height:220px; display:flex; flex-direction:column; overflow:hidden;}
   .month[hidden]{display:none;}
   .month table{flex:1;}
   .cal-head{
@@ -247,9 +247,8 @@
     scrollbar-width:thin;
     scrollbar-color:var(--dim) transparent;
   }
-  .scroll::-webkit-scrollbar{width:6px;}
-  .scroll::-webkit-scrollbar-thumb{background:var(--dim); border-radius:3px; min-height:24px;}
-  .scroll::-webkit-scrollbar-track{background:transparent;}
+  /* 커스텀 ::-webkit-scrollbar는 scrollbar-gutter를 무효화하므로 사용하지 않음
+     (표준 scrollbar-width:thin + scrollbar-color 조합으로 gutter 상시 확보) */
 
   /* bottom fade = "잘림 힌트" */
   .fade-b, .fade-t{
@@ -262,6 +261,7 @@
   .mod.can-up .fade-t{opacity:1;}
 
   .notice-txt{font-size:13.5px; line-height:1.65; padding-top:2px;}
+  .notice-txt + .notice-txt{margin-top:1.65em;}  /* 빈 줄(행간) 표현 */
 
   .row{
     display:flex; align-items:center; gap:8px;
@@ -358,15 +358,15 @@
     <span><b>모듈 사이 여백 드래그</b> = 높이 조절</span>
     <span><b>더블클릭</b> = 균등 분배</span>
     <span><b>타이틀 옆 아이콘</b> = 확대/복원</span>
-    <span><b>상단 스위치</b> = 공지사항·숨긴 목록 ON/OFF</span>
+    <span><b>상단 스위치</b> = 공유사항·숨긴 목록 ON/OFF</span>
     <span><b>캘린더 우측 토글</b> = 1개/2개</span>
   </div>
 
   <div class="panel">
 
-    <!-- 0) 모듈 표시 설정 : 공지사항 / 숨긴 캘린더 목록 ON·OFF -->
+    <!-- 0) 모듈 표시 설정 : 공유사항 / 숨긴 캘린더 목록 ON·OFF -->
     <div class="top-toggles">
-      <button class="switch on" id="tgNotice" type="button" aria-pressed="true"><span class="knob"></span>공지사항</button>
+      <button class="switch on" id="tgNotice" type="button" aria-pressed="true"><span class="knob"></span>공유사항</button>
       <button class="switch on" id="tgHidden" type="button" aria-pressed="true"><span class="knob"></span>숨긴 캘린더 목록</button>
     </div>
 
@@ -409,10 +409,10 @@
     <!-- 2~4) 가변 영역 -->
     <div class="flex-area" id="flexArea">
 
-      <section class="card mod" id="mod0" aria-label="공지사항">
+      <section class="card mod" id="mod0" aria-label="공유사항">
         <div class="mod-head">
-          <h2>공지사항</h2>
-          <button class="max-btn" type="button" data-i="0" aria-label="공지사항 확대/복원">
+          <h2>공유사항</h2>
+          <button class="max-btn" type="button" data-i="0" aria-label="공유사항 확대/복원">
             <svg class="ic-max" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><g fill="currentColor"><polygon points="5.6,3 10,3 10,7.4"/><polygon points="3,5.6 3,10 7.4,10"/></g></svg>
             <svg class="ic-min" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><line x1="3.5" y1="6.5" x2="9.5" y2="6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
           </button>
@@ -422,13 +422,15 @@
         </div>
         <div class="mod-body">
           <div class="scroll">
-            <p class="notice-txt">공지사항 등록 설정을 하게되면 병원 전체가 해당 공유사항 영역을 모두 볼 수 있고, 항상 영역이 표시됩니다. 내용은 당일에만 유지되며 다음 날 자동 삭제됩니다.</p>
+            <p class="notice-txt">등록 설정</p>
+            <p class="notice-txt">* 병원 전체가 공유되어 볼 수 있음<br>* 항상 영역이 표시<br>* 편집 가능<br>* 더보기에서 온오프 바로 가능</p>
+            <p class="notice-txt">* 내용은 당일 유지<br>* 다음 날 자동 삭제<br>* 빈 내용의 공유사항 발생</p>
           </div>
           <div class="fade-t"></div><div class="fade-b"></div>
         </div>
       </section>
 
-      <div class="splitter" data-i="0" tabindex="0" role="separator" aria-orientation="horizontal" aria-label="공지사항과 캘린더 설정 크기 조절"><i></i></div>
+      <div class="splitter" data-i="0" tabindex="0" role="separator" aria-orientation="horizontal" aria-label="공유사항과 캘린더 설정 크기 조절"><i></i></div>
 
       <section class="card mod" id="mod1" aria-label="캘린더 설정">
         <div class="mod-head">
@@ -498,17 +500,17 @@
       <h2>1. 개요</h2>
       <table>
         <tr><th style="width:120px">목적</th><td>예약설정 화면 좌측 패널의 모듈 구성과 세로 리사이즈 인터랙션 <b>동작</b> 정의 (기획·개발 공용)</td></tr>
-        <tr><th>적용 범위</th><td>좌측 패널 내 ① 모듈 표시 스위치 ② 캘린더 ③ 공지사항 ④ 캘린더 설정 ⑤ 숨긴 캘린더 목록 ⑥ 하단 고정 버튼</td></tr>
-        <tr><th>전제 조건</th><td>공지사항은 설정 ON 시에만 노출됩니다. 숨긴 캘린더 목록은 항목이 없을 수 있습니다(영역 미노출 가능).</td></tr>
+        <tr><th>적용 범위</th><td>좌측 패널 내 ① 모듈 표시 스위치 ② 캘린더 ③ 공유사항 ④ 캘린더 설정 ⑤ 숨긴 캘린더 목록 ⑥ 하단 고정 버튼</td></tr>
+        <tr><th>전제 조건</th><td>공유사항은 설정 ON 시에만 노출됩니다. 숨긴 캘린더 목록은 항목이 없을 수 있습니다(영역 미노출 가능).</td></tr>
         <tr><th>비고</th><td>간격·크기·형태·색상 등 GUI 상세 수치는 본 문서에서 다루지 않으며, <b>별도 GUI 디자인 가이드에서 제공 예정</b>입니다.</td></tr>
       </table>
 
       <h2>2. 화면 구성</h2>
       <div class="wire">
         <div class="wire-col" aria-hidden="true">
-          <div class="wbox">① 모듈 표시 스위치<small>공지사항 · 숨긴 캘린더 목록 ON/OFF</small></div>
+          <div class="wbox">① 모듈 표시 스위치<small>공유사항 · 숨긴 캘린더 목록 ON/OFF</small></div>
           <div class="wbox">② 캘린더<small>고정 영역 · 1개/2개 토글</small></div>
-          <div class="wbox">③ 공지사항<small>가변 모듈 · 내부 스크롤</small></div>
+          <div class="wbox">③ 공유사항<small>가변 모듈 · 내부 스크롤</small></div>
           <div class="wsplit"></div>
           <div class="wbox">④ 캘린더 설정<small>가변 모듈 · 내부 스크롤</small></div>
           <div class="wsplit"></div>
@@ -519,9 +521,9 @@
           <div class="tbl-wrap">
           <table>
             <tr><th style="width:36px">No</th><th style="width:150px">영역</th><th style="width:64px">타입</th><th>정의</th></tr>
-            <tr><td>①</td><td>모듈 표시 스위치</td><td><span class="tag-fixed">고정</span></td><td>공지사항·숨긴 캘린더 목록의 노출 여부를 토글. 변경 시 가변 모듈은 §3 규칙으로 재분배.</td></tr>
+            <tr><td>①</td><td>모듈 표시 스위치</td><td><span class="tag-fixed">고정</span></td><td>공유사항·숨긴 캘린더 목록의 노출 여부를 토글. 변경 시 가변 모듈은 §3 규칙으로 재분배.</td></tr>
             <tr><td>②</td><td>캘린더</td><td><span class="tag-fixed">고정</span></td><td>세로 크기 고정, 드래그 리사이즈 대상 아님. 우상단 토글로 1개월/2개월 전환하며, 전환 시 가변 영역이 남은 높이로 재계산.</td></tr>
-            <tr><td>③</td><td>공지사항</td><td><span class="tag-flex">가변</span></td><td>설정 ON 시에만 노출. 텍스트 공지, 내부 세로 스크롤.</td></tr>
+            <tr><td>③</td><td>공유사항</td><td><span class="tag-flex">가변</span></td><td>설정 ON 시에만 노출. 텍스트 공유사항, 내부 세로 스크롤.</td></tr>
             <tr><td>④</td><td>캘린더 설정</td><td><span class="tag-flex">가변</span></td><td>의사별 체크 목록(색상 라벨). 항상 노출되는 기준 모듈.</td></tr>
             <tr><td>⑤</td><td>숨긴 캘린더 목록</td><td><span class="tag-flex">가변</span></td><td>숨김 처리된 캘린더 목록. 0개면 영역 자체 미노출.</td></tr>
             <tr><td>⑥</td><td>하단 버튼</td><td><span class="tag-fixed">고정</span></td><td>'예약 미확정 환자(99)', '취소/부도내역'. 항상 노출, 크기 불변.</td></tr>
@@ -535,26 +537,26 @@
       <div class="tbl-wrap">
       <table>
         <tr><th style="width:160px">모듈</th><th>Default 높이 정책</th></tr>
-        <tr><td>③ 공지사항</td><td>공지 최대 입력 글자 수(<b>100자</b>)가 모두 보이는 높이로 등장. 이 높이가 공지사항의 <b>최대 높이</b>이기도 함 — 콘텐츠 상한이 있는 유일한 모듈이므로 그 이상 확장되지 않음</td></tr>
+        <tr><td>③ 공유사항</td><td><b>min(가변 영역의 1/3, 콘텐츠 전체 높이)</b>로 등장 — 글자 수(100자)는 줄바꿈에 따라 렌더링 높이가 달라져 높이 기준이 될 수 없으므로, <b>비율 상한 + 콘텐츠 클램프</b>로 정의(균형 규칙). 콘텐츠가 짧으면 콘텐츠 높이만 차지하고, 1/3 몫보다 길면 default에서는 내부 스크롤로 접근하며 확대(INT-03)·드래그로 전체를 볼 수 있음. <b>확장에는 최대 제한이 없으며</b>, 다른 모듈과 동일하게 콘텐츠보다 커지면 하단 여백이 발생함</td></tr>
         <tr><td>⑤ 숨긴 캘린더 목록</td><td><b>콘텐츠 높이</b>(목록 전체가 보이는 높이, 하단 여백 0)</td></tr>
         <tr><td>④ 캘린더 설정</td><td>위 두 모듈 배분 후 <b>나머지 공간 전부</b></td></tr>
       </table>
       </div>
       <ul>
-        <li>노출 모듈이 2개 이하일 때도 동일 규칙 적용, 규칙 대상이 아닌 조합(예: 공지 OFF)은 균등 분배 후 잉여를 캘린더 설정에 배분.</li>
+        <li>노출 모듈이 2개 이하일 때도 동일 규칙 적용, 규칙 대상이 아닌 조합(예: 공유사항 OFF)은 균등 분배 후 잉여를 캘린더 설정에 배분.</li>
         <li>공간이 부족하면 <b>모듈 최소 높이(타이틀 + 콘텐츠 1줄)</b> 확보가 항상 우선합니다.</li>
-        <li><b>공지사항 최대 높이 정책</b>: 축소·드래그·더블클릭 등 조작 문법은 다른 모듈과 동일하되, 확장만 100자 표시 높이에서 정지합니다. 콘텐츠 상한이 있는 모듈에 의미 없는 여백을 허용하면 내용 제약이 없는 모듈(캘린더 설정 등)의 공간을 잠식하기 때문입니다.</li>
+        <li><b>공유사항 확장 정책</b>: 축소·확장·드래그·더블클릭 모든 조작 문법이 다른 모듈과 동일합니다. 확장 최대 제한이 없어 콘텐츠보다 크게 늘리면 하단 여백이 발생할 수 있습니다. 콘텐츠 기준(콘텐츠 높이·비율 클램프)은 default 등장 높이에만 적용됩니다.</li>
       </ul>
 
       <h2>4. 인터랙션 명세</h2>
       <div class="tbl-wrap">
       <table>
         <tr><th style="width:64px">ID</th><th style="width:170px">트리거</th><th>동작</th><th style="width:220px">제약 · 예외</th></tr>
-        <tr><td>INT-01</td><td>모듈 사이 여백(스플리터) 드래그</td><td>경계 위/아래 모듈 높이 증감. hover 시 드래그 핸들과 리사이즈 커서 노출로 조절 가능함을 인지시킴. 인접 모듈이 최소 높이에 도달하면 그 다음 모듈에서 마저 차감(캐스케이드) → 한 모듈을 최대까지 확장 가능.</td><td>모든 모듈이 최소 높이면 더 줄지 않음. 공지사항은 <b>최대 높이(100자 표시 높이)</b> 이상으로 확장되지 않음. 두 한계 모두 도달 시 핸들 상태 변화로 피드백.</td></tr>
+        <tr><td>INT-01</td><td>모듈 사이 여백(스플리터) 드래그</td><td>경계 위/아래 모듈 높이 증감. hover 시 드래그 핸들과 리사이즈 커서 노출로 조절 가능함을 인지시킴. 인접 모듈이 최소 높이에 도달하면 그 다음 모듈에서 마저 차감(캐스케이드) → 한 모듈을 최대까지 확장 가능.</td><td>모든 모듈이 최소 높이면 더 줄지 않음. 한계 도달 시 핸들 상태 변화로 피드백.</td></tr>
         <tr><td>INT-02</td><td>스플리터 더블클릭</td><td>§3 Default 분배로 리셋.</td><td>—</td></tr>
-        <tr><td>INT-03</td><td>타이틀 우측 확대/복원 버튼 클릭</td><td>해당 모듈 <b>최대화</b>(나머지 모듈은 최소 높이). 재클릭 시 확대 직전 레이아웃으로 <b>복원</b>. 아이콘: 확대 ↔ 복원 상태 전환. <b>공지사항은 '펼치기 ↔ 접기' 토글</b>로 동작 — 확대 = 100자 표시 높이로 펼침, ─ = 최소(타이틀+1줄)로 접힘. 양쪽 모두 증감분은 다른 모듈이 기존 비율로 나눠 가짐.</td><td>아이콘 상태는 높이 기반 판정 — 드래그로 최대에 도달해도 복원 아이콘으로 동기화(이때 복원은 Default 분배). 공지사항은 default가 곧 최대이므로 최초 진입 시 ─(접기) 아이콘으로 표시됨. 노출 모듈이 1개면 동작 없음.</td></tr>
+        <tr><td>INT-03</td><td>타이틀 우측 확대/복원 버튼 클릭</td><td>해당 모듈 <b>최대화</b>(나머지 모듈은 최소 높이). 재클릭 시 확대 직전 레이아웃으로 <b>복원</b>. 아이콘: 확대 ↔ 복원 상태 전환. 세 모듈 모두 동일하게 동작하며, 콘텐츠보다 크게 확장되면 하단 여백이 발생할 수 있음.</td><td>아이콘 상태는 높이 기반 판정 — 드래그로 최대에 도달해도 복원 아이콘으로 동기화(이때 복원은 Default 분배). 노출 모듈이 1개면 동작 없음.</td></tr>
         <tr><td>INT-04</td><td>① 스위치 ON/OFF</td><td>해당 모듈 노출/숨김 + 노출 모듈을 §3 규칙으로 재분배. 스플리터는 인접한 노출 모듈 사이에만 1개씩 표시.</td><td>마지막 남은 모듈이 가변 영역 전체 사용.</td></tr>
-        <tr><td>INT-05</td><td>캘린더 1개/2개 토글</td><td>한 달 캘린더의 높이는 <b>1개/2개 모드에서 동일</b>. 2개 모드에서는 캘린더 영역이 좌측 패널 <b>전체 높이의 1/2</b>을 차지하며, 1개 모드는 그 절반(약 1/4)만 차지. 전환 시 가변 영역이 남은 높이로 재계산(기존 비율 유지).</td><td>공지사항 default 크기는 캘린더 표시 모드와 무관하게 동일.</td></tr>
+        <tr><td>INT-05</td><td>캘린더 1개/2개 토글</td><td>한 달 캘린더의 높이는 <b>1개/2개 모드에서 동일</b>. 2개 모드에서는 캘린더 영역이 좌측 패널 <b>전체 높이의 1/2</b>을 차지하며, 1개 모드는 그 절반(약 1/4)만 차지. 전환 시 가변 영역이 남은 높이로 재계산(기존 비율 유지).</td><td>공유사항 default 크기는 캘린더 표시 모드와 무관하게 동일.</td></tr>
         <tr><td>INT-06</td><td>모듈 내부 휠/트랙패드 스크롤</td><td>콘텐츠 세로 스크롤. 위/아래 잘린 내용이 있으면 페이드로 힌트 표시.</td><td>최소 상태(1줄)에서도 스크롤 동작. 스크롤바 영역은 상시 확보하여 스크롤바 유무로 본문 줄바꿈이 변하지 않아야 함.</td></tr>
         <tr><td>INT-07</td><td>스플리터 키보드 조작</td><td>Tab으로 포커스 → ↑/↓ 키로 일정 단위 조절.</td><td>포커스 상태를 시각적으로 표시.</td></tr>
         <tr><td>INT-08</td><td>창 높이 부족(모든 모듈 최소 합 초과 불가)</td><td>모든 모듈을 최소 높이(타이틀+1줄)로 고정. 모듈 전체를 감싸는 별도 스크롤은 제공하지 않으며, 콘텐츠 접근은 각 모듈 내부 스크롤(INT-06)로 처리.</td><td>최소 지원 해상도는 GUI 가이드에서 정의.</td></tr>
@@ -577,7 +579,6 @@
       <ul>
         <li><b>확대</b>: 모듈이 Max가 아닐 때. 클릭 → 최대화</li>
         <li><b>복원</b>: 모듈이 Max일 때. 클릭 → 직전 레이아웃(드래그로 Max 도달한 경우는 Default 분배)</li>
-        <li><b>공지사항 예외</b>: 콘텐츠 상한(100자) 때문에 default가 곧 최대이므로, 버튼은 <b>펼치기(100자 높이) ↔ 접기(타이틀+1줄)</b> 토글로 동작</li>
       </ul>
 
       <h2>6. 접근성 · 개발 참고</h2>
@@ -600,7 +601,8 @@
   var HEAD = 40, ROW = 34, PAD = 6;  // 최소 = 타이틀 + 콘텐츠 1줄
   var MIN = HEAD + ROW + PAD;        // 80px
   var H = [0,0,0];
-  var visible = [true, true, true];   // [공지사항, 캘린더 설정, 숨긴 캘린더 목록]
+  var visible = [true, true, true];   // [공유사항, 캘린더 설정, 숨긴 캘린더 목록]
+  var userTouched = false;            // 사용자가 직접 레이아웃을 조정했는지 (false면 default 정책 유지)
 
   function visIdx(){ return [0,1,2].filter(function(i){ return visible[i]; }); }
   // 보이는 모듈 연속 쌍마다 뒤 모듈 바로 앞의 스플리터 하나만 노출
@@ -625,31 +627,33 @@
     return m.querySelector('.mod-head').offsetHeight + m.querySelector('.scroll').scrollHeight;
   }
 
-  // 공지사항은 최대 100자 입력 — 100자가 모두 보이는 높이가 default이자 '최대 높이'
+  // 공유사항 콘텐츠 높이 — default 분배(min(가변 1/3, 콘텐츠))의 기준으로만 사용
+  // 확장(드래그·확대)은 다른 모듈과 동일하게 제한 없음(콘텐츠보다 커지면 여백 발생)
   var NOTICE_MAX = Infinity;
   function measureNoticeMax(){
     if (!visible[0]) return NOTICE_MAX;
-    var sc = mods[0].querySelector('.scroll');
-    var probe = document.createElement('p');
-    probe.className = 'notice-txt';
-    probe.style.cssText = 'position:absolute; visibility:hidden; width:' + Math.max(0, sc.clientWidth - 22) + 'px;';
-    var s = ''; for (var k = 0; k < 100; k++) s += '가';
-    probe.textContent = s;
-    sc.appendChild(probe);
-    NOTICE_MAX = HEAD + probe.offsetHeight + 12;
-    sc.removeChild(probe);
+    var m = mods[0];
+    var sc = m.querySelector('.scroll');
+    // 현재 모듈 높이와 무관하게 콘텐츠 자연 높이를 측정 (복제 프로브 — scrollHeight의 패딩 누락 오차 회피)
+    var probe = sc.cloneNode(true);
+    probe.style.cssText = 'position:absolute; visibility:hidden; height:auto; overflow:visible; width:' + sc.clientWidth + 'px;';
+    m.querySelector('.mod-body').appendChild(probe);
+    var h = probe.offsetHeight;
+    probe.remove();
+    NOTICE_MAX = m.querySelector('.mod-head').offsetHeight + h + 2;
     return NOTICE_MAX;
   }
-  function maxOf(i){ return i === 0 ? NOTICE_MAX : Infinity; }
 
   function equalize(){
     var v = visIdx();
     if (v.length){
       var a = avail();
       H = [0,0,0];
-      // 공지사항 default: 100자(최대 입력)가 모두 보이는 높이로 등장 = 공지사항의 최대 높이
+      // 공유사항 default: 균형 규칙 — min(가변 영역의 1/3, 콘텐츠 전체 높이)
+      // 글자 수로는 높이를 정의할 수 없으므로 '비율 상한 + 콘텐츠 클램프'로 정의
       if (visible[0] && v.length > 1){
-        var t = Math.min(Math.max(measureNoticeMax(), MIN), a - MIN * (v.length - 1));
+        var t = Math.min(measureNoticeMax(), a / 3);
+        t = Math.min(Math.max(t, MIN), a - MIN * (v.length - 1));
         H[0] = t;
         var rest = v.filter(function(i){ return i !== 0; });
         rest.forEach(function(i){ H[i] = (a - t) / rest.length; });
@@ -683,8 +687,6 @@
     if (!visible[i]) return false;
     var v = visIdx();
     if (v.length < 2) return false;
-    // 공지사항은 100자 표시 높이 도달 = 최대 (다른 모듈 상태와 무관)
-    if (i === 0 && isFinite(NOTICE_MAX)) return H[0] >= NOTICE_MAX - 1;
     if (H[i] <= MIN + 1) return false;
     for (var k=0;k<v.length;k++){ var j=v[k]; if (j !== i && H[j] > MIN + 1) return false; }
     return true;
@@ -711,18 +713,8 @@
       if (pool <= 0) break;
       v.forEach(function(i){ if (H[i] > MIN) H[i] -= deficit * (H[i] - MIN) / pool; });
     }
-    // 공지사항 최대 높이(100자 표시 높이) 초과분은 다른 모듈로 이관
-    if (visible[0] && isFinite(NOTICE_MAX) && H[0] > NOTICE_MAX && v.length > 1){
-      var ex = H[0] - NOTICE_MAX;
-      H[0] = NOTICE_MAX;
-      var recv = -1;
-      v.forEach(function(i){ if (i !== 0 && (recv < 0 || H[i] > H[recv])) recv = i; });
-      if (recv >= 0) H[recv] += ex;
-    }
     var sum2 = 0; v.forEach(function(i){ sum2 += H[i]; });
-    var big = -1;
-    v.forEach(function(i){ if (i !== 0 && (big < 0 || H[i] > H[big])) big = i; });
-    if (big < 0) big = v[0];
+    var big = v[0]; v.forEach(function(i){ if (H[i] > H[big]) big = i; });
     H[big] += a - sum2;
   }
 
@@ -742,15 +734,9 @@
     var above = v.filter(function(i){ return i <= s; });
     var below = v.filter(function(i){ return i > s; });
     if (!above.length || !below.length || !d) return;
-    // 확장을 받는 모듈의 최대 높이(공지사항 = 100자 표시 높이)까지만 이동
     var recv = d > 0 ? above[above.length-1] : below[0];
-    var room = Math.max(0, maxOf(recv) - H[recv]);
-    var want = Math.min(Math.abs(d), room);
-    var t = 0;
-    if (want > 0){
-      t = takeFrom(d > 0 ? below : above.slice().reverse(), want);
-      H[recv] += t;
-    }
+    var t = takeFrom(d > 0 ? below : above.slice().reverse(), Math.abs(d));
+    H[recv] += t;
     if (el){ el.classList.toggle('limit', Math.abs(d) > 0.5 && t < Math.abs(d)*0.5); }
     apply();
   }
@@ -759,6 +745,7 @@
     var s = +sp.dataset.i, lastY = 0, dragging = false;
     sp.addEventListener('pointerdown', function(e){
       dragging = true; lastY = e.clientY;
+      userTouched = true;
       sp.setPointerCapture(e.pointerId);
       sp.classList.add('active');
       e.preventDefault();
@@ -775,7 +762,7 @@
     }
     sp.addEventListener('pointerup', end);
     sp.addEventListener('pointercancel', end);
-    sp.addEventListener('dblclick', function(){ equalize(); });
+    sp.addEventListener('dblclick', function(){ userTouched = false; equalize(); });
     sp.addEventListener('keydown', function(e){
       if (e.key === 'ArrowUp'){ moveSplitter(s, -16, sp); e.preventDefault(); }
       if (e.key === 'ArrowDown'){ moveSplitter(s, 16, sp); e.preventDefault(); }
@@ -789,27 +776,11 @@
     b.addEventListener('click', function(){
       var i = +b.dataset.i;
       if (!visible[i]) return;
+      userTouched = true;
       var v = visIdx();
       if (v.length < 2) return;
       var a = avail();
-      if (i === 0 && isFinite(NOTICE_MAX)){
-        // 공지사항은 '펼치기(100자 높이) ↔ 접기(타이틀+1줄)' 토글
-        var rest = v.filter(function(j){ return j !== 0; });
-        var sumR = rest.reduce(function(s2, j){ return s2 + H[j]; }, 0);
-        if (isMaxed(0)){
-          // ─ : 최소(타이틀+1줄)로 접고, 남는 공간은 다른 모듈이 기존 비율로 나눔
-          restoreH = null;
-          var freed = H[0] - MIN;
-          H[0] = MIN;
-          rest.forEach(function(j){ H[j] += sumR > 0 ? freed * H[j] / sumR : freed / rest.length; });
-        } else {
-          // 확대 : 100자 표시 높이로 펼침
-          var t0 = Math.min(NOTICE_MAX, a - MIN * (v.length - 1));
-          H[0] = Math.max(MIN, t0);
-          rest.forEach(function(j){ H[j] = sumR > 0 ? (a - H[0]) * H[j] / sumR : (a - H[0]) / rest.length; });
-        }
-        fit(); apply();
-      } else if (isMaxed(i)){
+      if (isMaxed(i)){
         if (restoreH){ H = restoreH.slice(); restoreH = null; fit(); apply(); }
         else { equalize(); }
       } else {
@@ -840,7 +811,11 @@
       fit(); apply();
     });
   });
-  window.addEventListener('resize', function(){ layoutCal(); measureNoticeMax(); fit(); apply(); });
+  // 사용자가 레이아웃을 조정하기 전에는 창 크기 변경 시 default 분배 정책을 다시 적용
+  window.addEventListener('resize', function(){
+    layoutCal(); measureNoticeMax();
+    if (userTouched){ fit(); apply(); } else { equalize(); }
+  });
 
   // 잘림 힌트(페이드) 갱신
   function updateFades(){
@@ -862,7 +837,7 @@
     areaRO.observe(area);
   }
 
-  // 상단 ON/OFF 스위치 : 공지사항(mod0) / 숨긴 캘린더 목록(mod2)
+  // 상단 ON/OFF 스위치 : 공유사항(mod0) / 숨긴 캘린더 목록(mod2)
   // 토글 시 보이는 모듈들을 균일한 크기로 재배분
   function bindSwitch(id, idx){
     var btn = document.getElementById(id);
@@ -871,6 +846,7 @@
       btn.classList.toggle('on', visible[idx]);
       btn.setAttribute('aria-pressed', String(visible[idx]));
       restoreH = null;
+      userTouched = false;   // 토글 시 default 분배 정책으로 복귀
       syncVisibility();
       equalize();
     });
