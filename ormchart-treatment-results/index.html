@@ -128,22 +128,21 @@
     color: #fff; font-size: 9px; display: inline-flex; align-items: center; justify-content: center;
     line-height: 1;
   }
-  .seg {
-    display: inline-flex; margin-left: 6px; padding: 2px;
-    background: var(--chip-bg); border: 0.5px solid var(--border-soft);
-    border-radius: 999px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  .pref { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; }
+  .pref-label { font-size: 11px; color: var(--text-sub); }
+  .switch {
+    position: relative; width: 34px; height: 18px; border-radius: 999px; flex: 0 0 auto;
+    border: 0.5px solid var(--border); background: var(--chip-bg); cursor: pointer; padding: 0;
   }
-  .seg-opt {
-    font: inherit; font-size: 11px; color: var(--muted); background: transparent; border: 0;
-    padding: 3px 14px; cursor: pointer; border-radius: 999px; line-height: 1.5;
+  .switch .knob {
+    position: absolute; top: 1.5px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.25);
   }
-  .seg-opt.active {
-    background: var(--accent); color: #fff; font-weight: 600; cursor: default;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.18);
-  }
-  .seg-opt:not(.active):hover { color: var(--text-sub); }
+  .switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+  .switch[aria-checked="true"] .knob { left: 17px; }
   @media (prefers-reduced-motion: no-preference) {
-    .seg-opt { transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; }
+    .switch { transition: background 0.15s ease, border-color 0.15s ease; }
+    .switch .knob { transition: left 0.15s ease; }
   }
   .sec-actions { margin-left: auto; display: flex; gap: 6px; }
   .btn {
@@ -349,7 +348,7 @@
     display: flex; align-items: center; gap: 6px; padding: 9px 14px; min-width: 720px;
     border-top: 0.5px solid var(--border-soft); font-size: 11px;
   }
-  .mock .seg, .mock .status-link, .mock .btn, .mock .chkbox { pointer-events: none; }
+  .mock .switch, .mock .status-link, .mock .btn, .mock .chkbox { pointer-events: none; }
   .mock-cells { color: var(--muted); }
 
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
@@ -365,7 +364,7 @@
   <div id="tab-proto">
   <div class="simbar">
     <span class="sim-tag">SIMULATION</span>
-    <span class="sim-steps">① 섹션 타이틀 옆 <b>펼침/접힘 설정</b> 조작 → ② <b>화면 나가기</b> → ③ 재진입 시 설정 유지 확인</span>
+    <span class="sim-steps">① 섹션 타이틀 옆 <b>항상 펼침 스위치</b> 조작 → ② <b>화면 나가기</b> → ③ 재진입 시 설정 유지 확인 (행 개별 조작은 유지되지 않음)</span>
     <button class="sim-leave" id="leaveBtn" type="button">화면 나가기 →</button>
   </div>
 
@@ -379,8 +378,9 @@
 
   <div class="interstitial" id="interstitial" hidden>
     <h2>다른 환자 차트 조회 중 — 김영희 (F/45)</h2>
-    <p>치료 결과 화면을 벗어난 상태입니다. 재진입하면 사용자별로 저장된 마지막 펼침 상태가 복원됩니다.<br>
-    저장하지 않은 소견 입력값은 실제 화면과 동일하게 유지되지 않습니다.</p>
+    <p>치료 결과 화면을 벗어난 상태입니다. 재진입하면 각 섹션의 <b>항상 펼침</b> 설정대로 표시되며,
+    이 설정은 다른 환자 화면에서도 동일하게 적용됩니다.<br>
+    행 개별 펼침 조작과 저장하지 않은 소견 입력값은 유지되지 않습니다.</p>
     <button id="reenterBtn" type="button">← 치료 결과 화면 재진입</button>
   </div>
 
@@ -403,7 +403,7 @@
       핵심 UX 결정은 두 가지다.</p>
       <ul>
         <li><b>행 상세는 기본 접힘</b>(기초검사 제외) — 목록 스캔 효율 우선</li>
-        <li><b>펼침/접힘은 사용자별 설정으로 저장·복원</b> — 재진입 시 반복 조작(VOC)을 제거. 환자 단위가 아닌 <b>사용자 단위</b> 저장</li>
+        <li><b>"항상 펼침"은 사용자별 설정(규칙)으로 저장</b> — 환자를 바꾸거나 화면을 나갔다 와도 동일하게 적용되어 재진입 시 반복 조작(VOC)을 제거. 행 개별 조작은 세션 한정 임시 동작이며 설정에 영향을 주지 않음</li>
       </ul>
 
       <h2>3. 레이아웃 · 영역 정의</h2>
@@ -413,7 +413,8 @@
           <span class="ann">1</span><span style="color:var(--accent);font-size:10px">▼</span>
           <span class="sec-title">치료</span><span class="sec-check">✓</span>
           <span class="ann">2</span>
-          <div class="seg"><span class="seg-opt">펼침</span><span class="seg-opt active">접힘</span></div>
+          <span class="pref-label">항상 펼침</span>
+          <span class="switch" aria-checked="true"><span class="knob"></span></span>
           <div class="sec-actions"><span class="ann">3</span>
             <span class="btn">취소</span><span class="btn">수행시작</span><span class="btn filled-blue">수행완료</span><span class="btn filled-dark">결과완료</span>
           </div>
@@ -429,7 +430,7 @@
         <thead><tr><th style="width:44px">번호</th><th style="width:160px">영역</th><th>정의</th></tr></thead>
         <tbody>
           <tr><td><span class="ann">1</span></td><td>섹션 캐럿 ▼/▶</td><td>섹션 카드 자체를 열고 닫음. 닫으면 테이블 목록 전체가 숨고 헤더만 남음</td></tr>
-          <tr><td><span class="ann">2</span></td><td>펼침/접힘 설정 (필 토글)</td><td>해당 섹션 행 상세의 일괄 표시 설정. 주사 섹션에는 미노출 (4.1 참조)</td></tr>
+          <tr><td><span class="ann">2</span></td><td>항상 펼침 스위치</td><td>해당 섹션 행 상세의 기본 표시 규칙 설정 (사용자 단위, 전체 환자 공통). 주사 섹션에는 미노출 (4.1 참조)</td></tr>
           <tr><td><span class="ann">3</span></td><td>오더 액션 버튼</td><td>취소 · 수행시작(outlined) / 수행완료(#378ADD filled) / 결과완료(#374151 filled)</td></tr>
           <tr><td><span class="ann">4</span></td><td>선택 체크박스</td><td>액션 버튼의 대상 오더 선택. 체크박스 다음 열은 바로 상태(별도 확장 아이콘 컬럼 없음)</td></tr>
           <tr><td><span class="ann">5</span></td><td>상태 텍스트</td><td>행 상세 펼침 트리거. 펼침 가능 여부에 따라 두 형태 (4.2 참조)</td></tr>
@@ -437,17 +438,18 @@
       </table>
 
       <h2>4. 컴포넌트 정의</h2>
-      <h3>4.1 펼침/접힘 설정 — 필 토글</h3>
-      <p>순간 동작 버튼이 아닌 <b>유지되는 설정</b>임을 드러내는 것이 목적. 트랙(pill) 안에서 선택된 쪽이
-      채워진 썸으로 항상 표시되어 ON/OFF 토글처럼 읽힌다.</p>
+      <h3>4.1 항상 펼침 — ON/OFF 스위치</h3>
+      <p>현재 화면 상태가 아닌 <b>미래에 적용될 규칙</b>을 서술하는 설정 컨트롤. "항상"이라는 레이블이
+      규칙임을 약속하므로, 사용자가 행을 개별로 펼쳐 화면이 스위치 값과 잠시 달라져도 모순으로 읽히지 않는다.</p>
       <table>
-        <thead><tr><th style="width:120px">상태</th><th>표시</th><th>진입 조건</th></tr></thead>
+        <thead><tr><th style="width:100px">상태</th><th>표시</th><th>동작</th></tr></thead>
         <tbody>
-          <tr><td>펼침 선택</td><td>"펼침" 쪽 채움(accent)</td><td>토글로 펼침 설정, 또는 모든 행이 펼쳐짐</td></tr>
-          <tr><td>접힘 선택</td><td>"접힘" 쪽 채움(accent)</td><td>토글로 접힘 설정, 또는 모든 행이 접힘</td></tr>
-          <tr><td>혼합</td><td>양쪽 모두 비활성</td><td>행 개별 클릭으로 펼침/접힘이 섞임. 툴팁 "행별로 개별 조작된 상태"</td></tr>
+          <tr><td>ON</td><td>트랙 채움(accent) + 노브 우측</td><td>화면 진입 시 해당 섹션의 모든 행 상세를 펼쳐서 렌더링. 전환 즉시 현재 화면에도 적용</td></tr>
+          <tr><td>OFF</td><td>트랙 회색 + 노브 좌측</td><td>화면 진입 시 모든 행 상세를 접어서 렌더링. 전환 즉시 현재 화면에도 적용</td></tr>
         </tbody>
       </table>
+      <p><b>행 조작과의 분리(핵심 규칙)</b> — 행 상태 텍스트(▶/▼) 클릭은 스위치 값을 변경하지 않는다.
+      행 개별 조작은 세션 한정 임시 동작이며 저장되지 않는다.</p>
       <h3>4.2 상태 텍스트</h3>
       <table>
         <thead><tr><th style="width:120px">형태</th><th>표시</th><th>적용 대상</th></tr></thead>
@@ -473,48 +475,53 @@
 
       <h2>5. 오더분류별 펼침 정책</h2>
       <table>
-        <thead><tr><th>오더분류</th><th style="width:110px">행 펼침 기능</th><th style="width:90px">기본값</th><th style="width:110px">필 토글 노출</th></tr></thead>
+        <thead><tr><th>오더분류</th><th style="width:110px">행 펼침 기능</th><th style="width:110px">스위치 초기값</th><th style="width:120px">스위치 노출</th></tr></thead>
         <tbody>
-          <tr><td>치료</td><td>있음</td><td>접힘</td><td>노출</td></tr>
+          <tr><td>치료</td><td>있음</td><td>OFF (접힘)</td><td>노출</td></tr>
           <tr><td>주사</td><td>없음</td><td>—</td><td>미노출</td></tr>
           <tr><td>진단의학 · 단문형/수치형</td><td>없음</td><td>—</td><td rowspan="2">노출 (장문형에만 작용)</td></tr>
-          <tr><td>진단의학 · 장문형</td><td>있음</td><td>접힘</td></tr>
-          <tr><td>기초검사</td><td>있음</td><td><b>펼쳐짐</b></td><td>노출</td></tr>
-          <tr><td>영상의학 / 내시경 / 수술·처치 / 기능검사</td><td>있음</td><td>접힘</td><td>노출</td></tr>
+          <tr><td>진단의학 · 장문형</td><td>있음</td><td>OFF (접힘)</td></tr>
+          <tr><td>기초검사</td><td>있음</td><td><b>ON (펼쳐짐)</b></td><td>노출</td></tr>
+          <tr><td>영상의학 / 내시경 / 수술·처치 / 기능검사</td><td>있음</td><td>OFF (접힘)</td><td>노출</td></tr>
         </tbody>
       </table>
-      <p>기본값은 <b>저장된 사용자 설정이 없는 최초 진입에만</b> 적용되는 초기값이다.</p>
+      <p>초기값은 <b>사용자가 스위치를 한 번도 조작하지 않은 경우에만</b> 적용된다. 이후에는 사용자가 설정한 값이 항상 우선한다.</p>
 
       <h2>6. 인터랙션 정의</h2>
       <table>
         <thead><tr><th style="width:56px">ID</th><th style="width:150px">트리거</th><th>동작</th><th style="width:80px">저장</th></tr></thead>
         <tbody>
-          <tr><td>IX-01</td><td>섹션 캐럿 ▼/▶ 클릭</td><td>섹션 카드 열기/닫기 (테이블 목록 표시/숨김)</td><td>저장</td></tr>
-          <tr><td>IX-02</td><td>필 토글 "펼침"/"접힘" 클릭</td><td>해당 섹션의 모든 행 상세를 일괄 펼침/접힘 + 토글 상태 채움 + 저장 토스트</td><td>저장</td></tr>
-          <tr><td>IX-03</td><td>행 상태 텍스트 클릭</td><td>해당 행의 상세만 펼침/접힘 (▶↔▼). 결과적으로 혼합 상태가 되면 토글은 양쪽 비활성</td><td>저장</td></tr>
+          <tr><td>IX-01</td><td>섹션 캐럿 ▼/▶ 클릭</td><td>섹션 카드 열기/닫기 (테이블 목록 표시/숨김). 세션 한정 임시 동작</td><td>저장 안 함</td></tr>
+          <tr><td>IX-02</td><td>항상 펼침 스위치 클릭</td><td>스위치 ON/OFF 전환 + 해당 섹션의 모든 행 상세를 즉시 일괄 펼침/접힘 + 저장 토스트</td><td><b>저장</b></td></tr>
+          <tr><td>IX-03</td><td>행 상태 텍스트 클릭</td><td>해당 행의 상세만 펼침/접힘 (▶↔▼). <b>스위치 값에 영향 없음</b>. 세션 한정 임시 동작</td><td>저장 안 함</td></tr>
           <tr><td>IX-04</td><td>빠른 입력 칩 클릭 (치료)</td><td>선택 시 소견에 문구 추가, 해제 시 제거. 바이트 카운터 갱신</td><td>저장 안 함</td></tr>
-          <tr><td>IX-05</td><td>화면 재진입</td><td>저장된 사용자 설정으로 화면 복원 + 복원 토스트. 저장값 없으면 5장의 기본값 적용</td><td>—</td></tr>
+          <tr><td>IX-05</td><td>화면 재진입 (환자 변경 포함)</td><td>각 섹션을 스위치 값대로 렌더링 + 복원 토스트. 행·카드의 임시 조작은 초기화</td><td>—</td></tr>
         </tbody>
       </table>
 
       <h2>7. 상태 유지 정책</h2>
       <ul>
-        <li><b>저장 단위</b> — 사용자 × 섹션 × 행. 환자 단위 아님 (환자를 바꿔도 사용자의 화면 설정은 동일하게 적용)</li>
-        <li><b>저장 시점</b> — 조작 즉시 자동 저장. 별도 저장 버튼·설정 화면 없음</li>
-        <li><b>복원 시점</b> — 화면 재진입·새로고침 시. 프로토타입은 <code>localStorage</code>, 실서비스는 사용자 설정 API로 대체</li>
-        <li><b>제외 대상</b> — 저장하지 않은 소견 입력값은 유지되지 않음 (기존 저장 동작과 동일)</li>
+        <li><b>저장 대상</b> — 각 섹션의 "항상 펼침" 스위치 값 <b>하나뿐</b>. 행 개별 펼침, 섹션 카드 열림/닫힘은 저장하지 않음</li>
+        <li><b>저장 단위</b> — 사용자 × 섹션. 환자 단위 아님 — 어떤 환자 화면에서도 동일한 설정이 적용됨</li>
+        <li><b>저장 시점</b> — 스위치 조작 즉시 자동 저장. 별도 저장 버튼·설정 화면 없음</li>
+        <li><b>복원 시점</b> — 화면 재진입·환자 변경·새로고침 시 스위치 값대로 렌더링. 프로토타입은 <code>localStorage</code>, 실서비스는 사용자 설정 API로 대체</li>
+        <li><b>제외 대상</b> — 행 개별 조작(세션 임시), 저장하지 않은 소견 입력값</li>
       </ul>
-      <p>저장 데이터 구조 (프로토타입 기준, 키 <code>ormchart-proto-user-state</code>):</p>
+      <p>저장 데이터 구조 (프로토타입 기준, 키 <code>ormchart-proto-user-prefs</code>):</p>
       <pre>{
-  "cards": { "treat": false, "inject": false, ... },   // 섹션 카드 닫힘 여부
-  "rows":  { "treat": [true, false, false], ... }      // 섹션별 행 상세 펼침 여부 (행 순서 기준)
+  "prefs": {
+    "treat": false,   // 치료 · 항상 펼침 OFF
+    "diag":  false,   // 진단의학(장문형) · 항상 펼침 OFF
+    "basic": true,    // 기초검사 · 항상 펼침 ON
+    ...               // 주사(inject)는 스위치가 없어 키 자체가 없음
+  }
 }</pre>
 
       <h2>8. 메시지 정의</h2>
       <table>
         <thead><tr><th style="width:180px">트리거</th><th>토스트 문구</th></tr></thead>
         <tbody>
-          <tr><td>필 토글 조작 (매회)</td><td><code>{섹션명} · {펼침|접힘}으로 저장됨</code> — 예: "치료 · 펼침으로 저장됨"</td></tr>
+          <tr><td>스위치 조작 (매회)</td><td><code>{섹션명} · 항상 펼침 {ON|OFF} — 모든 환자 화면에 적용</code> — 예: "치료 · 항상 펼침 ON — 모든 환자 화면에 적용"</td></tr>
           <tr><td>재진입 (저장값 있음)</td><td>저장된 설정을 복원했습니다</td></tr>
           <tr><td>재진입 (저장값 없음)</td><td>기본 설정으로 표시합니다</td></tr>
         </tbody>
@@ -523,8 +530,9 @@
       <h2>9. 개발 참고</h2>
       <ul>
         <li>행 상세는 <code>colspan</code> 상세 행으로 구현. 상세 열림 여부와 무관하게 테이블 목록(오더 행)은 항상 유지</li>
-        <li>필 토글의 채움 상태는 별도 상태값이 아니라 <b>행 펼침 상태로부터 파생</b> (모두 펼침 → "펼침" 채움, 모두 접힘 → "접힘" 채움, 그 외 혼합)</li>
-        <li>복원 순서: 화면 렌더(기본값) → 저장값 로드 → 카드/행 상태 덮어쓰기 → 토글 표시 갱신</li>
+        <li>스위치 값과 행 상태는 <b>단방향</b> — 스위치 전환은 행 상태를 일괄 변경하지만, 행 개별 조작은 스위치 값을 변경하지 않음 (파생 관계 아님)</li>
+        <li>렌더 순서: 화면 렌더 → 저장된 스위치 값 로드 → 각 섹션 행 상태를 스위치 값대로 설정. 행·카드의 이전 임시 상태는 복원하지 않음</li>
+        <li>접근성 — 스위치는 <code>role="switch"</code> + <code>aria-checked</code>로 구현</li>
         <li>디자인 토큰 — 폭 940px · Pretendard · accent <code>#378ADD</code> · 결과완료 버튼 <code>#374151</code> · 보더 <code>0.5px #D7DCE1</code> · 카드 radius 8px · 라이트/다크 테마 지원</li>
       </ul>
     </div>
@@ -807,18 +815,17 @@
     var expRows = [];
     var hasExpand = spec.expandable || (spec.subsections || []).some(function (s) { return s.expandable; });
 
-    var seg = null, segOpen = null, segClose = null;
+    var prefOn = !!(spec.defaultExpanded || (spec.subsections || []).some(function (s) { return s.defaultExpanded; }));
+    var sw = null;
     if (hasExpand) {
-      seg = el('div', 'seg');
-      seg.setAttribute('role', 'group');
-      seg.setAttribute('aria-label', spec.title + ' 행 상세 표시 설정');
-      segOpen = el('button', 'seg-opt', '펼침');
-      segClose = el('button', 'seg-opt', '접힘');
-      segOpen.type = 'button';
-      segClose.type = 'button';
-      seg.appendChild(segOpen);
-      seg.appendChild(segClose);
-      head.appendChild(seg);
+      var pref = el('div', 'pref');
+      pref.appendChild(el('span', 'pref-label', '항상 펼침'));
+      sw = el('button', 'switch', '<span class="knob"></span>');
+      sw.type = 'button';
+      sw.setAttribute('role', 'switch');
+      sw.setAttribute('aria-label', spec.title + ' 항상 펼침');
+      pref.appendChild(sw);
+      head.appendChild(pref);
     }
 
     var actions = el('div', 'sec-actions');
@@ -845,47 +852,30 @@
     }
     root.appendChild(body);
 
-    function updateToggle() {
-      if (!seg) return;
-      var openCount = expRows.filter(isOpen).length;
-      var allOpen = openCount > 0 && openCount === expRows.length;
-      var allClosed = openCount === 0;
-      segOpen.classList.toggle('active', allOpen);
-      segClose.classList.toggle('active', allClosed);
-      segOpen.setAttribute('aria-pressed', allOpen ? 'true' : 'false');
-      segClose.setAttribute('aria-pressed', allClosed ? 'true' : 'false');
-      seg.title = (!allOpen && !allClosed) ? '행별로 개별 조작된 상태' : '';
+    function setPref(on) {
+      prefOn = !!on;
+      if (sw) sw.setAttribute('aria-checked', prefOn ? 'true' : 'false');
+      expRows.forEach(function (r) { setRow(r, prefOn); });
     }
 
     caret.addEventListener('click', function () {
       root.classList.toggle('closed');
-      persist();
     });
-    if (seg) {
-      segOpen.addEventListener('click', function () {
-        expRows.forEach(function (r) { setRow(r, true); });
-        updateToggle();
-        saveNotice('펼침', spec.title);
-        persist();
-      });
-      segClose.addEventListener('click', function () {
-        expRows.forEach(function (r) { setRow(r, false); });
-        updateToggle();
-        saveNotice('접힘', spec.title);
+    if (sw) {
+      sw.addEventListener('click', function () {
+        setPref(!prefOn);
+        toast(spec.title + ' · 항상 펼침 ' + (prefOn ? 'ON' : 'OFF') + ' — 모든 환자 화면에 적용');
         persist();
       });
     }
     expRows.forEach(function (r) {
       r._btn.addEventListener('click', function () {
         setRow(r, !isOpen(r));
-        updateToggle();
-        persist();
       });
-      setRow(r, !!r._default);
     });
-    updateToggle();
+    setPref(prefOn);
 
-    sectionCtls.push({ id: spec.id, root: root, expRows: expRows, updateToggle: updateToggle });
+    sectionCtls.push({ id: spec.id, root: root, hasPref: !!sw, getPref: function () { return prefOn; }, setPref: setPref });
     return root;
   }
 
@@ -894,7 +884,7 @@
   var interstitial = document.getElementById('interstitial');
 
   /* ── 사용자별 상태 저장 (시뮬레이션) ─────────── */
-  var STORE_KEY = 'ormchart-proto-user-state';
+  var STORE_KEY = 'ormchart-proto-user-prefs';
   var memoryState = null;
 
   function loadState() {
@@ -906,16 +896,12 @@
     return null;
   }
   function persist() {
-    var st = { cards: {}, rows: {} };
+    var st = { prefs: {} };
     sectionCtls.forEach(function (s) {
-      st.cards[s.id] = s.root.classList.contains('closed');
-      st.rows[s.id] = s.expRows.map(isOpen);
+      if (s.hasPref) st.prefs[s.id] = s.getPref();
     });
     memoryState = st;
     try { localStorage.setItem(STORE_KEY, JSON.stringify(st)); } catch (e) {}
-  }
-  function saveNotice(label, title) {
-    toast(title + ' · ' + label + '으로 저장됨');
   }
 
   var toastTimer = null;
@@ -933,15 +919,9 @@
     sectionCtls = [];
     SECTIONS.forEach(function (s) { host.appendChild(buildSection(s)); });
     var st = loadState();
-    if (st) {
+    if (st && st.prefs) {
       sectionCtls.forEach(function (s) {
-        if (st.cards && (s.id in st.cards)) s.root.classList.toggle('closed', !!st.cards[s.id]);
-        if (st.rows && st.rows[s.id]) {
-          st.rows[s.id].forEach(function (open, i) {
-            if (s.expRows[i]) setRow(s.expRows[i], !!open);
-          });
-        }
-        s.updateToggle();
+        if (s.hasPref && (s.id in st.prefs)) s.setPref(!!st.prefs[s.id]);
       });
     }
   }
