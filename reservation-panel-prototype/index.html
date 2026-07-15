@@ -223,19 +223,6 @@
   }
   .icon-btn:hover{background:var(--chip); color:var(--txt);}
   .icon-btn:focus-visible, .act:focus-visible{outline:2px solid var(--focus); outline-offset:1px;}
-  .max-btn{
-    display:inline-flex; align-items:center; justify-content:center;
-    width:16px; height:16px; padding:0; margin-left:2px;
-    color:var(--card); background:var(--dkgy);
-    border:none; border-radius:50%;
-    flex:none; cursor:pointer;
-  }
-  .max-btn:hover{opacity:.8;}
-  .max-btn svg{width:9px; height:9px; display:block;}
-  .max-btn .ic-max{width:10px; height:10px;}   /* 확대 글리프만 110% */
-  .max-btn .ic-min{display:none;}
-  .mod.is-max .max-btn .ic-max{display:none;}
-  .mod.is-max .max-btn .ic-min{display:block;}
 
   .mod-body{
     flex:1; min-height:0; position:relative;
@@ -357,7 +344,6 @@
   <div class="hint">
     <span><b>모듈 사이 여백 드래그</b> = 높이 조절</span>
     <span><b>더블클릭</b> = 균등 분배</span>
-    <span><b>타이틀 옆 아이콘</b> = 확대/복원</span>
     <span><b>상단 스위치</b> = 공유사항·숨긴 목록 ON/OFF</span>
     <span><b>캘린더 우측 토글</b> = 1개/2개</span>
   </div>
@@ -412,13 +398,8 @@
       <section class="card mod" id="mod0" aria-label="공유사항">
         <div class="mod-head">
           <h2>공유사항</h2>
-          <button class="max-btn" type="button" data-i="0" aria-label="공유사항 확대/복원">
-            <svg class="ic-max" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><g fill="currentColor"><polygon points="5.6,3 10,3 10,7.4"/><polygon points="3,5.6 3,10 7.4,10"/></g></svg>
-            <svg class="ic-min" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><line x1="3.5" y1="6.5" x2="9.5" y2="6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-          </button>
           <span class="sp"></span>
           <button class="act" type="button">편집</button>
-          <button class="icon-btn" type="button" aria-label="더보기">⋮</button>
         </div>
         <div class="mod-body">
           <div class="scroll">
@@ -435,10 +416,6 @@
       <section class="card mod" id="mod1" aria-label="캘린더 설정">
         <div class="mod-head">
           <h2>캘린더 설정</h2>
-          <button class="max-btn" type="button" data-i="1" aria-label="캘린더 설정 확대/복원">
-            <svg class="ic-max" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><g fill="currentColor"><polygon points="5.6,3 10,3 10,7.4"/><polygon points="3,5.6 3,10 7.4,10"/></g></svg>
-            <svg class="ic-min" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><line x1="3.5" y1="6.5" x2="9.5" y2="6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-          </button>
           <span class="sp"></span>
           <button class="act" type="button">추가</button>
           <button class="icon-btn" type="button" aria-label="더보기">⋮</button>
@@ -462,10 +439,6 @@
       <section class="card mod" id="mod2" aria-label="숨긴 캘린더 목록">
         <div class="mod-head">
           <h2>숨긴 캘린더 목록</h2>
-          <button class="max-btn" type="button" data-i="2" aria-label="숨긴 캘린더 목록 확대/복원">
-            <svg class="ic-max" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><g fill="currentColor"><polygon points="5.6,3 10,3 10,7.4"/><polygon points="3,5.6 3,10 7.4,10"/></g></svg>
-            <svg class="ic-min" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><line x1="3.5" y1="6.5" x2="9.5" y2="6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-          </button>
           <span class="sp"></span>
           <button class="act ghost" type="button">숨김해제</button>
         </div>
@@ -495,7 +468,7 @@
   <div class="view" id="view-spec" role="tabpanel" hidden>
     <div class="doc">
       <h1>예약설정 좌측 패널 — UX · Interaction 동작 가이드</h1>
-      <p class="meta">화면 ID: RSV-LEFT-01 · Ver 1.1 · 작성일 2026-07-14 · 본 가이드는 [프로토타입] 탭과 동일 사양이며, 프로토타입에서 모든 인터랙션을 직접 확인할 수 있습니다.</p>
+      <p class="meta">화면 ID: RSV-LEFT-01 · Ver 1.2 · 최종 수정 2026-07-15 · 본 가이드는 [프로토타입] 탭과 동일 사양이며, 프로토타입에서 모든 인터랙션을 직접 확인할 수 있습니다.</p>
 
       <h2>1. 개요</h2>
       <table>
@@ -537,7 +510,7 @@
       <div class="tbl-wrap">
       <table>
         <tr><th style="width:160px">모듈</th><th>Default 높이 정책</th></tr>
-        <tr><td>③ 공유사항</td><td><b>min(가변 영역의 1/3, 콘텐츠 전체 높이)</b>로 등장 — 글자 수(100자)는 줄바꿈에 따라 렌더링 높이가 달라져 높이 기준이 될 수 없으므로, <b>비율 상한 + 콘텐츠 클램프</b>로 정의(균형 규칙). 콘텐츠가 짧으면 콘텐츠 높이만 차지하고, 1/3 몫보다 길면 default에서는 내부 스크롤로 접근하며 확대(INT-03)·드래그로 전체를 볼 수 있음. <b>확장에는 최대 제한이 없으며</b>, 다른 모듈과 동일하게 콘텐츠보다 커지면 하단 여백이 발생함</td></tr>
+        <tr><td>③ 공유사항</td><td><b>min(가변 영역의 1/3, 콘텐츠 전체 높이)</b>로 등장 — 글자 수(100자)는 줄바꿈에 따라 렌더링 높이가 달라져 높이 기준이 될 수 없으므로, <b>비율 상한 + 콘텐츠 클램프</b>로 정의(균형 규칙). 콘텐츠가 짧으면 콘텐츠 높이만 차지하고, 1/3 몫보다 길면 default에서는 내부 스크롤로 접근하며 드래그로 전체를 볼 수 있음. <b>확장에는 최대 제한이 없으며</b>, 다른 모듈과 동일하게 콘텐츠보다 커지면 하단 여백이 발생함</td></tr>
         <tr><td>⑤ 숨긴 캘린더 목록</td><td><b>콘텐츠 높이</b>(목록 전체가 보이는 높이, 하단 여백 0)</td></tr>
         <tr><td>④ 캘린더 설정</td><td>위 두 모듈 배분 후 <b>나머지 공간 전부</b></td></tr>
       </table>
@@ -554,37 +527,31 @@
         <tr><th style="width:64px">ID</th><th style="width:170px">트리거</th><th>동작</th><th style="width:220px">제약 · 예외</th></tr>
         <tr><td>INT-01</td><td>모듈 사이 여백(스플리터) 드래그</td><td>경계 위/아래 모듈 높이 증감. hover 시 드래그 핸들과 리사이즈 커서 노출로 조절 가능함을 인지시킴. 인접 모듈이 최소 높이에 도달하면 그 다음 모듈에서 마저 차감(캐스케이드) → 한 모듈을 최대까지 확장 가능.</td><td>모든 모듈이 최소 높이면 더 줄지 않음. 한계 도달 시 핸들 상태 변화로 피드백.</td></tr>
         <tr><td>INT-02</td><td>스플리터 더블클릭</td><td>§3 Default 분배로 리셋.</td><td>—</td></tr>
-        <tr><td>INT-03</td><td>타이틀 우측 확대/복원 버튼 클릭</td><td>해당 모듈 <b>최대화</b>(나머지 모듈은 최소 높이). 재클릭 시 확대 직전 레이아웃으로 <b>복원</b>. 아이콘: 확대 ↔ 복원 상태 전환. 세 모듈 모두 동일하게 동작하며, 콘텐츠보다 크게 확장되면 하단 여백이 발생할 수 있음.</td><td>아이콘 상태는 높이 기반 판정 — 드래그로 최대에 도달해도 복원 아이콘으로 동기화(이때 복원은 Default 분배). 노출 모듈이 1개면 동작 없음.</td></tr>
-        <tr><td>INT-04</td><td>① 스위치 ON/OFF</td><td>해당 모듈 노출/숨김 + 노출 모듈을 §3 규칙으로 재분배. 스플리터는 인접한 노출 모듈 사이에만 1개씩 표시.</td><td>마지막 남은 모듈이 가변 영역 전체 사용.</td></tr>
-        <tr><td>INT-05</td><td>캘린더 1개/2개 토글</td><td>한 달 캘린더의 높이는 <b>1개/2개 모드에서 동일</b>. 2개 모드에서는 캘린더 영역이 좌측 패널 <b>전체 높이의 1/2</b>을 차지하며, 1개 모드는 그 절반(약 1/4)만 차지. 전환 시 가변 영역이 남은 높이로 재계산(기존 비율 유지).</td><td>공유사항 default 크기는 캘린더 표시 모드와 무관하게 동일.</td></tr>
-        <tr><td>INT-06</td><td>모듈 내부 휠/트랙패드 스크롤</td><td>콘텐츠 세로 스크롤. 위/아래 잘린 내용이 있으면 페이드로 힌트 표시.</td><td>최소 상태(1줄)에서도 스크롤 동작. 스크롤바 영역은 상시 확보하여 스크롤바 유무로 본문 줄바꿈이 변하지 않아야 함.</td></tr>
-        <tr><td>INT-07</td><td>스플리터 키보드 조작</td><td>Tab으로 포커스 → ↑/↓ 키로 일정 단위 조절.</td><td>포커스 상태를 시각적으로 표시.</td></tr>
-        <tr><td>INT-08</td><td>창 높이 부족(모든 모듈 최소 합 초과 불가)</td><td>모든 모듈을 최소 높이(타이틀+1줄)로 고정. 모듈 전체를 감싸는 별도 스크롤은 제공하지 않으며, 콘텐츠 접근은 각 모듈 내부 스크롤(INT-06)로 처리.</td><td>최소 지원 해상도는 GUI 가이드에서 정의.</td></tr>
+        <tr><td>INT-03</td><td>① 스위치 ON/OFF</td><td>해당 모듈 노출/숨김 + 노출 모듈을 §3 규칙으로 재분배. 스플리터는 인접한 노출 모듈 사이에만 1개씩 표시.</td><td>마지막 남은 모듈이 가변 영역 전체 사용.</td></tr>
+        <tr><td>INT-04</td><td>캘린더 1개/2개 토글</td><td>한 달 캘린더의 높이는 <b>1개/2개 모드에서 동일</b>. 2개 모드에서는 캘린더 영역이 좌측 패널 <b>전체 높이의 1/2</b>을 차지하며, 1개 모드는 그 절반(약 1/4)만 차지. 전환 시 가변 영역이 남은 높이로 재계산(기존 비율 유지).</td><td>공유사항 default 크기는 캘린더 표시 모드와 무관하게 동일.</td></tr>
+        <tr><td>INT-05</td><td>모듈 내부 휠/트랙패드 스크롤</td><td>콘텐츠 세로 스크롤. 위/아래 잘린 내용이 있으면 페이드로 힌트 표시.</td><td>최소 상태(1줄)에서도 스크롤 동작. 스크롤바 영역은 상시 확보하여 스크롤바 유무로 본문 줄바꿈이 변하지 않아야 함.</td></tr>
+        <tr><td>INT-06</td><td>스플리터 키보드 조작</td><td>Tab으로 포커스 → ↑/↓ 키로 일정 단위 조절.</td><td>포커스 상태를 시각적으로 표시.</td></tr>
+        <tr><td>INT-07</td><td>창 높이 부족(모든 모듈 최소 합 초과 불가)</td><td>모든 모듈을 최소 높이(타이틀+1줄)로 고정. 모듈 전체를 감싸는 별도 스크롤은 제공하지 않으며, 콘텐츠 접근은 각 모듈 내부 스크롤(INT-05)로 처리.</td><td>최소 지원 해상도는 GUI 가이드에서 정의.</td></tr>
       </table>
       </div>
 
       <h2>5. 상태 정의</h2>
-      <h3>5-1. 가변 모듈 상태</h3>
+      <h3>가변 모듈 상태</h3>
       <div class="tbl-wrap">
       <table>
         <tr><th style="width:110px">상태</th><th>정의</th></tr>
         <tr><td>Default</td><td>§3 규칙으로 배분된 초기 상태</td></tr>
         <tr><td>Custom</td><td>사용자가 드래그로 조정한 상태 (INT-01)</td></tr>
         <tr><td>Min</td><td>최소 높이 = 타이틀 + 콘텐츠 1줄. 더 이상 축소 불가</td></tr>
-        <tr><td>Max</td><td>해당 모듈 외 모든 노출 모듈이 Min인 상태. 버튼이 복원 아이콘으로 전환</td></tr>
+        <tr><td>Max</td><td>해당 모듈 외 모든 노출 모듈이 Min인 상태(드래그 캐스케이드로 도달)</td></tr>
         <tr><td>Hidden</td><td>① 스위치 OFF. 모듈·인접 스플리터 미노출</td></tr>
       </table>
       </div>
-      <h3>5-2. 확대/복원 버튼 상태</h3>
-      <ul>
-        <li><b>확대</b>: 모듈이 Max가 아닐 때. 클릭 → 최대화</li>
-        <li><b>복원</b>: 모듈이 Max일 때. 클릭 → 직전 레이아웃(드래그로 Max 도달한 경우는 Default 분배)</li>
-      </ul>
 
       <h2>6. 접근성 · 개발 참고</h2>
       <ul>
-        <li>스플리터: <code>role="separator"</code> + <code>aria-orientation="horizontal"</code>, Tab 포커스 및 방향키 조절(INT-07)</li>
-        <li>스위치: <code>button</code> + <code>aria-pressed</code>, 확대/복원 버튼: <code>aria-label</code>로 모듈명 포함</li>
+        <li>스플리터: <code>role="separator"</code> + <code>aria-orientation="horizontal"</code>, Tab 포커스 및 방향키 조절(INT-06)</li>
+        <li>스위치: <code>button</code> + <code>aria-pressed</code></li>
         <li>모든 조작 요소에 키보드 포커스 표시 제공, 모션 최소화 설정(<code>prefers-reduced-motion</code>) 대응</li>
         <li>구현 참고: 컨테이너 리사이즈 감지(<code>ResizeObserver</code>)로 재배분, 드래그는 pointer capture 사용, 모듈 높이 합계가 가변 영역을 넘지 않도록 정수 스냅 처리</li>
       </ul>
@@ -628,7 +595,7 @@
   }
 
   // 공유사항 콘텐츠 높이 — default 분배(min(가변 1/3, 콘텐츠))의 기준으로만 사용
-  // 확장(드래그·확대)은 다른 모듈과 동일하게 제한 없음(콘텐츠보다 커지면 여백 발생)
+  // 확장(드래그)은 다른 모듈과 동일하게 제한 없음(콘텐츠보다 커지면 여백 발생)
   var NOTICE_MAX = Infinity;
   function measureNoticeMax(){
     if (!visible[0]) return NOTICE_MAX;
@@ -770,27 +737,8 @@
     });
   });
 
-  // □ 확대 : 해당 모듈 최대화(나머지 최소) / ─ 복원 : 확대 직전 상태로
+  // (확대/복원 버튼은 제거됨 — 크기 조절은 드래그·더블클릭으로만 수행)
   var restoreH = null;
-  Array.prototype.forEach.call(document.querySelectorAll('.max-btn'), function(b){
-    b.addEventListener('click', function(){
-      var i = +b.dataset.i;
-      if (!visible[i]) return;
-      userTouched = true;
-      var v = visIdx();
-      if (v.length < 2) return;
-      var a = avail();
-      if (isMaxed(i)){
-        if (restoreH){ H = restoreH.slice(); restoreH = null; fit(); apply(); }
-        else { equalize(); }
-      } else {
-        restoreH = H.slice();
-        v.forEach(function(j){ H[j] = MIN; });
-        H[i] = Math.max(MIN, a - MIN * (v.length - 1));
-        apply();
-      }
-    });
-  });
 
   // 캘린더 1개 / 2개 토글 — 캘린더 영역 높이가 바뀌면 가변 영역이 재배분
   // 한 달 높이는 1개/2개 모드에서 동일: 2개 모드에서 캘린더 영역 = 패널 전체 높이의 1/2
