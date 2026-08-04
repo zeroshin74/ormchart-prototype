@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORMCHART 산재보험 UI — 작동 애니메이션 데모 허브</title>
+<style>
+  :root{--bg:#181a20;--card:#22252c;--line:#2c2f38;--txt:#e8eaf2;--dim:#9aa3b5;--blue:#2b4be0;--tgl:#3d6af5;--amber:#f0b45c;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;padding:40px 20px;}
+  .wrap{max-width:880px;margin:0 auto;}
+  h1{font-size:22px;margin-bottom:6px;}
+  .sub{font-size:13px;color:var(--dim);margin-bottom:8px;}
+  .warn{display:inline-block;font-size:11.5px;color:var(--amber);border:1px solid #5a4a2a;border-radius:4px;padding:3px 9px;margin-bottom:26px;}
+  .list{display:flex;flex-direction:column;gap:10px;}
+  .row{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:15px 18px;text-decoration:none;color:var(--txt);}
+  a.row:hover{border-color:var(--tgl);background:#262a34;}
+  .row .id{font-weight:800;font-size:14.5px;min-width:96px;}
+  .row .path{font-size:13px;color:var(--dim);flex:1;}
+  .badge{font-size:11px;font-weight:700;border-radius:10px;padding:3px 10px;white-space:nowrap;}
+  .badge.live{background:#1e3a2a;color:#7ee2a8;}
+  .badge.todo{background:#2a2e3a;color:#8a93a5;}
+  .row.todo{opacity:.55;}
+  .ver{font-size:11.5px;color:var(--dim);min-width:44px;text-align:right;}
+  .sect{font-size:12px;color:var(--dim);margin:26px 0 10px;letter-spacing:.4px;}
+  footer{margin-top:36px;font-size:11.5px;color:#6a7386;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ORMCHART 산업재해보험 UI — 작동 애니메이션 데모</h1>
+  <div class="sub">화면 ID별 조작 흐름 자동 재생 시뮬레이션 · CENACLE ORMCHART(클라우드 EMR)</div>
+  <div class="warn">※ 실화면 녹화가 아닌, 시안·정책 기반 설계 의도 시뮬레이션</div>
+
+  <div class="sect">게시됨</div>
+  <div class="list">
+    <a class="row" href="sj-set-01/">
+      <span class="id">SJ-SET-01</span>
+      <span class="path">병원설정 &gt; 산재 설정 — 산재 기능 활성화·간병 인프라·간병인 명부 등록 흐름 (장면 11개)</span>
+      <span class="badge live">게시</span><span class="ver">v0.5</span>
+    </a>
+    <a class="row" href="sj-pat-01/">
+      <span class="id">SJ-PAT-01/02</span>
+      <span class="path">환자 상세정보 &gt; 산업재해보험 탭 + 정보 추가/수정 팝업 — 탭 노출·등록 경로 ①·필수 입력 오류·종료일 자동 입력·후유증상·목록 반영·수정/삭제 분기 흐름 (장면 12개)</span>
+      <span class="badge live">게시</span><span class="ver">v0.2</span>
+    </a>
+    <a class="row" href="sj-rcp-01/">
+      <span class="id">SJ-RCP-01</span>
+      <span class="path">진료접수 &gt; 산재 접수 영역 — 보험유형 2종·건보 옵션 비활성·정보 영역 자동 기입(원본 뷰+에디터)·후유증상 토글·간병 층위·간병범위 풀다운·접수(F8) 검증 흐름 (장면 9개)</span>
+      <span class="badge live">게시</span><span class="ver">v0.1</span>
+    </a>
+    <a class="row" href="sj-lib-01/">
+      <span class="id">SJ-LIB-01</span>
+      <span class="path">기초자료 관리 &gt; 산업재해보험 단가 — 산재 탭·사용자코드 검색/선택·최초 상태(급여단가 자동/원내 단가 빈 상태)·산재 원내 단가 등록 흐름 (장면 7개 · 08.04 실서비스 변경 4건 반영)</span>
+      <span class="badge live">게시</span><span class="ver">v0.4</span>
+    </a>
+  </div>
+
+  <div class="sect">예정 (제작 순서는 기획 협의에 따름)</div>
+  <div class="list">
+    <div class="row todo"><span class="id">SJ-CLN-01</span><span class="path">진료실 &gt; 산재정보 매핑/변경</span><span class="badge todo">예정</span><span class="ver">—</span></div>
+    <div class="row todo"><span class="id">SJ-CLN-02</span><span class="path">진료실 &gt; 특정내역 MB/JB</span><span class="badge todo">예정</span><span class="ver">—</span></div>
+    <div class="row todo"><span class="id">SJ-CLN-03</span><span class="path">진료실 &gt; 진료결과 (치료구분)</span><span class="badge todo">예정</span><span class="ver">—</span></div>
+    <div class="row todo"><span class="id">SJ-PAY-01</span><span class="path">수납 &gt; 본인부담률 분기</span><span class="badge todo">예정</span><span class="ver">—</span></div>
+    <div class="row todo"><span class="id">SJ-DOC-01</span><span class="path">서류 &gt; 원외처방전 보험구분</span><span class="badge todo">예정</span><span class="ver">—</span></div>
+    <div class="row todo"><span class="id">SJ-DOC-02</span><span class="path">서류 &gt; 산재 별지 서식 3종</span><span class="badge todo">예정</span><span class="ver">—</span></div>
+    <div class="row todo"><span class="id">SJ-CLM-01</span><span class="path">청구 &gt; 산재 청구서·SAM 다운로드</span><span class="badge todo">예정</span><span class="ver">—</span></div>
+    <div class="row todo"><span class="id">SJ-CLM-02</span><span class="path">청구 &gt; 명세서·문서함</span><span class="badge todo">예정</span><span class="ver">—</span></div>
+    <div class="row todo"><span class="id">SJ-AGG-01</span><span class="path">전자서명 &gt; 진료기록, 전자서명</span><span class="badge todo">예정</span><span class="ver">—</span></div>
+  </div>
+
+  <footer>
+    데모 규칙: 동작 0.3초 단위 · 장면 시작 전 1초 대기 · 하단 장면 번호로 이동 · Space = 재생/정지.<br>
+    근거: 산업재해보험 UI화면설계서(피그마 시안) · 01_1(40-산재_정책). 문서 산출물(Description·Flow·목업)과 번호·내용 정합 유지.
+  </footer>
+</div>
+</body>
+</html>

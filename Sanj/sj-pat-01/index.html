@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SJ-PAT-01 (환자 상세정보 &gt; 산업재해보험 탭) · SJ-PAT-02 (정보 추가/수정 팝업) — 작동 애니메이션 데모 v0.2</title>
+<style>
+  :root{
+    --gnb:#1E3EDB; --side:#3E4553; --blue:#2B4BE0; --tgl:#3D6AF5;
+    --bg:#EFF1F5; --line:#E8EAF0; --line2:#ECEEF4; --txt:#333B4A;
+    --dim:#8A93A5; --red:#E5484D; --panel:#F7F8FA; --sel:#DCE6FB;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+    background:#22252c;color:var(--txt);display:flex;flex-direction:column;overflow:hidden;}
+
+  /* ── 데모 헤더 ── */
+  #demoHead{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:10px 18px;background:#181a20;color:#e8eaf2;}
+  #demoHead .tit{font-size:15px;font-weight:700;}
+  #demoHead .sub{font-size:12px;color:#9aa3b5;}
+  #demoHead .warn{margin-left:auto;font-size:11px;color:#f0b45c;border:1px solid #5a4a2a;border-radius:4px;padding:3px 8px;}
+
+  /* ── 스테이지 ── */
+  #stageWrap{flex:1 1 auto;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#22252c;}
+  #stage{position:relative;width:1444px;height:1010px;background:#D6DAE3;
+    transform-origin:center center;box-shadow:0 8px 40px rgba(0,0,0,.5);border-radius:6px;overflow:hidden;}
+
+  /* 환자 상세정보 창 */
+  #pwin{position:absolute;left:60px;top:28px;width:1324px;height:954px;background:#fff;border-radius:6px;
+    box-shadow:0 10px 40px rgba(20,30,60,.25);display:flex;flex-direction:column;overflow:hidden;}
+  #ptitle{flex:0 0 34px;background:var(--side);color:#fff;font-size:12.5px;display:flex;align-items:center;padding:0 14px;}
+  #ptitle .wctl{margin-left:auto;display:flex;gap:14px;color:#C7CCD6;font-size:11px;}
+
+  #phead{flex:0 0 auto;padding:14px 24px 0;border-bottom:1px solid var(--line);}
+  #phead .row1{display:flex;align-items:center;}
+  #phead .row1 .h{font-size:17px;font-weight:800;}
+  #phead .row1 .right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--dim);}
+  .chipUrl{border:1px solid var(--blue);color:var(--blue);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;}
+  #phead .row2{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;flex-wrap:wrap;}
+  #phead .row2 .nm{font-size:16px;font-weight:800;}
+  .badge{font-size:10px;font-weight:700;border-radius:9px;padding:2px 8px;}
+  .badge.b1{background:#E9FBF0;color:#18A05A;}
+  .badge.b2{background:#F9E0EA;color:#D6336C;}
+  .badge.b3{background:#EEF0F5;color:#4A5468;}
+  #phead .row3{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.3px;color:#4A5468;flex-wrap:wrap;}
+  #phead .row3 .dv{color:#D9DDE6;}
+  #phead .row4{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.8px;flex-wrap:wrap;color:#4A5468;}
+  #phead .row4 a{color:#3B4B92;text-decoration:underline;text-underline-offset:2px;}
+  #phead .row4 .rd{color:var(--red);font-weight:700;text-decoration:underline;}
+  #phead .row4 .tagS{font-size:9.5px;border-radius:2px;padding:1px 4px;font-weight:700;}
+  #phead .row5{margin-top:8px;font-size:11.8px;color:#9AA3B5;padding-bottom:4px;}
+  #phead .row5 a{color:#3B4B92;text-decoration:underline;}
+
+  /* 탭 */
+  #ptabs{flex:0 0 40px;display:flex;align-items:flex-end;gap:2px;padding:0 18px;border-bottom:1px solid var(--line);background:#fff;}
+  .ptab{font-size:12.6px;color:#5A6478;padding:10px 12px;border-bottom:2px solid transparent;white-space:nowrap;}
+  .ptab.on{color:var(--blue);font-weight:700;border-bottom-color:var(--blue);}
+
+  /* 본문 */
+  #pbody{flex:1 1 auto;overflow-y:auto;padding:18px 24px;}
+  #pbody::-webkit-scrollbar{width:6px;}
+  #pbody::-webkit-scrollbar-thumb{background:#C9CEDA;border-radius:3px;}
+
+  /* 기본정보 자리 표시 */
+  #basicPh .skel{background:#F2F4F8;border-radius:4px;height:22px;margin-bottom:14px;}
+
+  /* 산재 섹션 */
+  #sjHead{display:flex;align-items:center;margin-bottom:10px;}
+  #sjHead .t{font-size:14.5px;font-weight:800;}
+  .btnDark{background:#3A4254;color:#fff;font-size:12px;border:none;border-radius:3px;padding:6px 14px;margin-left:auto;}
+  #sjTbl{width:100%;border-collapse:collapse;font-size:12.2px;}
+  #sjTbl th{color:#7A8398;font-weight:600;text-align:left;padding:9px 8px;border-top:1px solid #E2E5EC;border-bottom:1px solid #E2E5EC;background:#FAFBFD;white-space:nowrap;}
+  #sjTbl td{padding:9px 8px;border-bottom:1px solid #F0F2F6;vertical-align:top;}
+  #sjTbl td.ell{max-width:230px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .lnk{color:var(--blue);text-decoration:underline;text-underline-offset:2px;margin-right:8px;white-space:nowrap;}
+  #sjEmpty{text-align:center;color:#B4BAC8;font-size:12.8px;padding:70px 0 60px;}
+  /* 후유증상 하위 상세 */
+  .detWrap{background:#F7F8FA;border-radius:4px;margin:2px 0 4px;padding:12px 16px;}
+  .detGrid{display:grid;grid-template-columns:170px 90px 150px 90px 1fr;column-gap:18px;font-size:11.8px;}
+  .detGrid .h{color:#8A93A5;font-weight:600;margin-bottom:6px;}
+  .detGrid .v.ell2{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.5;}
+
+  /* 팝업 (SJ-PAT-02) */
+  #ovl{position:absolute;inset:0;background:rgba(20,25,40,.35);display:none;z-index:40;}
+  #ovl.open{display:block;}
+  #popup{position:absolute;left:50%;top:50%;transform:translate(-50%,-54%);width:660px;background:#fff;border-radius:4px;
+    box-shadow:0 14px 50px rgba(0,0,0,.35);z-index:41;display:none;overflow:visible;}
+  #popup.open{display:block;}
+  #popup.pop-anim{animation:popIn .3s ease;}
+  @keyframes popIn{from{opacity:0;transform:translate(-50%,-51%) scale(.97);}to{opacity:1;transform:translate(-50%,-54%) scale(1);}}
+  #popTitle{height:32px;background:var(--side);color:#fff;font-size:12.5px;display:flex;align-items:center;padding:0 12px;border-radius:4px 4px 0 0;}
+  #popTitle .wctl{margin-left:auto;display:flex;gap:14px;color:#C7CCD6;font-size:11px;}
+  #popBody{padding:22px 28px 16px;}
+  .prow{display:flex;align-items:flex-start;margin-bottom:14px;font-size:12.5px;position:relative;}
+  .plb{width:104px;flex:0 0 104px;color:#4A5468;padding-top:6px;}
+  .plb .req{color:var(--red);}
+  .gap{width:22px;}
+  .inp{height:28px;border:1px solid #D9DDE6;border-radius:3px;font-size:12.5px;padding:0 9px;color:var(--txt);background:#fff;display:flex;align-items:center;overflow:hidden;}
+  .inp .ph{color:#B4BAC8;}
+  .inp.err{border-color:var(--red);box-shadow:0 0 0 1px rgba(229,72,77,.25);}
+  #fDxVal{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;display:block;}
+  .cal{color:#8A93A5;margin-left:5px;font-size:13px;padding-top:6px;}
+  .hint{font-size:10.5px;color:#B4BAC8;margin-top:3px;}
+  .errMsg{color:var(--red);font-size:11px;margin-top:3px;display:none;}
+  .errMsg.show{display:block;}
+  /* 후유증상 토글 */
+  .tgl{width:31px;height:18px;border-radius:9px;background:#C3C9D6;position:relative;transition:background .25s;flex:0 0 auto;margin-top:5px;}
+  .tgl::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .25s;box-shadow:0 1px 2px rgba(0,0,0,.25);}
+  .tgl.on{background:var(--tgl);}
+  .tgl.on::after{left:15px;}
+  .tglTxt{color:#6A7386;font-size:12.5px;margin-left:8px;padding-top:5px;}
+  #aftSub{background:var(--panel);border-radius:4px;padding:0 14px;overflow:hidden;max-height:0;opacity:0;transition:max-height .3s ease,opacity .3s ease;margin-bottom:4px;}
+  #aftSub.open{max-height:330px;opacity:1;padding:12px 14px 10px;}
+  .selBox{height:28px;border:1px solid #D9DDE6;border-radius:3px;font-size:12.5px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;background:#fff;gap:8px;}
+  .mgmt{border:1px solid #D9DDE6;border-radius:3px;min-height:58px;font-size:12.3px;line-height:1.55;padding:7px 9px;color:var(--txt);background:#fff;position:relative;}
+  .mgmt .ph{color:#B4BAC8;}
+  .cnt{text-align:right;font-size:10.5px;color:#8A93A5;margin-top:3px;}
+  /* 상병 검색 풀다운 — 팝업 밖까지 넘침 */
+  #dxMenu{position:absolute;top:29px;left:0;width:470px;background:#fff;border:1px solid #C9CEDA;border-radius:4px;
+    box-shadow:0 10px 34px rgba(20,30,60,.22);display:none;z-index:60;}
+  #dxMenu.open{display:block;}
+  #dxMenu table{width:100%;border-collapse:collapse;font-size:11.8px;}
+  #dxMenu th{color:#8A93A5;font-weight:600;text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  #dxMenu td{padding:6px 10px;border-bottom:1px solid #F3F5F9;}
+  #dxMenu tr.hov td{background:#EEF2FF;}
+  #dxMenu .hl{color:var(--blue);}
+  #popFoot{border-top:1px solid var(--line);padding:12px 18px;display:flex;justify-content:flex-end;gap:8px;}
+  .btnGhost{border:1px solid #D9DDE6;background:#fff;border-radius:15px;font-size:12.5px;padding:7px 20px;color:#4A5468;}
+  .btnDark2{border:none;background:#3A4254;color:#fff;border-radius:15px;font-size:12.5px;padding:7px 20px;font-weight:600;}
+  .btnBlue{border:none;background:var(--blue);color:#fff;border-radius:15px;font-size:12.5px;padding:7px 20px;font-weight:600;}
+
+  /* 삭제 확인 모달 */
+  #delOvl{position:absolute;inset:0;background:rgba(20,25,40,.35);display:none;z-index:44;}
+  #delOvl.open{display:block;}
+  #delModal{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:380px;background:#fff;border-radius:6px;
+    box-shadow:0 14px 50px rgba(0,0,0,.35);z-index:45;display:none;padding:26px 24px 18px;text-align:center;}
+  #delModal.open{display:block;}
+  #delModal.pop-anim{animation:popIn2 .3s ease;}
+  @keyframes popIn2{from{opacity:0;transform:translate(-50%,-47%) scale(.97);}to{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+  #delModal .msg{font-size:13px;line-height:1.6;color:var(--txt);}
+  #delModal .btns{display:flex;justify-content:center;gap:8px;margin-top:18px;}
+
+  /* 토스트 */
+  #toast{position:absolute;left:50%;bottom:60px;transform:translateX(-50%);background:#2E3442;color:#fff;font-size:13px;
+    border-radius:20px;padding:10px 24px;opacity:0;transition:opacity .3s;z-index:70;pointer-events:none;}
+  #toast.show{opacity:1;}
+
+  #stage.noanim *{transition:none !important;animation:none !important;}
+
+  /* 커서 */
+  #cursor{position:absolute;z-index:80;width:26px;height:30px;transition:left .3s cubic-bezier(.4,.1,.2,1),top .3s cubic-bezier(.4,.1,.2,1);
+    opacity:0;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));}
+  #cursor.vis{opacity:1;}
+  #clickFx{position:absolute;z-index:79;width:36px;height:36px;border-radius:50%;border:3px solid var(--tgl);opacity:0;pointer-events:none;}
+  #clickFx.go{animation:cfx .3s ease-out;}
+  @keyframes cfx{0%{opacity:.85;transform:scale(.3);}100%{opacity:0;transform:scale(1.5);}}
+
+  /* ── 하단 컨트롤/자막 패널 ── */
+  #panel{flex:0 0 152px;background:#181a20;border-top:1px solid #2c2f38;display:flex;color:#E8EAF2;}
+  #ctrls{flex:0 0 300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border-right:1px solid #2c2f38;padding:10px;}
+  #ctrls .row{display:flex;gap:8px;}
+  .cbtn{background:#2A2E3A;border:1px solid #3A3F4E;color:#E8EAF2;border-radius:6px;font-size:13px;padding:7px 13px;cursor:pointer;white-space:nowrap;}
+  .cbtn:hover{background:#343A49;}
+  .cbtn.play{background:var(--blue);border-color:var(--blue);font-weight:700;min-width:96px;}
+  #stepNums{display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:center;}
+  .snum{width:23px;height:23px;border-radius:50%;border:2px solid #4A4F5E;color:#9AA3B5;font-size:11.5px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;}
+  .snum.done{border-color:#7c8296;color:#c3c9d8;}
+  .snum.act{border-color:var(--blue);color:#fff;background:var(--blue);}
+  #subtt{flex:1;padding:12px 22px;display:flex;flex-direction:column;justify-content:center;gap:5px;overflow:hidden;}
+  #stTitle{font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:9px;}
+  #stBody{font-size:12.6px;color:#C3C9D8;line-height:1.45;}
+  #stBasis{font-size:11.3px;color:#8A93A5;}
+  .tag{display:inline-block;font-size:10.5px;border-radius:3px;padding:1px 6px;margin-right:5px;font-weight:700;vertical-align:1px;}
+  .tag.pol{background:#1e3a2a;color:#7ee2a8;}
+  .tag.conf{background:#3a2a1e;color:#f0b45c;}
+  .tag.fix{background:#3a1e2a;color:#f08ca8;}
+  .tag.prop{background:#1e2a3a;color:#7ec2f0;}
+  #prog{height:3px;background:#2c2f38;}
+  #progIn{height:100%;background:var(--blue);width:0;transition:width .3s;}
+</style>
+</head>
+<body>
+
+<div id="demoHead">
+  <span class="tit">SJ-PAT-01 (환자 상세정보 &gt; 산업재해보험 탭) · SJ-PAT-02 (정보 추가/수정 팝업) — 작동 애니메이션 데모</span>
+  <span class="sub">v0.2 · 2026.08.04 · 아래 장면 번호로 이동 · Space = 재생/정지</span>
+  <span class="warn">※ 실화면 녹화가 아닌, 시안·정책 기반 설계 의도 시뮬레이션</span>
+</div>
+
+<div id="stageWrap">
+  <div id="stage">
+
+    <!-- 환자 상세정보 창 -->
+    <div id="pwin">
+      <div id="ptitle">환자 상세정보<span class="wctl"><span>—</span><span>▢</span><span>✕</span></span></div>
+
+      <div id="phead">
+        <div class="row1">
+          <span class="h">환자 상세정보</span>
+          <span class="right"><span>최종 업데이트 : yyyy.mm.dd hh:mm:ss</span><span class="chipUrl">클레 설치 URL</span><span>&lt;</span><span>🖨</span><span>📅</span><span>✎</span><span>⋮</span></span>
+        </div>
+        <div class="row2">
+          <span class="nm">이요원</span><span>(26세/여)</span>
+          <span class="badge b1">동명</span><span class="badge b2">클레 ›</span><span class="badge b3">신환</span>
+        </div>
+        <div class="row3">
+          <span><b>cn.123456789</b></span><span class="dv">|</span><span>건강보험</span><span class="dv">|</span><span>891005-2******</span><span class="dv">|</span>
+          <span>010-1234-1234</span><span class="dv">|</span><span><u>(05-364)서울특별시 강동구 풍성로63길</u> 📍</span>
+        </div>
+        <div class="row4">
+          <a>본인확인 (2024.05.02)</a><span class="dv">|</span><span>조산아</span><span class="dv">|</span><span>{장애}</span><span class="dv">|</span>
+          <a>산정특례-V009, D38 외 4</a><span class="dv">|</span><span class="rd">감염병 대상</span><span class="dv">|</span><a>금지약물</a><span class="dv">|</span>
+          <a>만성질환 관리대상</a><span class="tagS" style="background:#FDECEC;color:#E5484D;">의원</span><span class="tagS" style="background:#fff;color:#4A5468;border:1px solid #D9DDE6;">공단</span><span class="dv">|</span>
+          <a>금연치료</a><span class="dv">|</span><span>PACS ({number}) ⧉</span><span class="dv">|</span><a>VIP-원장님 친구딸</a>
+        </div>
+        <div class="row5">등록된 가족(n) <a>김하나(형제)</a>, <a>김두이(아버지)</a></div>
+      </div>
+
+      <div id="ptabs">
+        <span class="ptab" id="tabBasic">기본정보</span>
+        <span class="ptab">신체계측/바이탈</span><span class="ptab">진료기록</span><span class="ptab">입원</span><span class="ptab">수납</span>
+        <span class="ptab">처방금지약품</span><span class="ptab">사전심사</span><span class="ptab">예약</span><span class="ptab">건강검진</span>
+        <span class="ptab">문서함</span><span class="ptab">자동차보험</span>
+        <span class="ptab" id="tabSanjae">산업재해보험</span>
+      </div>
+
+      <div id="pbody">
+        <!-- 기본정보 자리 표시(데모용 스켈레톤) -->
+        <div id="basicPh">
+          <div class="skel" style="width:38%;"></div>
+          <div class="skel" style="width:62%;"></div>
+          <div class="skel" style="width:55%;"></div>
+          <div class="skel" style="width:70%;height:120px;"></div>
+          <div class="skel" style="width:48%;"></div>
+        </div>
+
+        <!-- 산업재해보험 탭 콘텐츠 -->
+        <div id="sjSec" style="display:none;">
+          <div id="sjHead"><span class="t">산업재해보험 정보</span><button class="btnDark" id="btnAdd">추가</button></div>
+          <table id="sjTbl">
+            <thead><tr>
+              <th style="width:56px;">상태</th><th style="width:88px;">재해일자</th><th>소속사업장명</th><th style="width:112px;">사업장 관리번호</th>
+              <th style="width:190px;">승인 상병</th><th style="width:96px;">요양기간 시작일</th><th style="width:96px;">요양기간 종료일</th>
+              <th style="width:86px;">후유증상 상태</th><th style="width:92px;">관리</th>
+            </tr></thead>
+            <tbody id="sjBody"></tbody>
+          </table>
+          <!-- (v0.2) [확정 08.04 — 기획 확인] 빈 상태 = 테이블 헤더 유지 + 목록만 빈 영역 (별도 문구 없음, 첨부 캡처 기준) -->
+          <div id="sjBlank" style="height:250px;border-bottom:1px solid #E2E5EC;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SJ-PAT-02 팝업 -->
+    <div id="ovl"></div>
+    <div id="popup">
+      <div id="popTitle"><span id="popTitleTxt">산업재해보험 정보 추가</span><span class="wctl"><span>—</span><span>▢</span><span>✕</span></span></div>
+      <div id="popBody">
+        <div class="prow">
+          <span class="plb">재해일자<span class="req">*</span></span>
+          <div>
+            <div class="inp" id="fDate" style="width:150px;"><span class="ph" id="fDatePh">yyyy.mm.dd</span><span id="fDateVal"></span></div>
+            <div class="errMsg" id="eDate">필수 입력 항목입니다.</div>
+          </div><span class="cal">📅</span>
+          <span class="gap"></span>
+          <span class="plb">소속사업장명<span class="req">*</span></span>
+          <div>
+            <div class="inp" id="fComp" style="width:190px;"><span class="ph" id="fCompPh">최대 50자</span><span id="fCompVal"></span></div>
+            <div class="errMsg" id="eComp">필수 입력 항목입니다.</div>
+          </div>
+        </div>
+        <div class="prow">
+          <span class="plb">사업장 관리번호</span>
+          <div>
+            <div class="inp" id="fNum" style="width:150px;"><span class="ph" id="fNumPh">숫자 11자리</span><span id="fNumVal"></span></div>
+            <div class="hint">산재관리번호 11자리 입력</div>
+          </div>
+          <span class="gap"></span>
+          <span class="plb">승인상병</span>
+          <div style="position:relative;">
+            <div class="inp" id="fDx" style="width:190px;"><span style="color:#8A93A5;margin-right:5px;">🔍</span><span class="ph" id="fDxPh">상병 검색</span><span id="fDxVal"></span></div>
+            <!-- 상병 검색 풀다운 — 팝업 밖까지 펼쳐짐 -->
+            <div id="dxMenu">
+              <table>
+                <thead><tr><th style="width:76px;">사용자코드</th><th style="width:70px;">상병코드</th><th>명칭</th></tr></thead>
+                <tbody id="dxBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="prow">
+          <span class="plb">요양기간 시작일</span>
+          <div class="inp" id="fStart" style="width:150px;"><span class="ph" id="fStartPh">yyyy.mm.dd</span><span id="fStartVal"></span></div><span class="cal">📅</span>
+          <span class="gap"></span>
+          <span class="plb">요양기간 종료일</span>
+          <div class="inp" id="fEnd" style="width:150px;"><span class="ph" id="fEndPh">yyyy.mm.dd</span><span id="fEndVal"></span></div><span class="cal">📅</span>
+        </div>
+        <div class="prow" style="margin-bottom:10px;">
+          <span class="plb">후유증상 상태</span>
+          <div class="tgl" id="aftTgl"></div><span class="tglTxt" id="aftTxt">OFF</span>
+        </div>
+        <div id="aftSub">
+          <div class="prow">
+            <span class="plb">유효기간</span>
+            <div class="inp" id="fEff1" style="width:132px;"><span class="ph" id="fEff1Ph">yyyy.mm.dd</span><span id="fEff1Val"></span></div><span class="cal">📅</span>
+            <span style="padding:6px 8px 0;color:#8A93A5;">~</span>
+            <div class="inp" id="fEff2" style="width:132px;"><span class="ph" id="fEff2Ph">yyyy.mm.dd</span><span id="fEff2Val"></span></div><span class="cal">📅</span>
+          </div>
+          <div class="prow">
+            <span class="plb">증상구분</span>
+            <div class="selBox" id="fGrade" style="width:110px;"><span id="fGradeVal">주증상</span><span style="color:#8A93A5;font-size:10px;">▾</span></div>
+            <span class="gap"></span>
+            <span class="plb" style="width:88px;flex:0 0 88px;">후유증상코드</span>
+            <div class="inp" id="fCode" style="width:100px;"><span class="ph" id="fCodePh">최대 10자</span><span id="fCodeVal"></span></div>
+            <span class="gap"></span>
+            <span class="plb" style="width:48px;flex:0 0 48px;">치유일</span>
+            <div class="inp" id="fCure" style="width:120px;"><span class="ph" id="fCurePh">yyyy.mm.dd</span><span id="fCureVal"></span></div><span class="cal">📅</span>
+          </div>
+          <div class="prow" style="margin-bottom:4px;">
+            <span class="plb">관리내용</span>
+            <div style="flex:1;">
+              <div class="mgmt" id="fMgmt"><span class="ph" id="fMgmtPh">최대 100자</span><span id="fMgmtVal"></span></div>
+              <div class="cnt" id="mgmtCnt"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="popFoot">
+        <button class="btnGhost" id="btnCancel">취소</button>
+        <button class="btnDark2" id="btnEnd">종결</button>
+        <button class="btnBlue" id="btnSave2">저장</button>
+      </div>
+    </div>
+
+    <!-- 삭제 확인 모달 -->
+    <div id="delOvl"></div>
+    <div id="delModal">
+      <div class="msg">삭제 후 복구할 수 없습니다.<br>삭제하시겠습니까?</div>
+      <div class="btns"><button class="btnGhost" id="btnNo">아니오</button><button class="btnBlue" id="btnYes">예</button></div>
+    </div>
+
+    <div id="toast"></div>
+    <div id="clickFx"></div>
+    <div id="cursor"><svg viewBox="0 0 26 30" width="26" height="30"><path d="M3 1 L3 23 L9 18 L13 28 L17 26 L13 16.5 L21 16 Z" fill="#fff" stroke="#222" stroke-width="1.6"/></svg></div>
+  </div>
+</div>
+
+<div id="prog"><div id="progIn"></div></div>
+<div id="panel">
+  <div id="ctrls">
+    <div class="row">
+      <button class="cbtn play" id="btnPlay">▶ 재생</button>
+      <button class="cbtn" id="btnPrev">◀ 이전</button>
+      <button class="cbtn" id="btnNext">다음 ▶</button>
+    </div>
+    <div id="stepNums"></div>
+  </div>
+  <div id="subtt">
+    <div id="stTitle"></div>
+    <div id="stBody"></div>
+    <div id="stBasis"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ═══════ 더미 데이터 (시안 그대로 — SJ-PAT-02 컷 값) ═══════ */
+const D = {
+  date:"2024-05-07", comp:"포스코건설(주)", num:"987-45-678900",
+  dx:"골수증식병에서의 이차성 골수섬유증", dxCode:"D474",
+  start:"2024-10-31", end:"2024-12-10",   /* 종료일 = 자동 입력 더미 [확정 08.04] */
+  eff1:"2024-05-10", eff2:"2024-10-31", code:"M511", cure:"2024-05-10",
+  mgmt:"요추 제4-5간 추간판 탈출증 환자로, 치유일 이후 발생한 하지 방사통 및 간헐적 요통 증상에 대한 합병증 예방 관리."
+};
+/* 상병 검색 풀다운 더미 (시안 그대로, "골수" 하이라이트) */
+const DX_LIST = [
+ ["","D474","골수증식병에서의 이차성 골수섬유증"],
+ ["","C944","골수섬유증을 동반한 급성 범골수증"],
+ ["","D474","골수섬유증(특발성)(골수모양화생을 동반한)"],
+ ["","D474","골수모양화생이 동반된 골수경화증(거핵세포성)"],
+ ["","C946","골수형성이상성 및 골수증식성 질환, 상세불명"],
+ ["","C900","형질세포골수종"],
+ ["","C900","다발골수종"],
+ ["","C900","골수종증"]
+];
+
+/* ═══════ 상태 모델 ═══════ */
+function baseState(){ return {
+  tab:"sanjae",           // 시작부터 산업재해보험 탭 (v0.2 — 기획 확인: 테이블 헤더 + 빈 목록으로 시작)
+  rows:[],                // 등록된 산재정보 (최근순)
+  expanded:false,         // 후유증상 '있음' 행 하위 상세 펼침
+  popup:null,             // null | {mode:'add'|'edit', date,comp,num,dx,start,end,reqErr, aft, eff1,eff2,grade,code,cure,mgmt, dxMenu}
+  delModal:false,
+  toast:""
+};}
+const clone = s => JSON.parse(JSON.stringify(s));
+function emptyPopup(mode){ return {mode, date:"",comp:"",num:"",dx:"",start:"",end:"",reqErr:false,
+  aft:false, eff1:"",eff2:"",grade:"주증상",code:"",cure:"",mgmt:"", dxMenu:false}; }
+function filledPopup(mode){ const p=emptyPopup(mode);
+  p.date=D.date; p.comp=D.comp; p.num=D.num; p.dx=D.dx; p.start=D.start; p.end=D.end;
+  p.aft=true; p.eff1=D.eff1; p.eff2=D.eff2; p.code=D.code; p.cure=D.cure; p.mgmt=D.mgmt; return p; }
+const SAVED_ROW = {state:"진행중", date:D.date, comp:D.comp, num:D.num, dx:D.dx, start:D.start, end:D.end, aft:"있음"};
+
+/* ═══════ 장면(Scene) 정의 ═══════ */
+const STEPS = [
+ {title:"장면 1 — 시작: 산업재해보험 탭 — 테이블 헤더 + 빈 목록",
+  tags:["pol"], body:"환자 상세정보 창의 산업재해보험 탭입니다. 병원설정 SJ-SET-01(병원설정 > 산재 설정)에서 산재 사용이 ON인 병원이라 보험 계열 탭 그룹(자동차보험 옆)에 이 탭이 노출됩니다 — 사용 중 OFF로 전환하면 산재 이력이 없는 환자는 탭이 사라지고, 이력 보유 환자는 탭·정보가 유지됩니다(열람·정비 가능). 이 탭은 환자 단위 산재정보 '원본'을 보고 관리하는 화면이자 등록 경로 ①(직접 등록)의 진입점으로, 이미 승인받은 환자(Case C)의 재내원에 대비해 승인 정보를 미리 등록해 두는 용도입니다. [확정 08.04 — 기획 확인] 등록 건이 없는 최초 상태는 '산업재해보험 정보' 테이블 헤더를 그대로 제공하고 목록만 빈 상태로 보여줍니다(별도 안내 문구 없음).",
+  basis:"└ 근거: 피그마 시안 v0.5 SJ-PAT-01 Description 1·3 + 실화면 캡처(08.04) — 노출 조건·원본 관리·등록 경로 ①·빈 목록 표현.",
+  mut(s){}},
+
+ {title:"장면 2 — [추가] 클릭: SJ-PAT-02 팝업이 등록 모드로 열림",
+  tags:["pol"], body:"[추가]를 누르면 SJ-PAT-02 (산업재해보험 정보 추가/수정 팝업)가 등록 모드 — 타이틀 \"산업재해보험 정보 추가\" — 로 열립니다. 등록/수정은 같은 폼을 함께 쓰는 공용 컴포넌트로, 타이틀과 기존 값 로드 여부만 다릅니다(진료실 변경 팝업의 [+추가] 즉시 등록도 이 폼 재사용). 빈 상태든 목록 상태든 [추가] 동작은 동일하고 추가 개수 제한도 없습니다. 상태(진행중/종료) 필드는 팝업에 없습니다 — 자동관리 항목이라 입력받지 않습니다.",
+  basis:"└ 근거: 시안 v0.5 SJ-PAT-01 Description 2 · SJ-PAT-02 Description 4 — 공용 컴포넌트·등록 모드 호출·상태 필드 없음.",
+  mut(s){ s.popup=emptyPopup("add"); }},
+
+ {title:"장면 3 — 오류 케이스: 필수 입력 없이 [저장] → 인라인 오류·팝업 유지",
+  tags:["pol"], body:"아무것도 입력하지 않은 채 [저장]을 눌러 봅니다 — 통과되지 않고 필수 필드인 재해일자*와 소속사업장명* 아래에 \"필수 입력 항목입니다.\" 인라인 오류가 빨갛게 표시되며 팝업은 닫히지 않습니다. 유효성 실패 시 필드별 메시지를 그 자리에서 보여주고 팝업을 유지하는 방식입니다. [확정 08.04 — 기획 확인] 오류 케이스의 대표 예는 필수 미입력입니다(요양기간 종료일은 자동 입력되므로 날짜 역전 오류는 일부러 건드리지 않는 한 발생하지 않음).",
+  basis:"└ 근거: 시안 v0.5 SJ-PAT-02 Description 4·5 — 재해일자*·소속사업장명* 필수 · [저장] 실패 시 인라인 오류 노출·팝업 유지.",
+  mut(s){ s.popup.reqErr=true; }},
+
+ {title:"장면 4 — 오류 정정: 재해일자 → 소속사업장명 → 사업장 관리번호 입력",
+  tags:["pol"], body:"오류가 난 필드부터 채웁니다. 재해일자(yyyy.mm.dd)에 2024-05-07을 입력하는 순간 오류 표시가 사라지고, 이어서 소속사업장명(한글·영문·숫자 최대 50자)에 포스코건설(주), 사업장 관리번호(숫자 11자리 — 입력칸 아래 \"산재관리번호 11자리 입력\" 안내)에 987-45-678900을 차례로 입력합니다. 값은 모두 시안 더미 그대로입니다.",
+  basis:"└ 근거: 시안 v0.5 SJ-PAT-02 Description 4 — 필드 구성: 재해일자*·소속사업장명*(50자)·사업장 관리번호(11자리).",
+  mut(s){ s.popup.date=D.date; s.popup.comp=D.comp; s.popup.num=D.num; s.popup.reqErr=false; }},
+
+ {title:"장면 5 — 승인상병: 검색 풀다운이 팝업 밖까지 펼쳐짐 → 1개 선택",
+  tags:["pol","conf"], body:"승인상병 검색폼을 누르면 풀다운 메뉴가 팝업 경계 밖까지 펼쳐집니다. \"골수\"를 입력하면 일치 부분이 파란색으로 표시된 후보 목록이 나오고, D474(골수증식병에서의 이차성 골수섬유증)를 선택합니다. 승인상병은 상병 검색 후 1개만 추가할 수 있습니다. [확인 — 기존 미결 '승인상병 1개 vs 다상병' 승계] 승인 상병이 여러 개인 환자의 대표 상병 1개 원칙, 청구 명세서 주/부상병 기재와의 연결은 기획 회신 대기 — 회신 전 대표 상병 1개로 잠정.",
+  basis:"└ 근거: 시안 v0.5 SJ-PAT-02 Description 4·6 — 상병 검색 풀다운(팝업 밖 노출)·1개만 추가 / 확인·문의 7 — 다상병 관계.",
+  mut(s){ s.popup.dx=D.dx; }},
+
+ {title:"장면 6 — 요양기간: 시작일 입력 → 종료일 자동 입력 (직접 수정 가능)",
+  tags:["pol","conf"], body:"요양기간 시작일에 2024-10-31을 입력하면, 종료일 2024-12-10이 자동으로 채워집니다. [확정 08.04 — 기획 확인] 요양기간 종료일은 자동 입력 값이라 사용자가 일부러 건드리지 않는 한 날짜 역전이 발생하지 않습니다(직접 수정은 가능하며, 수정 시 종료일 ≥ 시작일 유효성 검증이 지켜집니다). [확인 PA-01] 자동 입력되는 종료일의 산정 기준(어떤 값으로 채워지는지)은 기획 회신 대기 — 회신 전 시안 더미(2024-12-10)로 상정.",
+  basis:"└ 근거: 기획 확인(08.04) — 종료일 자동 입력 / 시안 v0.5 SJ-PAT-02 Description 4 — 종료일 ≥ 시작일 유효성 검증.",
+  mut(s){ s.popup.start=D.start; s.popup.end=D.end; }},
+
+ {title:"장면 7 — 후유증상 상태 ON: 하위 영역이 나타나고 값 입력",
+  tags:["pol"], body:"후유증상 상태 토글(기본값 OFF)을 켜면 하위 영역이 나타납니다: 유효기간(범위, 종료 ≥ 시작 검증) · 증상구분(주증상/부증상, 기본값 주증상 — 그대로 둡니다) · 후유증상코드(한글·영문·숫자 최대 10자) · 치유일 · 관리내용(최대 100자, 글자수 카운터). 유효기간 2024-05-10 ~ 2024-10-31, 코드 M511, 치유일 2024-05-10, 관리내용을 입력하면 카운터가 함께 올라갑니다.",
+  basis:"└ 근거: 시안 v0.5 SJ-PAT-02 Description 4 — 후유증상 상태 On/Off(기본 OFF)·ON 시 하위 영역 노출·관리내용 100자 카운터.",
+  mut(s){ const p=s.popup; p.aft=true; p.eff1=D.eff1; p.eff2=D.eff2; p.code=D.code; p.cure=D.cure; p.mgmt=D.mgmt; }},
+
+ {title:"장면 8 — [저장]: 원본 생성 → 목록 최상단에 새 행 (상태는 자동관리)",
+  tags:["pol"], body:"[저장]을 누르면 유효성 통과 → 산재정보 원본이 생성되고 팝업이 닫히며, SJ-PAT-01 목록 최상단에 새 행이 반영됩니다(최근순 정렬). 상태 컬럼의 '진행중'은 자동관리 값입니다 — 요양기간 종료일이 도래하면 자동으로 '종료' 처리되고, 접수 화면의 \"종료 전까지 사용 선택\" 규칙이 바로 이 상태를 참조합니다. 조기 종결도 별도 조작 없이 종료일을 실제 종료일로 수정하면 자동 종료됩니다.",
+  basis:"└ 근거: 시안 v0.5 SJ-PAT-02 Description 4 — 등록: 원본 생성·목록 최상단 반영 / SJ-PAT-01 Description 3 — 상태 자동관리·종료일 도래 시 자동 종료.",
+  mut(s){ s.popup=null; s.rows=[clone(SAVED_ROW)]; s.toast="저장되었습니다."; }},
+
+ {title:"장면 9 — 후유증상 '있음' 행 클릭: 하위 상세 토글 펼침",
+  tags:["pol"], body:"후유증상 상태가 '있음'인 행을 클릭하면 그 아래로 하위 상세(유효기간 / 증상구분 / 후유증상코드 / 치유일 / 관리내용)가 토글로 펼쳐집니다. 다시 클릭하면 접힙니다. 소속사업장명(최대 50자)·관리내용(최대 100자) 같은 긴 텍스트는 목록에서 2줄 말줄임으로 표시되고, 전체 내용은 수정 팝업에서 확인합니다 — 환자 상세의 기존 목록 컨벤션을 그대로 따릅니다.",
+  basis:"└ 근거: 시안 v0.5 SJ-PAT-01 Description 3 — 있음 행 클릭 시 하위 상세 토글 펼침·접힘 · 긴 텍스트 2줄 말줄임.",
+  mut(s){ s.expanded=true; s.toast=""; }},
+
+ {title:"장면 10 — [수정] 클릭: 같은 폼이 수정 모드로 — 저장 시 전체 전파(Sync)",
+  tags:["pol"], body:"관리 컬럼의 [수정]을 누르면 같은 폼이 수정 모드 — 타이틀 \"산업재해보험 정보 수정\", 기존 값 로드 — 로 열립니다. 수정 저장 시 이 원본을 참조(매핑)하는 접수·진료·청구 전체에 변경 내용이 전파(Sync)되며 변경 제한은 없습니다. 접수증 업로드 이후 기간의 수정은 추가청구로 자동 집계되고, SAM 생성 이력이 있는 기간을 수정 저장하면 \"보완청구가 필요할 수 있습니다\" 주의 안내가 나옵니다. [종결] 버튼은 요양기간 종료일만 자동 입력된 상태로 종결 처리하는 버튼입니다. 여기서는 [취소]로 변경 없이 닫습니다.",
+  basis:"└ 근거: 시안 v0.5 SJ-PAT-02 Description 4·5 — 수정: 전파(Sync)·추가청구 자동 집계·보완청구 안내 · [취소]/[종결]/[저장] / UC-00 — 원본-매핑-전파.",
+  mut(s){ /* 팝업 열고 취소 — 종료 상태는 변화 없음 */ }},
+
+ {title:"장면 11 — [삭제] 분기: 매핑 존재 여부 판정 → 확인 모달",
+  tags:["pol"], body:"[삭제]를 누르면 시스템이 접수/진료/청구 매핑 존재 여부를 판정합니다. 매핑이 하나라도 있으면 삭제가 차단되고 \"이미 사용중인 정보로 삭제할 수 없습니다.\" 안내가 나옵니다 — 원본을 참조하는 곳이 있는 한 지울 수 없다는 원본-매핑 규칙입니다. 이 건은 방금 등록해 매핑이 없으므로 확인 모달 \"삭제 후 복구할 수 없습니다. 삭제하시겠습니까?\"가 뜹니다. [예]를 누르면 삭제·목록 갱신되지만, 여기서는 [아니오]로 유지합니다.",
+  basis:"└ 근거: 시안 v0.5 SJ-PAT-02 Description 4 — 삭제 규칙: 매핑 존재 시 차단·안내, 없으면 확인 모달 / UC-00 — 매핑 존재 시 삭제 불가.",
+  mut(s){ /* 모달 열고 아니오 — 상태 변화 없음 */ }},
+
+ {title:"장면 12 — 마무리: 원본-매핑-전파 요약 + 시안 교정 목록",
+  tags:["pol","fix"], body:"이 탭의 정보가 곧 '원본'입니다 — 접수·진료·청구는 복사 없이 이 원본을 참조하고, 원본을 고치면 전체에 전파되며, 참조가 남아 있는 한 삭제할 수 없습니다. 산재 사용을 OFF로 바꿔도 이력 보유 환자의 탭·정보는 유지됩니다. [교정] 시안 더미·표기 오류: ① 빈 상태 컷과 목록 컷의 컬럼명 불일치(사고일자/사업장명/승인 상병명 ↔ 재해일자/소속사업장명/승인 상병 — SJ-PAT-02 필드명 기준 통일 필요) ② 후유증상 상태 값에 'ON' 표기 행 존재(있음/없음이 규칙) ③ 하위 상세 더미 유효기간 역전·표기 혼용(2026.11.01~2026-07-16) ④ 목록 관리 컬럼에 [삭제] 미표기(Description 정의는 [수정]·[삭제]). ※ 이 데모는 시안 v0.5(피그마)·정책서(01_1)·UC-00 기반 설계 의도 시뮬레이션이며 실화면 녹화가 아닙니다.",
+  basis:"└ 근거: UC-00 (공통 > Case 상태 모델) — 원본-매핑-전파·삭제 불가 / 시안 v0.5 SJ-PAT-01 컷 대조.",
+  mut(s){ }}
+];
+
+/* 스냅샷 계산 */
+const SNAPS = (() => { const arr=[]; let s=baseState();
+  for(const st of STEPS){ s=clone(s); st.mut(s); arr.push(clone(s)); } return arr; })();
+
+/* ═══════ DOM 헬퍼 ═══════ */
+const $ = id => document.getElementById(id);
+const stage=$("stage"), cursor=$("cursor"), clickFx=$("clickFx"), pbody=$("pbody");
+
+function setInp(inpEl, phEl, valEl, val){ valEl.textContent = val; phEl.style.display = val ? "none" : ""; }
+function stageRect(el){
+  const s = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+  const k = s.width / 1444;
+  return { x:(r.left-s.left)/k, y:(r.top-s.top)/k, w:r.width/k, h:r.height/k };
+}
+function rowHtml(r, i){
+  return `<tr data-i="${i}">
+    <td>${r.state}</td><td>${r.date}</td><td class="ell">${r.comp}</td><td>${r.num}</td>
+    <td class="ell">${r.dx}</td><td>${r.start}</td><td>${r.end}</td>
+    <td id="aftCell${i}">${r.aft}</td>
+    <td><span class="lnk" id="rowEdit${i}">수정</span><span class="lnk" id="rowDel${i}">삭제</span></td>
+  </tr>`;
+}
+function detHtml(){
+  return `<tr class="detRow"><td colspan="9" style="padding:4px 6px;">
+    <div class="detWrap"><div class="detGrid">
+      <div><div class="h">유효기간</div><div class="v">${D.eff1} ~ ${D.eff2}</div></div>
+      <div><div class="h">증상구분</div><div class="v">주증상</div></div>
+      <div><div class="h">후유증상코드</div><div class="v">${D.code}</div></div>
+      <div><div class="h">치유일</div><div class="v">${D.cure}</div></div>
+      <div><div class="h">관리내용</div><div class="v ell2">${D.mgmt}</div></div>
+    </div></div>
+  </td></tr>`;
+}
+/* 상병 풀다운 목록 ("골수" 하이라이트) */
+$("dxBody").innerHTML = DX_LIST.map((r,i)=>
+  `<tr data-i="${i}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2].split("골수").join('<span class="hl">골수</span>')}</td></tr>`).join("");
+
+/* ═══════ 렌더(스냅샷 → 화면) ═══════ */
+function render(s, instant=true){
+  if(instant){
+    clickFx.classList.remove("go");
+    $("popup").classList.remove("pop-anim");
+    $("delModal").classList.remove("pop-anim");
+    stage.classList.add("noanim");
+  }
+  // 탭
+  $("tabBasic").classList.toggle("on", s.tab==="basic");
+  $("tabSanjae").classList.toggle("on", s.tab==="sanjae");
+  $("basicPh").style.display = s.tab==="basic" ? "" : "none";
+  $("sjSec").style.display = s.tab==="sanjae" ? "" : "none";
+  // 목록
+  let html = "";
+  s.rows.forEach((r,i)=>{ html += rowHtml(r,i); if(i===0 && s.expanded) html += detHtml(); });
+  $("sjBody").innerHTML = html;
+  $("sjBlank").style.display = s.rows.length ? "none" : "";
+  // 팝업
+  const p = s.popup;
+  const wasOpen = $("popup").classList.contains("open");
+  $("ovl").classList.toggle("open", !!p); $("popup").classList.toggle("open", !!p);
+  if(p && !wasOpen && !instant) $("popup").classList.add("pop-anim");
+  if(p){
+    $("popTitleTxt").textContent = p.mode==="add" ? "산업재해보험 정보 추가" : "산업재해보험 정보 수정";
+    setInp($("fDate"), $("fDatePh"), $("fDateVal"), p.date);
+    setInp($("fComp"), $("fCompPh"), $("fCompVal"), p.comp);
+    setInp($("fNum"), $("fNumPh"), $("fNumVal"), p.num);
+    setInp($("fDx"), $("fDxPh"), $("fDxVal"), p.dx);
+    setInp($("fStart"), $("fStartPh"), $("fStartVal"), p.start);
+    setInp($("fEnd"), $("fEndPh"), $("fEndVal"), p.end);
+    /* (v0.2) 필수 미입력 오류 표시 — 재해일자·소속사업장명 */
+    $("fDate").classList.toggle("err", !!p.reqErr && !p.date);
+    $("eDate").classList.toggle("show", !!p.reqErr && !p.date);
+    $("fComp").classList.toggle("err", !!p.reqErr && !p.comp);
+    $("eComp").classList.toggle("show", !!p.reqErr && !p.comp);
+    $("dxMenu").classList.toggle("open", !!p.dxMenu);
+    $("aftTgl").classList.toggle("on", p.aft); $("aftTxt").textContent = p.aft ? "ON" : "OFF";
+    $("aftSub").classList.toggle("open", p.aft);
+    setInp($("fEff1"), $("fEff1Ph"), $("fEff1Val"), p.eff1);
+    setInp($("fEff2"), $("fEff2Ph"), $("fEff2Val"), p.eff2);
+    $("fGradeVal").textContent = p.grade;
+    setInp($("fCode"), $("fCodePh"), $("fCodeVal"), p.code);
+    setInp($("fCure"), $("fCurePh"), $("fCureVal"), p.cure);
+    setInp($("fMgmt"), $("fMgmtPh"), $("fMgmtVal"), p.mgmt);
+    $("mgmtCnt").textContent = p.mgmt ? `${p.mgmt.length} / 100자` : "0 / 100자";
+  }
+  // 삭제 모달
+  const wasDel = $("delModal").classList.contains("open");
+  $("delOvl").classList.toggle("open", s.delModal); $("delModal").classList.toggle("open", s.delModal);
+  if(s.delModal && !wasDel && !instant) $("delModal").classList.add("pop-anim");
+  // 토스트
+  $("toast").textContent = s.toast; $("toast").classList.toggle("show", !!s.toast);
+  if(instant){
+    void stage.offsetWidth;
+    pbody.scrollTop = 0;
+    requestAnimationFrame(()=>stage.classList.remove("noanim"));
+  }
+}
+
+/* ═══════ 자막/컨트롤 ═══════ */
+const TAGMAP={pol:'<span class="tag pol">정책</span>',conf:'<span class="tag conf">확인</span>',fix:'<span class="tag fix">교정</span>',prop:'<span class="tag prop">제안</span>'};
+function showSub(i){
+  const st=STEPS[i];
+  $("stTitle").innerHTML = st.title
+    + `<span style="margin-left:auto;font-size:11.5px;color:#6a7386;font-weight:400;">${i+1} / ${STEPS.length}</span>`;
+  $("stBody").innerHTML = st.tags.map(t=>TAGMAP[t]).join("") + " " + st.body;
+  $("stBasis").textContent = st.basis;
+  $("progIn").style.width = ((i+1)/STEPS.length*100)+"%";
+  document.querySelectorAll(".snum").forEach(el=>{
+    const n=+el.dataset.n;
+    el.classList.toggle("act", n===i);
+    el.classList.toggle("done", n<i);
+  });
+}
+$("stepNums").innerHTML = STEPS.map((_,i)=>`<button class="snum" data-n="${i}">${i+1}</button>`).join("");
+document.querySelectorAll(".snum").forEach(el=>el.addEventListener("click",()=>goto(+el.dataset.n)));
+
+/* ═══════ 애니메이션 프리미티브 (취소=중단 · 좌표 재검증 · 1회성 효과 소거) ═══════ */
+class CancelError extends Error{ constructor(){ super("cancelled"); this.isCancel=true; } }
+function newToken(){ return {cancelled:false, cbs:[]}; }
+let token=newToken();
+function cancelAnim(){ const t=token; t.cancelled=true; t.cbs.forEach(f=>f()); t.cbs.length=0; token=newToken(); }
+const sleep=(ms,t)=>new Promise((res,rej)=>{
+  if(t && t.cancelled) return rej(new CancelError());
+  const id=setTimeout(res,ms);
+  if(t) t.cbs.push(()=>{ clearTimeout(id); rej(new CancelError()); });
+});
+async function moveCursor(el,t,dx=0,dy=0){
+  cursor.classList.add("vis");
+  let r=stageRect(el);
+  for(let k=0;k<4;k++){
+    cursor.style.left=(r.x+r.w/2+dx-4)+"px"; cursor.style.top=(r.y+r.h/2+dy-2)+"px";
+    await sleep(k===0?300:150,t);
+    const r2=stageRect(el);
+    if(Math.abs(r2.x-r.x)<2 && Math.abs(r2.y-r.y)<2) break;
+    r=r2;
+  }
+}
+async function clickEl(el,t,dx=0,dy=0){
+  await moveCursor(el,t,dx,dy);
+  const r=stageRect(el);
+  cursor.style.left=(r.x+r.w/2+dx-4)+"px"; cursor.style.top=(r.y+r.h/2+dy-2)+"px";
+  clickFx.style.left=(r.x+r.w/2+dx-18)+"px"; clickFx.style.top=(r.y+r.h/2+dy-18)+"px";
+  clickFx.classList.remove("go"); void clickFx.offsetWidth; clickFx.classList.add("go");
+  await sleep(300,t);
+}
+["animationend","animationcancel"].forEach(ev=>{
+  clickFx.addEventListener(ev,()=>clickFx.classList.remove("go"));
+  $("popup").addEventListener(ev,e=>{ if(e.animationName==="popIn") $("popup").classList.remove("pop-anim"); });
+  $("delModal").addEventListener(ev,e=>{ if(e.animationName==="popIn2") $("delModal").classList.remove("pop-anim"); });
+});
+async function typePair(phEl,valEl,text,t,speed=35){
+  phEl.style.display="none";
+  for(let i=1;i<=text.length;i++){ if(t.cancelled) throw new CancelError(); valEl.textContent=text.slice(0,i); await sleep(speed,t); }
+}
+async function typeMgmt(text,t){
+  $("fMgmtPh").style.display="none";
+  for(let i=1;i<=text.length;i++){ if(t.cancelled) throw new CancelError();
+    $("fMgmtVal").textContent=text.slice(0,i);
+    $("mgmtCnt").textContent=`${i} / 100자`;
+    await sleep(12,t); }
+}
+const HOLD=1000;
+
+/* ═══════ 장면별 연출 ═══════ */
+const ANIM = [
+ /* 1 시작 (산재 탭 · 빈 목록) */ async t=>{ render(SNAPS[0]); cursor.classList.remove("vis"); await sleep(HOLD+800,t); },
+
+ /* 2 추가 → 팝업(등록 모드) */ async t=>{ render(SNAPS[0]); await sleep(HOLD,t);
+    await clickEl($("btnAdd"),t);
+    render(SNAPS[1],false);
+    await sleep(300,t); },
+
+ /* 3 필수 미입력 → 저장 → 인라인 오류 */ async t=>{ render(SNAPS[1],false); await sleep(HOLD,t);
+    await clickEl($("btnSave2"),t);
+    $("fDate").classList.add("err"); $("eDate").classList.add("show");
+    $("fComp").classList.add("err"); $("eComp").classList.add("show");
+    await sleep(900,t); },
+
+ /* 4 정정 — 기본 필드 입력 */ async t=>{ render(SNAPS[2],false); await sleep(HOLD,t);
+    await clickEl($("fDate"),t);
+    $("fDate").classList.remove("err"); $("eDate").classList.remove("show");
+    await typePair($("fDatePh"),$("fDateVal"),D.date,t,35);
+    await clickEl($("fComp"),t);
+    $("fComp").classList.remove("err"); $("eComp").classList.remove("show");
+    await typePair($("fCompPh"),$("fCompVal"),D.comp,t,45);
+    await clickEl($("fNum"),t);   await typePair($("fNumPh"),$("fNumVal"),D.num,t,30);
+    await sleep(300,t); },
+
+ /* 5 상병 검색 풀다운 → 선택 */ async t=>{ render(SNAPS[3],false); await sleep(HOLD,t);
+    await clickEl($("fDx"),t);
+    await typePair($("fDxPh"),$("fDxVal"),"골수",t,80);
+    $("dxMenu").classList.add("open");
+    await sleep(600,t);
+    const row0=$("dxBody").rows[0]; row0.classList.add("hov");
+    await clickEl(row0,t);
+    row0.classList.remove("hov"); $("dxMenu").classList.remove("open");
+    setInp($("fDx"),$("fDxPh"),$("fDxVal"),D.dx);
+    await sleep(300,t); },
+
+ /* 6 요양기간 — 시작일 입력 → 종료일 자동 입력 */ async t=>{ render(SNAPS[4],false); await sleep(HOLD,t);
+    await clickEl($("fStart"),t); await typePair($("fStartPh"),$("fStartVal"),D.start,t,30);
+    await sleep(400,t);
+    /* 종료일 자동 입력 [확정 08.04 — 기획 확인] */
+    $("fEndPh").style.display="none"; $("fEndVal").textContent=D.end;
+    await sleep(900,t); },
+
+ /* 7 후유증상 ON + 하위 입력 */ async t=>{ render(SNAPS[5],false); await sleep(HOLD,t);
+    await clickEl($("aftTgl"),t);
+    $("aftTgl").classList.add("on"); $("aftTxt").textContent="ON"; $("aftSub").classList.add("open");
+    await sleep(600,t);
+    await clickEl($("fEff1"),t); await typePair($("fEff1Ph"),$("fEff1Val"),D.eff1,t,30);
+    await clickEl($("fEff2"),t); await typePair($("fEff2Ph"),$("fEff2Val"),D.eff2,t,30);
+    await clickEl($("fCode"),t); await typePair($("fCodePh"),$("fCodeVal"),D.code,t,55);
+    await clickEl($("fCure"),t); await typePair($("fCurePh"),$("fCureVal"),D.cure,t,30);
+    await clickEl($("fMgmt"),t); await typeMgmt(D.mgmt,t);
+    await sleep(300,t); },
+
+ /* 8 저장 → 목록 반영 */ async t=>{ render(SNAPS[6],false); await sleep(HOLD,t);
+    await clickEl($("btnSave2"),t);
+    render(SNAPS[7],false);
+    $("toast").textContent="저장되었습니다."; $("toast").classList.add("show");
+    await sleep(900,t); },
+
+ /* 9 있음 행 클릭 → 상세 펼침 */ async t=>{ render(SNAPS[7]); await sleep(HOLD,t);
+    const aftCell=$("aftCell0");
+    if(aftCell) await clickEl(aftCell,t);
+    render(SNAPS[8],false);
+    await sleep(900,t); },
+
+ /* 10 수정 모드 → 취소 */ async t=>{ render(SNAPS[8]); await sleep(HOLD,t);
+    const ed=$("rowEdit0");
+    if(ed) await clickEl(ed,t);
+    const s=clone(SNAPS[8]); s.popup=filledPopup("edit"); render(s,false);
+    await sleep(1600,t);
+    await clickEl($("btnCancel"),t);
+    render(SNAPS[9],false);
+    await sleep(300,t); },
+
+ /* 11 삭제 → 확인 모달 → 아니오 */ async t=>{ render(SNAPS[9]); await sleep(HOLD,t);
+    const del=$("rowDel0");
+    if(del) await clickEl(del,t);
+    const s=clone(SNAPS[9]); s.delModal=true; render(s,false);
+    await sleep(1200,t);
+    await clickEl($("btnNo"),t);
+    render(SNAPS[10],false);
+    await sleep(300,t); },
+
+ /* 12 마무리 */ async t=>{ render(SNAPS[11]); cursor.classList.remove("vis"); await sleep(HOLD+800,t); }
+];
+
+/* ═══════ 재생 엔진 (취소=중단 · 세션 중첩 차단) ═══════ */
+let cur=0, playing=false, session=0;
+async function playStep(i){
+  showSub(i);
+  const t=token;
+  try{ await ANIM[i](t); render(SNAPS[i]); }
+  catch(e){ if(!e || !e.isCancel) throw e; }
+}
+function goto(i){
+  session++; playing=false; cancelAnim(); $("btnPlay").textContent="▶ 재생";
+  cur=Math.max(0,Math.min(STEPS.length-1,i));
+  cursor.classList.remove("vis");
+  render(SNAPS[cur]); showSub(cur);
+}
+async function autoPlay(){
+  const my=++session;
+  playing=true; $("btnPlay").textContent="⏸ 일시정지";
+  while(playing && my===session){
+    cancelAnim();
+    await playStep(cur);
+    if(!playing || my!==session) break;
+    if(cur>=STEPS.length-1){ playing=false; $("btnPlay").textContent="▶ 처음부터"; cur=0; render(SNAPS[STEPS.length-1]); showSub(STEPS.length-1); break; }
+    cur++;
+    try{ await sleep(300,token); }catch(e){ if(!e||!e.isCancel) throw e; break; }
+  }
+}
+$("btnPlay").addEventListener("click",()=>{
+  if(playing){ session++; playing=false; cancelAnim(); $("btnPlay").textContent="▶ 재생"; cursor.classList.remove("vis"); render(SNAPS[cur]); }
+  else autoPlay();
+});
+$("btnPrev").addEventListener("click",()=>goto(cur-1));
+$("btnNext").addEventListener("click",()=>goto(cur+1));
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowRight") goto(cur+1);
+  else if(e.key==="ArrowLeft") goto(cur-1);
+  else if(e.key===" "){ e.preventDefault(); $("btnPlay").click(); }
+});
+
+/* ═══════ 스테이지 스케일 ═══════ */
+function fit(){
+  const w=$("stageWrap").clientWidth-24, h=$("stageWrap").clientHeight-24;
+  const k=Math.min(w/1444, h/1010);
+  stage.style.transform=`scale(${k})`;
+}
+window.addEventListener("resize",fit); fit();
+
+/* 초기 상태 */
+render(SNAPS[0]); showSub(0);
+</script>
+</body>
+</html>
