@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SJ-SET-01 (병원설정 &gt; 산재 설정) — 작동 애니메이션 데모 v0.5</title>
+<title>SJ-SET-01 (병원설정 &gt; 산재 설정) — 작동 애니메이션 데모 v0.6</title>
 <style>
   :root{
     --gnb:#1E3EDB; --side:#3E4553; --blue:#2B4BE0; --tgl:#3D6AF5;
@@ -198,7 +198,7 @@
 
 <div id="demoHead">
   <span class="tit">SJ-SET-01 (병원설정 &gt; 산재 설정) — 작동 애니메이션 데모</span>
-  <span class="sub">v0.5 · 2026.08.03 · 아래 장면 번호로 이동 · Space = 재생/정지</span>
+  <span class="sub">v0.6 · 2026.08.06 · 간병제공 기본값 OFF 반영 · 아래 장면 번호로 이동 · Space = 재생/정지</span>
   <span class="warn">※ 실화면 녹화가 아닌, 시안·정책 기반 설계 의도 시뮬레이션</span>
 </div>
 
@@ -443,15 +443,15 @@ const STEPS = [
   basis:"└ 근거: 01_1 §설정 — 산업재해보험 사용유무 기본값 OFF·필수.",
   mut(s){}},
 
- {title:"장면 2 — 산재 설정 ON: 하위 항목이 빈 상태로 등장",
-  tags:["pol"], body:"토글을 클릭해 ON(사용함)으로 바꾸면, 산재 의료기관 코드 입력칸과 간병제공 여부(기본 사용함 ON)가 나타납니다. 간병제공이 ON이므로 간병병상 수·간호 등급·간병인 관리 영역까지 함께 보이며, 내용은 모두 비어 있습니다.",
-  basis:"└ 근거: 01_1 §설정 — 산재병원 ON 시 하위 정보 입력 가능.",
-  mut(s){ s.sanjae=true; s.care=true; }},
+ {title:"장면 2 — 산재 설정 ON: 하위 항목이 빈 상태로 등장 (간병제공은 기본 OFF)",
+  tags:["pol"], body:"토글을 클릭해 ON(사용함)으로 바꾸면, 산재 의료기관 코드 입력칸과 간병제공 여부가 나타납니다. 간병제공 여부의 기본값은 OFF(사용안함)이므로 간병병상 수·간호 등급·간병인 관리 영역은 아직 보이지 않습니다.",
+  basis:"└ 근거: 01_1 §설정 — 산재병원 ON 시 하위 정보 입력 가능 · 간병제공유무 기본값 OFF.",
+  mut(s){ s.sanjae=true; }},
 
- {title:"장면 3 — 간병제공 여부 OFF ↔ ON: 하위 영역이 숨고 다시 나타남",
-  tags:["pol"], body:"간병제공 여부 토글을 한 번 끄면(사용안함) 간병병상 수·간호 등급·간병인 관리 영역이 숨겨집니다. 다시 켜면 그대로 다시 나타납니다. 간병 서비스를 실제 제공하는 병원만 켜는 스위치입니다.",
-  basis:"└ 근거: 01_1 §설정 — 간병제공유무 ON 시 하위 정보 입력 가능(산재병원 ON 시 노출).",
-  mut(s){ /* 왕복 후 ON 유지 */ }},
+ {title:"장면 3 — 간병제공 여부 ON ↔ OFF: 하위 영역 등장·숨김·재등장",
+  tags:["pol"], body:"기본값 OFF인 간병제공 여부 토글을 켜면(사용함) 간병병상 수·간호 등급·간병인 관리 영역이 나타납니다. 다시 끄면(사용안함) 하위 영역이 숨겨지고, 다시 켜면 그대로 재등장합니다. 간병 서비스를 실제 제공하는 병원만 켜는 스위치입니다.",
+  basis:"└ 근거: 01_1 §설정 — 간병제공유무 기본값 OFF · ON 시 하위 정보 입력 가능(산재병원 ON 시 노출).",
+  mut(s){ s.care=true; }},
 
  {title:"장면 4 — 빈 칸 순차 입력: 기관 코드 → 병상 수 → 간호 등급",
   tags:["pol","conf"], body:"산재 의료기관 코드 4512308(숫자만·최대 7자리·필수, SAM 청구 파일에 찍히는 값) → 간병병상 수 30(0~99·필수) → 간호 등급 2등급(1~7등급 선택·필수) 순서로 채웁니다. [확인 S-01] 간병인 \"수\"는 별도 입력 없이 간병인 관리 명부로 파악 — 01_1 원문의 간병인 수 필드와 대조 필요.",
@@ -643,14 +643,17 @@ const ANIM = [
  /* 1 시작 */ async t=>{ render(SNAPS[0]); cursor.classList.remove("vis");
     highlight($("sanjaeTglRow")); await sleep(HOLD,t); unhighlight(); },
 
- /* 2 산재 ON */ async t=>{ render(SNAPS[0]); await sleep(HOLD,t); if(t.cancelled)return;
+ /* 2 산재 ON (간병제공은 기본 OFF 유지) */ async t=>{ render(SNAPS[0]); await sleep(HOLD,t); if(t.cancelled)return;
     await clickEl($("sanjaeTgl"),t); if(t.cancelled)return;
     setToggle($("sanjaeTgl"),$("sanjaeTglTxt"),true); $("sanjaeSub").classList.add("open");
-    setToggle($("careTgl"),$("careTglTxt"),true); $("careSub").classList.add("open");
     await sleep(300,t); scrollArea.style.scrollBehavior="smooth"; scrollArea.scrollTop=scrollArea.scrollHeight;
     await sleep(300,t); },
 
- /* 3 간병 OFF↔ON */ async t=>{ render(SNAPS[1]); await sleep(HOLD,t); if(t.cancelled)return;
+ /* 3 간병 ON↔OFF↔ON */ async t=>{ render(SNAPS[1]); await sleep(HOLD,t); if(t.cancelled)return;
+    await clickEl($("careTgl"),t); if(t.cancelled)return;
+    setToggle($("careTgl"),$("careTglTxt"),true); $("careSub").classList.add("open");
+    await sleep(300,t); scrollArea.style.scrollBehavior="smooth"; scrollArea.scrollTop=scrollArea.scrollHeight;
+    await sleep(600,t); if(t.cancelled)return;
     await clickEl($("careTgl"),t); if(t.cancelled)return;
     setToggle($("careTgl"),$("careTglTxt"),false); $("careSub").classList.remove("open");
     await sleep(900,t); if(t.cancelled)return;
