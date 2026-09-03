@@ -1,0 +1,412 @@
+/* ── 인바디 결과 분석 v2 ─────────────────────────────────────── */
+:root {
+  --navy: #1e2430;
+  --blue: #2f5bff;
+  --ink: #222834;
+  --ink-2: #555e6d;
+  --ink-3: #8b94a5;
+  --line: #e4e8ef;
+  --line-2: #eef1f6;
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --left-col-w: 215px; /* 상/하단 좌측 고정 영역 — 1px 오차 없이 동일 */
+  --crosshair: #b9c2d0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+    "Segoe UI", "Malgun Gothic", sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: #d9dce2;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+  overflow: hidden;
+}
+
+#window {
+  display: flex; flex-direction: column;
+  height: 100vh; background: var(--card);
+  box-shadow: 0 8px 40px rgba(20, 26, 40, 0.25);
+}
+
+/* 창 타이틀바 */
+#titlebar {
+  flex: 0 0 34px; display: flex; align-items: center;
+  background: var(--navy); color: #cfd5e2; padding: 0 12px; gap: 8px;
+  user-select: none;
+}
+#titlebar .win-controls { margin-left: auto; display: flex; gap: 14px; color: #9aa3b5; font-size: 12px; }
+
+/* 환자 헤더 */
+#patient-bar {
+  flex: 0 0 52px; display: flex; align-items: center; gap: 14px;
+  padding: 0 20px; border-bottom: 1px solid var(--line);
+}
+#patient-bar .p-name { font-size: 18px; font-weight: 700; }
+#patient-bar .p-name small { font-size: 14px; font-weight: 500; color: var(--ink-2); }
+#patient-bar .p-meta { color: var(--ink-2); display: flex; gap: 10px; align-items: center; }
+#patient-bar .p-meta .sep { color: var(--line); }
+#patient-bar select {
+  height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 0 8px;
+  color: var(--ink); background: #fff; font-size: 13px;
+}
+#patient-bar .spacer { flex: 1; }
+.btn-outline {
+  height: 30px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px;
+  background: #fff; color: var(--ink); font-size: 13px; cursor: pointer;
+}
+.btn-outline:hover { border-color: #c9d0dc; }
+/* '추가제안' 토글 ON 상태 */
+#extras-toggle.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+/* 차트 헤더 Δ 요약 (추가제안 ON) */
+.chart-card .head .head-delta {
+  margin-left: 8px; font-weight: 500; font-size: 11px; color: var(--ink-3);
+  background: #f2f4f8; border-radius: 5px; padding: 1px 7px;
+}
+
+/* 컨트롤 바 */
+#control-bar {
+  flex: 0 0 54px; display: flex; align-items: center; gap: 14px;
+  padding: 0 20px; border-bottom: 1px solid var(--line);
+  flex-wrap: nowrap; white-space: nowrap;
+}
+.mode-toggle { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.mode-toggle button {
+  height: 34px; padding: 0 14px; border: 0; background: #f2f4f8; color: var(--ink-2);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.mode-toggle button.active { background: var(--blue); color: #fff; }
+
+.zoom-box {
+  display: flex; align-items: center; gap: 4px;
+  border: 1px solid var(--line); border-radius: 8px; height: 34px; padding: 0 6px;
+}
+.zoom-box button {
+  border: 0; background: none; font-size: 13px; color: var(--ink-2); cursor: pointer;
+  padding: 4px 6px; font-weight: 600;
+}
+.zoom-box button:disabled { color: #c3c9d4; cursor: default; } /* 한계점 Dim */
+.zoom-box .pct { font-weight: 700; min-width: 40px; text-align: center; }
+
+.icon-btn {
+  width: 34px; height: 34px; border: 0; background: none; cursor: pointer;
+  color: var(--ink-2); border-radius: 8px; display: flex; align-items: center; justify-content: center;
+}
+.icon-btn:hover { background: #f2f4f8; }
+.icon-btn.active { color: var(--blue); }
+.icon-btn:disabled { color: #c3c9d4; cursor: default; }
+.icon-btn:disabled:hover { background: none; }
+
+#control-bar .spacer { flex: 1; }
+
+.preset-group { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.preset-group button {
+  height: 34px; padding: 0 12px; background: #fff; border: 0; border-right: 1px solid var(--line);
+  color: var(--ink-2); cursor: pointer; font-size: 13px;
+}
+.preset-group button:last-child { border-right: 0; }
+.preset-group button.active { background: var(--navy); color: #fff; font-weight: 700; }
+
+.date-range { display: flex; align-items: center; gap: 6px; }
+.date-range input {
+  width: 100px; height: 34px; border: 1px solid var(--line); border-radius: 8px;
+  padding: 0 10px; font-size: 13px; color: var(--ink);
+}
+.date-range input::placeholder { color: #b9c0cd; }
+.btn-primary {
+  height: 34px; padding: 0 16px; background: var(--navy); color: #fff; border: 0;
+  border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+
+.layout-toggle { display: flex; gap: 2px; }
+
+/* 설정 팝오버 */
+#metric-pop {
+  position: absolute; z-index: 3000; background: #fff; border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(20,26,40,.14); padding: 10px 12px;
+  display: none; min-width: 180px;
+}
+#metric-pop.open { display: block; }
+#metric-pop .mp-title { font-weight: 700; margin-bottom: 8px; color: var(--ink-2); font-size: 12px; }
+#metric-pop label { display: flex; gap: 8px; align-items: center; padding: 4px 0; cursor: pointer; }
+#metric-pop .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── 메인 ──────────────────────────────────────────────────── */
+#main { flex: 1; overflow: hidden; position: relative; background: var(--bg); }
+/* 세로 스크롤바 공간 상시 예약 — 스크롤바 유무 전환에 따른 폭 변화/재렌더 진동 방지 */
+#main-scroll {
+  height: 100%; overflow-y: auto; overflow-x: hidden; position: relative;
+  scrollbar-gutter: stable;
+  overscroll-behavior: none; /* 경계 탄성 바운스 제거 — 휠 줌 전환 시 상하 출렁임 방지 */
+}
+/* padding-bottom 금지: 상시 세로 넘침(+스크롤바 깜빡임)의 원인이 된다 */
+#content { position: relative; min-height: 100%; }
+
+/* 리스트/카드 공용 섹션 골격 */
+.sect { display: flex; background: var(--card); }
+.sect-left {
+  flex: 0 0 var(--left-col-w); width: var(--left-col-w);
+  border-right: 1px solid var(--line-2);
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start;
+  gap: 4px; padding: 14px 16px;
+}
+.sect-left .stick { position: sticky; top: 160px; text-align: left; }
+.sect-left .stick .t2 { margin-top: 4px; }
+.sect-left .t1 { font-size: 15px; font-weight: 700; }
+.sect-left .t2 { font-size: 12px; color: var(--ink-3); }
+.sect-body { flex: 1; min-width: 0; position: relative; }
+
+#charts-sect { background: #fff; border-bottom: 1px solid var(--line); }
+/* 섹션 헤더 행 (좌측 고정 열 대체) */
+.area-head { display: flex; align-items: baseline; gap: 10px; padding: 12px 16px 2px; background: #fff; }
+.area-head .t1 { font-size: 15px; font-weight: 700; }
+.area-head .t2 { font-size: 12px; color: var(--ink-3); }
+
+/* 차트 행(리스트형) */
+.chart-rows { padding: 10px 14px 4px; display: flex; flex-direction: column; gap: 10px; }
+.chart-card {
+  background: #fff; border: 1px solid var(--line); border-radius: 10px;
+  position: relative; overflow: hidden;
+}
+.chart-card .head {
+  display: flex; align-items: center; gap: 6px; padding: 10px 14px 0; font-weight: 700; font-size: 13px;
+}
+.chart-card .head .dot { width: 8px; height: 8px; border-radius: 50%; }
+.chart-card .head .unit { color: var(--ink-3); font-weight: 400; font-size: 12px; }
+.chart-card .head .latest { margin-left: auto; color: var(--ink-2); font-size: 12px; }
+.chart-card .head .latest b { font-size: 13px; }
+.chart-scroll { overflow: hidden; position: relative; }
+.chart-scroll svg { display: block; }
+
+/* 카드형 그리드 */
+.card-grid {
+  padding: 10px 14px 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+
+/* 마스터 가로 스크롤바 (하단 고정 블록 최상단 행) — 스트립 내 세로 센터 정렬 */
+#master-scroll {
+  overflow-x: auto; overflow-y: hidden; height: 8px; background: var(--card);
+}
+#master-scroll .spacer { height: 1px; }
+#master-scroll::-webkit-scrollbar { height: 8px; }
+#master-scroll::-webkit-scrollbar-thumb { background: #c8cfdb; border-radius: 4px; }
+
+/* ── 하단 고정 블록: 스크롤바 + 독립 날짜 축 + 처방항목 ─────── */
+/* 하단 처방 모듈: 상단 모듈 라인으로 구획 */
+#bottom-block {
+  position: sticky; bottom: 0; z-index: 45; background: #fff;
+  border-top: 1px solid var(--line);
+}
+/* 독립 날짜 축 행 (전체 폭) */
+#axis-sect, #rx-title-sect, #rx-sect { background: #fff; }
+/* 처방 목록: 독립 세로 스크롤 (마우스 위치 기반) — 부모로의 스크롤 전파 차단 */
+#rx-sect { position: relative; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+#axis-body { overflow: hidden; position: relative; }
+/* 연도 밴드: 스크롤 컨테이너 밖(#axis-sect)에 그려 가로 스크롤과 무관하게
+   좌우 끝까지 항상 채워진 면+라인 유지 */
+#axis-sect { position: relative; }
+#axis-sect::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 20px;
+  background: #f7f8fa; border-bottom: 1px solid var(--line-2);
+  pointer-events: none;
+}
+#axis-body { position: relative; z-index: 1; }
+.axis-head {
+  height: 46px; border-bottom: 1px solid var(--line-2); position: relative; color: var(--ink-2);
+}
+.axis-head .yr-row { display: none; } /* 밴드는 #axis-body::before 가 전체 폭으로 담당 */
+.axis-head .dlabel {
+  position: absolute; transform: translateX(-50%); white-space: nowrap; line-height: 1.2;
+  bottom: 11px;
+}
+.axis-head .dlabel.today { font-weight: 700; color: var(--ink); }
+/* 처방항목 타이틀 행 (축 아래 독립 행) */
+#rx-left-title { padding: 0; justify-content: center; }
+/* 슬림 헤더: 기능(전체 클릭 접기/펴기) 유지하며 세로 점유 최소화 */
+.rx-title {
+  display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px;
+  height: 28px; padding: 0 16px; border-bottom: 1px solid var(--line-2);
+  cursor: pointer; user-select: none; width: 100%;
+}
+.rx-title .rx-toggle { width: 20px; height: 20px; }
+.rx-title-body { height: 28px; border-bottom: 1px solid var(--line-2); background: #fff; }
+#rx-sect { }
+#rx-left { align-items: stretch; justify-content: flex-start; padding: 0; }
+.rx-toggle {
+  width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 6px;
+  background: #fff; color: var(--ink-2); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; padding: 0;
+}
+.rx-toggle:hover { background: #f2f4f8; border-color: #c9d0dc; }
+.rx-toggle svg { transition: none; }
+#rx-title-sect.collapsed .rx-toggle svg { transform: rotate(180deg); }
+#rx-sect.collapsed { display: none; }
+.rx-count { font-weight: 400; color: var(--ink-3); font-size: 12px; }
+#rx-left .rx-row-name {
+  height: 44px; display: flex; flex-direction: column; justify-content: center;
+  padding: 0 16px; border-bottom: 1px solid var(--line-2); font-weight: 700; font-size: 13px;
+}
+#rx-left .rx-row-name small { font-weight: 400; color: var(--ink-3); font-size: 11px; }
+#rx-body { overflow: hidden; position: relative; }
+#rx-canvas { position: relative; }
+.dtick {
+  position: absolute; bottom: 0; width: 0; height: 4px;
+  border-left: 1px solid #d5dae3;
+}
+.dtick.visit { height: 7px; border-left-color: #a7b0bf; }
+.yr-label {
+  position: absolute; top: 3px; font-size: 10px; font-weight: 700; color: #667085;
+  letter-spacing: 0.03em; white-space: nowrap; z-index: 2;
+  background: #fff; border: 1px solid var(--line); border-radius: 4px;
+  padding: 0 6px; line-height: 1.4;
+}
+/* 행 줄무늬는 연도 세로 밴드와 충돌(체커보드)하므로 미사용 — 행 구분은 하단 보더로 */
+.rx-row { height: 44px; border-bottom: 1px solid var(--line-2); position: relative; }
+/* 셀 폰트는 날짜 라벨과 동일한 11px, 라운드는 숫자에 밀착하는 최소형 */
+.rx-cell {
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  font-size: 11px; color: var(--ink); white-space: nowrap;
+  padding: 2px 3px; border-radius: 7px;
+}
+/* 항목명: 행 좌측(세로 중앙) 라벨 — 데이터 시작점(PAD_L)이 목록 폭에 맞춰 시작 */
+.rx-names { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 5; }
+.rx-name-float {
+  position: absolute; left: 0; height: 44px; display: flex; align-items: center;
+  font-weight: 700; font-size: 11px; color: var(--ink);
+  padding: 0 24px 0 16px;
+  background: linear-gradient(90deg, #fff 70%, rgba(255, 255, 255, 0));
+  white-space: nowrap;
+}
+/* 밀집 구간: 추이 그래프와 동일한 원형 점 표기 */
+.rx-dot {
+  position: absolute; top: 50%; width: 6px; height: 6px;
+  margin: -3px 0 0 -3px; border-radius: 50%; background: #a7b0bf;
+}
+/* 전체 노출 셀: 정보가 다 보이므로 호버 액션 없음 */
+.rx-cell.plain { cursor: default; }
+/* 용량 단독 셀: 최소 라운드(숫자 밀착) → 호버 시 상세 툴팁 */
+.rx-cell.more {
+  cursor: pointer; background: #eef1f6; min-width: 14px; text-align: center;
+}
+.rx-cell.more:hover { background: rgba(47, 91, 255, 0.12); }
+/* 크로스헤어 동기 강조는 압축 칩에만 — 전체 노출 셀(1|1|1)은 배경/호버 없음 */
+.rx-cell.more.hl { background: rgba(47, 91, 255, 0.10); }
+.rx-cell .bar { color: #c3c9d4; padding: 0 1px; }
+
+/* ── 지표 변화 비교 ───────────────────────────────────────── */
+#compare-wrap { display: flex; background: var(--card); }
+#compare-center { flex: 1; min-width: 0; position: relative; padding: 12px 0 0 0; }
+#compare-center .cmp-head {
+  padding: 0 16px 6px; display: flex; align-items: flex-end; gap: 16px;
+}
+#compare-center .cmp-head .t1 { font-weight: 700; font-size: 14px; }
+#compare-center .cmp-head .t2 { color: var(--ink-3); font-size: 12px; }
+#compare-scroll { overflow: hidden; position: relative; }
+/* 범례: 타이틀 행 우측 배치 */
+#compare-legend {
+  display: flex; gap: 14px; justify-content: flex-end; flex-wrap: wrap;
+  margin-left: auto; padding-bottom: 1px;
+}
+#compare-legend .lg { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--ink-2); cursor: pointer; }
+#compare-legend .lg.off { opacity: 0.35; }
+#compare-legend .lg .sw { width: 18px; height: 3px; border-radius: 2px; }
+/* 우측 열: 비어 있어도 전체 높이 흰색 단 구조 — 모듈 라인이 하단까지 이어짐 */
+#mini-col {
+  flex: 0 0 258px; width: 258px; background: #fff;
+  border-left: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  position: relative;
+}
+/* 좌우 영역 크기 조절 스플리터 (경계 드래그) */
+#mini-splitter {
+  position: absolute; left: -5px; top: 0; bottom: 0; width: 10px;
+  cursor: col-resize; z-index: 20;
+}
+#mini-splitter:hover, #mini-splitter:active { background: rgba(47, 91, 255, 0.12); }
+/* 경계선 호버 시 나타나는 좌우 그립 아이콘 */
+.split-grip {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; border: 1px solid var(--line);
+  box-shadow: 0 2px 8px rgba(20, 26, 40, 0.12);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-2); opacity: 0; transition: opacity 0.12s;
+  pointer-events: none;
+}
+#mini-splitter:hover .split-grip, #mini-splitter:active .split-grip { opacity: 1; }
+/* 측정 지표 추이 패널: 세로 스크롤 시 우측 고정(sticky) */
+#mini-panel {
+  overflow-y: auto; background: #fff;
+  position: sticky; top: 0;
+  max-height: calc(100vh - 142px);
+  border-bottom: 1px solid var(--line);
+  scrollbar-gutter: stable;
+}
+#mini-panel .mini-title {
+  font-weight: 700; font-size: 14px; padding: 12px 14px 6px; border-bottom: 1px solid var(--line-2);
+}
+.mini-card { padding: 8px 10px 2px; border-bottom: 1px solid var(--line-2); position: relative; }
+.mini-card .m-head { display: flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 700; }
+.mini-card .m-head .dot { width: 7px; height: 7px; border-radius: 50%; }
+.mini-card .m-head .unit { color: var(--ink-3); font-weight: 400; font-size: 11px; }
+.mini-card svg { display: block; }
+
+/* ── 크로스헤어 & 플로팅 레이어 ───────────────────────────── */
+#crosshair {
+  position: absolute; top: 0; bottom: 0; width: 0;
+  border-left: 1px dashed var(--crosshair);
+  pointer-events: none; display: none; z-index: 60;
+}
+/* 동기화 수직 점선(비교 중앙↔처방, 카드별, 미니맵) */
+.vline {
+  position: absolute; top: 0; bottom: 0; width: 0;
+  border-left: 1px dashed var(--crosshair);
+  pointer-events: none; display: none; z-index: 60;
+}
+#floating {
+  position: fixed; inset: 0; pointer-events: none; z-index: 2000; overflow: visible;
+}
+.tip {
+  position: absolute; background: #fff; border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: 0 6px 20px rgba(20, 26, 40, 0.065);
+  padding: 10px 12px; min-width: 148px; pointer-events: none;
+  font-size: 12px;
+}
+.tip.pinned { pointer-events: auto; }
+/* 중첩 레이어 접근성: 핀 고정 상태에서 호버한 레이어를 즉시 최상단으로 */
+.tip.pinned:hover {
+  z-index: 3000 !important;
+  box-shadow: 0 8px 24px rgba(20, 26, 40, 0.18);
+}
+/* 호버 타겟: 블루 아웃라인만 (별도 글로우 없음) */
+.tip.target { border-color: #6e8bff; }
+.tip .t-head { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.tip .t-head .code { font-weight: 400; color: var(--ink-3); font-size: 11px; margin-left: auto; }
+/* 직전 측정 참조(LOCF) 배지 */
+.tip .ref-badge {
+  font-size: 10px; font-weight: 400; color: var(--ink-3);
+  background: #f2f4f8; border-radius: 4px; padding: 1px 6px; margin-left: 6px;
+}
+.tip .t-close {
+  border: 0; background: none; color: #aab2c0; cursor: pointer; font-size: 12px;
+  padding: 0 0 0 4px; line-height: 1;
+}
+.tip .t-row { display: flex; gap: 6px; color: var(--ink-3); line-height: 1.7; white-space: nowrap; }
+.tip .t-row .v { color: var(--ink); }
+.tip .t-row .v.accent { font-weight: 700; }
+.tip .t-row .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin: 5px 2px 0 0; }
+.tip .t-note { margin-top: 6px; padding: 5px 8px; background: #f4f6fa; border-radius: 6px; color: var(--ink-2); white-space: nowrap; }
+
+/* 값 라벨/포인트 */
+.pt-label { font-size: 10px; fill: var(--ink-2); }
+.axis-tick { font-size: 10px; fill: var(--ink-3); }
+.mini-tick { font-size: 9px; fill: var(--ink-3); }
+
+/* 드래그 패닝 커서 */
+.pannable { cursor: grab; }
+.pannable.panning { cursor: grabbing; }
+
+/* 안내 배지(빈 상태 등) */
+.empty-hint { padding: 30px; color: var(--ink-3); text-align: center; }
