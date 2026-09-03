@@ -42,7 +42,7 @@ const VISIT_MS = VISIT_DATES.map(pms);
 
 // ── 상태 ────────────────────────────────────────────────────────
 const S = {
-  mode: 'compare',          // trend | compare — 기본 진입: 지표 변화 비교
+  mode: 'trend',            // trend | compare — 기본 진입: 항목별 추이
   layout: 'list',           // list | card
   scaleTrend: 2,            // 75% 기본뷰
   scaleCompare: 0,          // 지표변화비교는 Fit to screen 기본
