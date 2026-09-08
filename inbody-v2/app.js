@@ -122,26 +122,25 @@ function domainRange() {
   return { start, end };
 }
 
-// 카드 단 수 자동 규칙: 카드 폭 하한(380px)을 지키는 범위에서
-// 세로 스크롤 없이 전 지표가 들어가는 "최소 단 수"(2→3→4).
-// 행 수가 줄지 않는 단 수는 후보에서 배제 — 6지표에서 4단이 선택되지 않는 이유.
-// 모두 넘치면 행 수가 가장 적은 후보(스크롤 최소화)를 반환.
+// 카드 단 수 자동 규칙: 기본 3단(2행) 고정.
+// - 2단 강등: 폭이 좁아 3단 카드가 하한(380px) 미달일 때, 또는 표시 지표 2개 이하(빈 슬롯 방지)
+// - 4단 승격: 지표 7개 이상 + 행 수 감소 + 폭 하한 충족 + (3단은 세로 넘침, 4단은 무스크롤)일 때만
+// 높이는 2↔3단 전환에 관여하지 않음 — 크기 변화에 대한 단 수 반응이 폭 기준으로 결정적(히스테리시스 없음)
 const MIN_CARD_W = 380;
 function autoCardCols(nVis, bodyW, mainH, rxH) {
-  const cands = [];
-  for (const c of [2, 3, 4]) {
-    const cardW = (bodyW - 28 - 10 * (c - 1)) / c;
-    if (c > 2 && cardW < MIN_CARD_W) break;
-    const rows = Math.ceil(nVis / c);
-    if (cands.length && rows >= cands[cands.length - 1].rows) continue;
-    cands.push({ c, rows });
-  }
-  for (const cand of cands) {
+  const cardW = (c) => (bodyW - 28 - 10 * (c - 1)) / c;
+  const fits = (c) => {
     // chartH 예산 공식과 동일 (computeGeometry의 trend 분기 참조)
-    const avail = mainH - rxH - 63 - cand.rows * 9;
-    if (Math.floor(avail / cand.rows) - HEAD_H >= 150) return cand.c;
-  }
-  return cands.length ? cands[cands.length - 1].c : 2;
+    const rows = Math.ceil(nVis / c);
+    const avail = mainH - rxH - 63 - rows * 9;
+    return Math.floor(avail / rows) - HEAD_H >= 150;
+  };
+  let cols = cardW(3) >= MIN_CARD_W ? 3 : 2;
+  if (nVis <= 2) cols = 2;
+  if (nVis >= 7 && cardW(4) >= MIN_CARD_W
+    && Math.ceil(nVis / 4) < Math.ceil(nVis / cols)
+    && !fits(cols) && fits(4)) cols = 4;
+  return cols;
 }
 
 // 창 숨김/최소화 등으로 측정값이 0에 가까울 때를 대비한 마지막 유효 크기 캐시
