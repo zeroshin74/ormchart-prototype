@@ -70,7 +70,7 @@ const S = {
   axisView: 'calendar',     // 'calendar'(전체일자) | 'gather'(결과모아보기: 측정일 등간격)
   rxListHUser: null,        // 처방 영역 높이 수동 조절값 (상/하 스플리터)
   cardColsUser: null,       // 카드 단 수: null=자동(해상도 기준) | 2 | 3
-  extras: false,            // '추가제안' 토글: Δ요약·목표선·구간 통계 (사실·산술 표시만)
+  extras: true,             // Δ요약·목표선·구간 통계 기본 제공 (사실·산술 표시만 — 토글 없음)
   miniW: MINI_W,            // 우측 측정 지표 추이 패널 폭 (스플리터 드래그로 조절)
 };
 
@@ -538,6 +538,25 @@ function yScale(metric, pts, h, topPad, botPad) {
   return { vmin, vmax, plotTop: topPad, plotH, yOf: (v) => topPad + (1 - (v - vmin) / (vmax - vmin)) * plotH };
 }
 
+// Y축 라운드 눈금 (B안): 범위는 데이터가 정하고, 눈금은 읽기 좋은 숫자로 —
+// 1·2·5×10ⁿ 단위 스텝 중 목표 개수(≈3)에 맞는 최소 스텝을 골라 범위 내 배수만 표기
+function niceTicks(vmin, vmax, minN) {
+  const span = Math.max(1e-9, vmax - vmin);
+  const mag = Math.pow(10, Math.floor(Math.log10(span / minN)));
+  // 최소 minN개를 만족하는 가장 큰 스텝 선택 → 눈금 3~5개 유지
+  let step = mag;
+  for (const c of [10, 5, 2, 1]) {
+    const s = c * mag;
+    if (Math.floor(vmax / s) - Math.ceil(vmin / s) + 1 >= minN) { step = s; break; }
+  }
+  const dec = step >= 1 ? 0 : Math.min(3, Math.ceil(-Math.log10(step) - 1e-9));
+  const ticks = [];
+  for (let v = Math.ceil(vmin / step) * step; v <= vmax + step * 1e-6; v += step) {
+    ticks.push(+v.toFixed(dec));
+  }
+  return ticks;
+}
+
 // 값 라벨 노출 규칙 (가이드 2): 100/75% 전체, 50% 충돌 시 최고/최저/최근, 25% 숨김
 function labelMode(pts, g) {
   const idx = scaleIdx();
@@ -562,8 +581,8 @@ function buildChartSVG(metric, g, h, opts) {
     const yBot = sc.yOf(b.from == null ? sc.vmin : b.from);
     out += `<rect x="0" y="${yTop.toFixed(1)}" width="${w}" height="${Math.max(0, yBot - yTop).toFixed(1)}" fill="${b.color}"/>`;
   });
-  // 그리드 (y 3틱)
-  const ticks = [sc.vmax - (sc.vmax - sc.vmin) * 0.08, (sc.vmax + sc.vmin) / 2, sc.vmin + (sc.vmax - sc.vmin) * 0.08];
+  // 그리드: 라운드 눈금 (B안) — 범위 내 1·2·5 단위 배수 위치에 점선
+  const ticks = niceTicks(sc.vmin, sc.vmax, 3);
   ticks.forEach((tv) => {
     out += `<line x1="0" y1="${sc.yOf(tv).toFixed(1)}" x2="${w}" y2="${sc.yOf(tv).toFixed(1)}" stroke="#edf0f5" stroke-dasharray="3 3"/>`;
   });
@@ -612,7 +631,7 @@ function buildChartSVG(metric, g, h, opts) {
     });
   }
   out += '</svg>';
-  return { svg: out, sc, pts, tickVals: [ticks[0], ticks[1], ticks[2]] };
+  return { svg: out, sc, pts, tickVals: ticks };
 }
 
 function yAxisHtml(metric, built, h) {
@@ -1569,14 +1588,6 @@ function bindEvents() {
     rxSplitDrag = null;
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
-  });
-
-  // '추가제안' 토글: Δ요약·목표선·구간 통계 일괄 표시/숨김
-  const extrasBtn = $('#extras-toggle');
-  if (extrasBtn) extrasBtn.addEventListener('click', () => {
-    S.extras = !S.extras;
-    extrasBtn.classList.toggle('active', S.extras);
-    render();
   });
 
   // 지표 표시 설정 팝오버 (케이스 전환 시 재빌드)

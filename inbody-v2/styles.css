@@ -58,9 +58,7 @@ body {
   background: #fff; color: var(--ink); font-size: 13px; cursor: pointer;
 }
 .btn-outline:hover { border-color: #c9d0dc; }
-/* '추가제안' 토글 ON 상태 */
-#extras-toggle.active { background: var(--blue); border-color: var(--blue); color: #fff; }
-/* 차트 헤더 Δ 요약 (추가제안 ON) */
+/* 차트 헤더 Δ 요약 (기본 제공) */
 .chart-card .head .head-delta {
   margin-left: 8px; font-weight: 500; font-size: 11px; color: var(--ink-3);
   background: #f2f4f8; border-radius: 5px; padding: 1px 7px;
