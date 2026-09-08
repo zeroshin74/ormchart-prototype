@@ -122,6 +122,28 @@ function domainRange() {
   return { start, end };
 }
 
+// 카드 단 수 자동 규칙: 카드 폭 하한(380px)을 지키는 범위에서
+// 세로 스크롤 없이 전 지표가 들어가는 "최소 단 수"(2→3→4).
+// 행 수가 줄지 않는 단 수는 후보에서 배제 — 6지표에서 4단이 선택되지 않는 이유.
+// 모두 넘치면 행 수가 가장 적은 후보(스크롤 최소화)를 반환.
+const MIN_CARD_W = 380;
+function autoCardCols(nVis, bodyW, mainH, rxH) {
+  const cands = [];
+  for (const c of [2, 3, 4]) {
+    const cardW = (bodyW - 28 - 10 * (c - 1)) / c;
+    if (c > 2 && cardW < MIN_CARD_W) break;
+    const rows = Math.ceil(nVis / c);
+    if (cands.length && rows >= cands[cands.length - 1].rows) continue;
+    cands.push({ c, rows });
+  }
+  for (const cand of cands) {
+    // chartH 예산 공식과 동일 (computeGeometry의 trend 분기 참조)
+    const avail = mainH - rxH - 63 - cand.rows * 9;
+    if (Math.floor(avail / cand.rows) - HEAD_H >= 150) return cand.c;
+  }
+  return cands.length ? cands[cands.length - 1].c : 2;
+}
+
 // 창 숨김/최소화 등으로 측정값이 0에 가까울 때를 대비한 마지막 유효 크기 캐시
 const _lastGood = { w: 1200, h: 700 };
 // 비교 차트 높이 실측 보정치 (렌더 후 잔여 여백/넘침을 흡수)
@@ -203,6 +225,7 @@ function computeGeometry() {
   // 처방 접힘 시 — 리스트형은 축이 차트의 유일한 기준이므로 측정일로 전환해 유지,
   // 카드형은 개별 축이 있으므로 공유 축 자체를 숨김
   g.mainWRaw = mainWRaw;
+  g.mainH = mainH;
   g.axisHidden = S.rxCollapsed && S.mode === 'trend' && S.layout === 'card';
   const axisKind = S.mode === 'compare' ? 'mixed'
     : (S.rxCollapsed && S.layout === 'list' ? 'visits' : 'rx');
@@ -229,7 +252,7 @@ function computeGeometry() {
   // 항목별 추이 차트 높이: 세로 반응형 — 표시 지표 수/레이아웃 기준 배분
   if (S.mode === 'trend') {
     const nVis = Math.max(1, METRICS.filter((m) => S.visible.has(m.key)).length);
-    g.cardCols = S.cardColsUser || (mainW >= 1900 ? 3 : 2); // 단 수: 수동 선택 > 해상도 자동
+    g.cardCols = S.cardColsUser || autoCardCols(nVis, bodyW, mainH, rxH); // 단 수: 수동 선택 > 자동(무스크롤 최소 단 수)
     const rowsN = S.layout === 'card' ? Math.ceil(nVis / g.cardCols) : nVis;
     // 예산 정밀 산출 — 하단 잔여 여백 최소화:
     // 63 = 블록 보더(1)+마스터 스트립(16)+헤더 행(42: 8+32+2)+그리드 상하 패딩(14)−갭 보정(10)
@@ -769,9 +792,17 @@ function headControlsHtml(g, opts) {
   let sortDd = '';
   if (opts.sort) {
     const cur = currentSortCols(g);
-    const icon = cur === 1 ? ICON_ROWS : ICON_GRID; // 1단=카드(행) 정렬 아이콘, 2/3단=대시보드 아이콘
-    const items = [1, 2, 3].map((n) =>
-      `<div class="dd-item${cur === n ? ' sel' : ''}" data-sort="${n}"><span>${n === 1 ? ICON_ROWS : ICON_GRID}</span><span>${n}단 정렬</span>${cur === n ? DD_CHECK : ''}</div>`).join('');
+    const icon = cur === 1 ? ICON_ROWS : ICON_GRID; // 1단=카드(행) 정렬 아이콘, 2단 이상=대시보드 아이콘
+    // 4단은 표시 지표 7개 이상일 때만 노출 — 6지표에서는 3단과 행 수가 같아 이점이 없음
+    const nVis = METRICS.filter((m) => S.visible.has(m.key)).length;
+    const colOpts = nVis >= 7 || cur === 4 ? [1, 2, 3, 4] : [1, 2, 3];
+    // '자동': 화면 크기에 맞춰 단 수 자동 결정 — 수동 선택 후 복귀 경로 제공
+    const isAuto = S.layout === 'card' && S.cardColsUser == null;
+    const items = `<div class="dd-item${isAuto ? ' sel' : ''}" data-sort="0"><span>${ICON_GRID}</span><span>자동 (화면 맞춤)</span>${isAuto ? DD_CHECK : ''}</div>`
+      + colOpts.map((n) => {
+        const on = !isAuto && cur === n;
+        return `<div class="dd-item${on ? ' sel' : ''}" data-sort="${n}"><span>${n === 1 ? ICON_ROWS : ICON_GRID}</span><span>${n}단 정렬</span>${on ? DD_CHECK : ''}</div>`;
+      }).join('');
     sortDd = `<div class="dd" id="sort-dd" title="정렬 방식">
       <button class="dd-btn">${icon}<span>${cur}단 정렬</span>${DD_CARET}</button>
       <div class="dd-menu"><div class="dd-box">${items}</div></div>
@@ -1501,16 +1532,22 @@ function bindEvents() {
       }
       return;
     }
-    // 정렬 방식 선택: 1단=리스트형(행), 2/3단=카드 그리드
+    // 정렬 방식 선택: 0=자동(화면 맞춤), 1단=리스트형(행), 2단 이상=카드 그리드
     const st = e.target.closest('.dd-item[data-sort]');
     if (st) {
       const n = +st.dataset.sort;
-      if (n !== currentSortCols(G)) {
-        if (n === 1) S.layout = 'list';
-        else { S.layout = 'card'; S.cardColsUser = n; }
-        S.pin = null;
-        render();
+      let changed = false;
+      if (n === 0) {
+        changed = S.layout !== 'card' || S.cardColsUser != null;
+        S.layout = 'card'; S.cardColsUser = null;
+      } else if (n === 1) {
+        changed = S.layout !== 'list';
+        S.layout = 'list';
+      } else {
+        changed = S.layout !== 'card' || S.cardColsUser !== n;
+        S.layout = 'card'; S.cardColsUser = n;
       }
+      if (changed) { S.pin = null; render(); }
       return;
     }
   });
@@ -1639,7 +1676,9 @@ function bindEvents() {
       // 유효한 크기로 실제 변화가 있을 때만 재렌더 (스크롤바 토글/숨김 상태 진동 방지)
       const scroller = $('#main-scroll');
       const w = scroller ? scroller.clientWidth : 0;
-      if (w >= 400 && (!G || w !== G.mainWRaw)) render();
+      const h = $('#main').clientHeight;
+      // 폭·높이 어느 쪽 변화든 재렌더 — 리사이즈 중간 크기로 계산이 굳는 것 방지
+      if (w >= 400 && h >= 200 && (!G || w !== G.mainWRaw || h !== G.mainH)) render();
     }, 120);
   };
   window.addEventListener('resize', maybeRerender);
