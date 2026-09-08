@@ -16,10 +16,11 @@
 
   <!-- 환자 헤더 -->
   <div id="patient-bar">
-    <span class="p-name">이요원 <small>(32세/여)</small></span>
+    <span class="p-name" id="p-name">- <small id="p-agesex"></small></span>
     <span class="p-meta">
-      <span>cn.57</span><span class="sep">|</span><span>1989.10.04</span>
+      <span id="p-chart">-</span><span class="sep">|</span><span id="p-height">-</span>
     </span>
+    <select id="case-select" title="테스트 케이스 전환"></select>
     <select><option>인바디 결과지</option></select>
     <span class="spacer"></span>
     <button class="btn-outline" id="extras-toggle" title="Δ요약·목표선·구간 통계 표시 (단순 산술·표시 기능)">추가제안</button>
@@ -31,12 +32,6 @@
     <div class="mode-toggle" id="mode-toggle">
       <button data-mode="trend" class="active">항목별 추이</button>
       <button data-mode="compare">지표 변화 비교</button>
-    </div>
-
-    <div class="zoom-box">
-      <button id="zoom-in">+확대</button>
-      <span class="pct" id="zoom-pct">75%</span>
-      <button id="zoom-out">-축소</button>
     </div>
 
     <button class="icon-btn" id="metric-btn" title="표시 지표 설정">
@@ -61,10 +56,6 @@
       <span style="color:#b9c0cd">–</span>
       <input id="date-to" placeholder="yyyy.mm.dd" />
       <button class="btn-primary" id="date-apply">조회</button>
-    </div>
-
-    <div class="layout-toggle">
-      <button class="icon-btn" id="layout-toggle" title="카드형으로 보기"></button>
     </div>
   </div>
 

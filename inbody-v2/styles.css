@@ -135,14 +135,22 @@ body {
 
 /* ── 메인 ──────────────────────────────────────────────────── */
 #main { flex: 1; overflow: hidden; position: relative; background: var(--bg); }
-/* 세로 스크롤바 공간 상시 예약 — 스크롤바 유무 전환에 따른 폭 변화/재렌더 진동 방지 */
+/* 메인 스크롤러는 더 이상 직접 스크롤하지 않음 — 영역별 독립 스크롤 컨테이너의 부모 */
 #main-scroll {
-  height: 100%; overflow-y: auto; overflow-x: hidden; position: relative;
-  scrollbar-gutter: stable;
-  overscroll-behavior: none; /* 경계 탄성 바운스 제거 — 휠 줌 전환 시 상하 출렁임 방지 */
+  height: 100%; overflow: hidden; position: relative;
+  display: flex; flex-direction: column;
 }
-/* padding-bottom 금지: 상시 세로 넘침(+스크롤바 깜빡임)의 원인이 된다 */
-#content { position: relative; min-height: 100%; }
+#content { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* 영역별 독립 세로 스크롤: 차트 영역만 스크롤 — 하단 처방 블록은 항상 고정
+   세로 스크롤바 공간 상시 예약(gutter stable)으로 폭 변화/재렌더 진동 방지 */
+#charts-vscroll, #cmp-vscroll {
+  flex: 1 1 0; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain; /* 경계 도달 시 처방/다른 영역으로 스크롤 전파 금지 */
+  position: relative;
+  background: #fff; /* 차트 하단/거터 잔여 영역도 화이트 유지 */
+}
 
 /* 리스트/카드 공용 섹션 골격 */
 .sect { display: flex; background: var(--card); }
@@ -159,10 +167,41 @@ body {
 .sect-body { flex: 1; min-width: 0; position: relative; }
 
 #charts-sect { background: #fff; border-bottom: 1px solid var(--line); }
-/* 섹션 헤더 행 (좌측 고정 열 대체) */
-.area-head { display: flex; align-items: baseline; gap: 10px; padding: 12px 16px 2px; background: #fff; }
+/* 섹션 헤더 행 (좌측 고정 열 대체) — 우측에 그래프 컨트롤(줌/풀다운) 배치 */
+.area-head { display: flex; align-items: center; gap: 10px; padding: 8px 16px 2px; background: #fff; }
 .area-head .t1 { font-size: 15px; font-weight: 700; }
 .area-head .t2 { font-size: 12px; color: var(--ink-3); }
+.area-head .spacer { flex: 1; }
+
+/* 그래프 헤더 컨트롤 그룹 */
+.head-controls { display: flex; align-items: center; gap: 10px; }
+.head-controls .zoom-box { height: 32px; background: #fff; }
+.head-controls .zoom-box button { font-size: 15px; padding: 2px 8px; line-height: 1; }
+
+/* 호버 풀다운 메뉴 (결과모아보기 / 정렬 방식) */
+.dd { position: relative; }
+.dd-btn {
+  display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 8px; background: #fff;
+  font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer;
+}
+.dd-btn svg { flex: 0 0 auto; }
+.dd:hover .dd-btn { border-color: #c9d0dc; background: #fafbfc; }
+/* 메뉴 레이어: 버튼과의 간격은 padding으로 확보 — 호버 연속성 유지 */
+.dd-menu { position: absolute; top: 100%; right: 0; display: none; z-index: 1200; padding-top: 4px; }
+.dd:hover .dd-menu { display: block; }
+.dd-box {
+  background: #fff; border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(20, 26, 40, 0.14); padding: 4px; min-width: 140px;
+}
+.dd-item {
+  display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 7px;
+  font-size: 13px; color: var(--ink); cursor: pointer; white-space: nowrap;
+}
+.dd-item:hover { background: #f2f4f8; }
+.dd-item.sel { font-weight: 700; color: var(--blue); }
+.dd-item .dd-check { margin-left: auto; }
+.dd-item svg { flex: 0 0 auto; }
 
 /* 차트 행(리스트형) */
 .chart-rows { padding: 10px 14px 4px; display: flex; flex-direction: column; gap: 10px; }
@@ -196,8 +235,11 @@ body {
 /* ── 하단 고정 블록: 스크롤바 + 독립 날짜 축 + 처방항목 ─────── */
 /* 하단 처방 모듈: 상단 모듈 라인으로 구획 */
 #bottom-block {
-  position: sticky; bottom: 0; z-index: 45; background: #fff;
+  position: relative; z-index: 45; background: #fff;
   border-top: 1px solid var(--line);
+  flex: 0 0 auto;
+  /* 차트 영역의 스크롤바 예약폭과 동일한 우측 인셋 — 축/처방/차트의 X 좌표계 정렬 유지 */
+  padding-right: var(--sbw, 0px);
 }
 /* 독립 날짜 축 행 (전체 폭) */
 #axis-sect, #rx-title-sect, #rx-sect { background: #fff; }
@@ -284,11 +326,12 @@ body {
   position: absolute; top: 50%; width: 6px; height: 6px;
   margin: -3px 0 0 -3px; border-radius: 50%; background: #a7b0bf;
 }
-/* 전체 노출 셀: 정보가 다 보이므로 호버 액션 없음 */
-.rx-cell.plain { cursor: default; }
-/* 용량 단독 셀: 최소 라운드(숫자 밀착) → 호버 시 상세 툴팁 */
+/* 전체 노출 셀: 툴팁 통일성(회의 확정) — 호버 시 레이어 팝업 */
+.rx-cell.plain { cursor: pointer; }
+.rx-cell.plain:hover { background: rgba(47, 91, 255, 0.08); }
+/* 용량 단독 셀: 원(칩 배경) 없이 숫자만 표기 → 호버 시 상세 툴팁 (호버/동기 강조만 배경) */
 .rx-cell.more {
-  cursor: pointer; background: #eef1f6; min-width: 14px; text-align: center;
+  cursor: pointer; min-width: 14px; text-align: center;
 }
 .rx-cell.more:hover { background: rgba(47, 91, 255, 0.12); }
 /* 크로스헤어 동기 강조는 압축 칩에만 — 전체 노출 셀(1|1|1)은 배경/호버 없음 */
@@ -297,9 +340,10 @@ body {
 
 /* ── 지표 변화 비교 ───────────────────────────────────────── */
 #compare-wrap { display: flex; background: var(--card); }
-#compare-center { flex: 1; min-width: 0; position: relative; padding: 12px 0 0 0; }
+/* 하단 여백 12px 확보 — 차트 박스와 처방 블록 사이 화이트 간격 */
+#compare-center { flex: 1; min-width: 0; position: relative; padding: 12px 0 12px 0; }
 #compare-center .cmp-head {
-  padding: 0 16px 6px; display: flex; align-items: flex-end; gap: 16px;
+  padding: 0 16px 6px; display: flex; align-items: center; gap: 16px;
 }
 #compare-center .cmp-head .t1 { font-weight: 700; font-size: 14px; }
 #compare-center .cmp-head .t2 { color: var(--ink-3); font-size: 12px; }
@@ -336,12 +380,11 @@ body {
   pointer-events: none;
 }
 #mini-splitter:hover .split-grip, #mini-splitter:active .split-grip { opacity: 1; }
-/* 측정 지표 추이 패널: 세로 스크롤 시 우측 고정(sticky) */
+/* 측정 지표 추이 패널: 우측 열을 가득 채우는 독립 세로 스크롤 — 가로 스크롤 없음(폭 반응형) */
 #mini-panel {
-  overflow-y: auto; background: #fff;
-  position: sticky; top: 0;
-  max-height: calc(100vh - 142px);
-  border-bottom: 1px solid var(--line);
+  flex: 1; min-height: 0;
+  overflow-y: auto; overflow-x: hidden; background: #fff;
+  overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
 #mini-panel .mini-title {
@@ -410,3 +453,27 @@ body {
 
 /* 안내 배지(빈 상태 등) */
 .empty-hint { padding: 30px; color: var(--ink-3); text-align: center; }
+/* 초기 Empty 화면 */
+.empty-screen {
+  flex: 1; min-height: 70vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+  background: #fff; text-align: center;
+}
+.empty-screen .empty-title { margin-top: 10px; font-size: 16px; font-weight: 700; color: var(--ink-2); }
+.empty-screen .empty-desc { font-size: 13px; color: var(--ink-3); line-height: 1.7; }
+/* 처방항목 상/하 스플리터 (하단 블록 상단 경계) */
+#rx-vsplitter {
+  position: absolute; top: -5px; left: 0; right: 0; height: 10px;
+  cursor: row-resize; z-index: 46;
+}
+#rx-vsplitter:hover, #rx-vsplitter:active { background: rgba(47, 91, 255, 0.12); }
+#rx-vsplitter .split-grip {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; border: 1px solid var(--line);
+  box-shadow: 0 2px 8px rgba(20, 26, 40, 0.12);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-2); opacity: 0; transition: opacity 0.12s;
+  pointer-events: none;
+}
+#rx-vsplitter:hover .split-grip, #rx-vsplitter:active .split-grip { opacity: 1; }

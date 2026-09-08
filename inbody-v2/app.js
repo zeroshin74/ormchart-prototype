@@ -38,12 +38,24 @@ const parseDot = (s) => {
 };
 
 const TODAY_MS = pms(TODAY);
-const VISIT_MS = VISIT_DATES.map(pms);
+let VISIT_MS = [];
+let RX_DATE_SET = new Set();
+let RX_BY_KEY = {};
+function rebuildDataIndexes() {
+  VISIT_MS = VISIT_DATES.map(pms);
+  RX_DATE_SET = new Set();
+  PRESCRIPTIONS.forEach((r) => r.events.forEach((e) => RX_DATE_SET.add(pms(e.date))));
+  RX_BY_KEY = {};
+  PRESCRIPTIONS.forEach((r) => {
+    RX_BY_KEY[r.key] = { ...r, byDate: new Map(r.events.map((e) => [pms(e.date), e])) };
+  });
+}
+rebuildDataIndexes();
 
 // ── 상태 ────────────────────────────────────────────────────────
 const S = {
   mode: 'trend',            // trend | compare — 기본 진입: 항목별 추이
-  layout: 'list',           // list | card
+  layout: 'card',           // list | card — 기본: 카드형 (회의 확정)
   scaleTrend: 2,            // 75% 기본뷰
   scaleCompare: 0,          // 지표변화비교는 Fit to screen 기본
   presetDays: 0,            // 전체(3년) 기본
@@ -53,7 +65,11 @@ const S = {
   pin: null,                // {dateMs, targetKey}
   anchorMs: null,           // 클릭 앵커링 기준일
   scroll: 0,
-  rxCollapsed: false,       // 처방항목 전체 접기
+  rxCollapsed: false,       // 처방항목 전체 접기 (기본: 펼침)
+  caseIdx: 0,               // 테스트 케이스 선택
+  axisView: 'calendar',     // 'calendar'(전체일자) | 'gather'(결과모아보기: 측정일 등간격)
+  rxListHUser: null,        // 처방 영역 높이 수동 조절값 (상/하 스플리터)
+  cardColsUser: null,       // 카드 단 수: null=자동(해상도 기준) | 2 | 3
   extras: false,            // '추가제안' 토글: Δ요약·목표선·구간 통계 (사실·산술 표시만)
   miniW: MINI_W,            // 우측 측정 지표 추이 패널 폭 (스플리터 드래그로 조절)
 };
@@ -73,6 +89,18 @@ const textWAt = (s, px) => {
   return _measureCtx.measureText(s).width;
 };
 
+// 클래식 스크롤바 실측 폭 (오버레이 스크롤바 환경은 0)
+// — 차트 영역(gutter stable)과 하단 처방 블록(padding-right)의 폭 정렬에 사용
+const SBW = (() => {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:absolute;visibility:hidden;width:100px;height:100px;overflow:scroll';
+  document.body.appendChild(d);
+  const w = d.offsetWidth - d.clientWidth;
+  d.remove();
+  return w;
+})();
+document.documentElement.style.setProperty('--sbw', SBW + 'px');
+
 // 렌더링 산출물 레지스트리
 const REG = { charts: {}, rxRows: {}, minis: {}, cmp: null, scrolls: [], vlines: [], master: null };
 let G = null; // geometry
@@ -86,7 +114,7 @@ function domainRange() {
   if (S.customFrom != null && S.customTo != null) {
     start = S.customFrom; end = S.customTo;
   } else if (S.presetDays === 0) {
-    start = VISIT_MS[0];
+    start = VISIT_MS.length ? VISIT_MS[0] : end - 365 * MS;
   } else {
     start = end - S.presetDays * MS;
   }
@@ -99,6 +127,29 @@ const _lastGood = { w: 1200, h: 700 };
 // 비교 차트 높이 실측 보정치 (렌더 후 잔여 여백/넘침을 흡수)
 let _cmpCorr = 0, _cmpCorrecting = false;
 
+// 결과모아보기(gather): 측정일 등간격 서수 축 좌표계 생성
+// anchors = 도메인 내 측정일(+마지막 이후 처방을 위한 '오늘' 앵커)
+function makeOrdinalScale(anchors, padL, slot) {
+  const n = anchors.length;
+  const x = (ms) => {
+    if (n === 0) return padL;
+    if (ms <= anchors[0]) return padL;
+    if (ms >= anchors[n - 1]) return padL + (n - 1) * slot;
+    let lo = 0, hi = n - 1;
+    while (lo < hi - 1) { const m = (lo + hi) >> 1; if (anchors[m] <= ms) lo = m; else hi = m; }
+    const frac = (ms - anchors[lo]) / Math.max(1, anchors[lo + 1] - anchors[lo]);
+    return padL + (lo + frac) * slot;
+  };
+  const msFromX = (cx) => {
+    if (n === 0) return null;
+    const pos = Math.max(0, Math.min(n - 1, (cx - padL) / slot));
+    const i = Math.min(n - 2, Math.floor(pos));
+    if (n === 1) return anchors[0];
+    return Math.round(anchors[i] + (pos - i) * (anchors[i + 1] - anchors[i]));
+  };
+  return { x, msFromX };
+}
+
 function computeGeometry() {
   // 세로 스크롤바 폭을 제외한 실제 가용 폭 기준 (가로 스크롤 진동 방지)
   const scroller = $('#main-scroll');
@@ -106,26 +157,52 @@ function computeGeometry() {
   let mainH = $('#main').clientHeight;
   if (mainW < 400) mainW = _lastGood.w; else _lastGood.w = mainW;
   if (mainH < 200) mainH = _lastGood.h; else _lastGood.h = mainH;
+  // 차트 영역 세로 스크롤바 예약폭 차감 — 하단 블록도 동일 인셋(padding-right: var(--sbw))
+  const mainWRaw = mainW;
+  mainW -= SBW;
   // 좌측 고정 열 제거 — 전체 폭을 플롯에 사용 (항목명은 행 오버레이)
   const bodyW = S.mode === 'compare' ? mainW - S.miniW : mainW;
   const plotViewW = Math.max(200, bodyW - PLOT_OFF - PLOT_RIGHT);
   const { start, end } = domainRange();
   const days = Math.max(1, (end - start) / MS);
-  const fit = Math.max(0.2, (plotViewW - PAD_L - PAD_R) / days);
-  const steps = [fit, Math.max(fit, 4), Math.max(fit, 14), Math.max(fit, 48)];
-  const px = steps[scaleIdx()];
-  let contentW = Math.round(PAD_L + PAD_R + days * px);
-  if (contentW - plotViewW < 3) contentW = plotViewW; // 반올림 오차로 인한 불필요 스크롤 제거
   const visits = VISIT_MS.filter((t) => t >= start && t <= end);
-  const g = {
-    mainW, bodyW, plotViewW, start, end, days, fit, steps, px, contentW, visits,
-    maxScroll: Math.max(0, contentW - plotViewW),
-    padL: PAD_L,
-    x(ms) { return PAD_L + ((ms - start) / MS) * px; },
-  };
+  const gather = S.axisView === 'gather' && visits.length > 0;
+  let g;
+  if (gather) {
+    // 결과모아보기: 측정일 등간격(서수) 축 — 마지막 측정 이후 처방 배치를 위해 '오늘' 앵커 추가
+    const anchors = [...visits];
+    if (end > anchors[anchors.length - 1]) anchors.push(end);
+    const nSlots = Math.max(1, anchors.length - 1);
+    const slotFit = Math.max(4, (plotViewW - PAD_L - PAD_R) / nSlots);
+    const steps = [slotFit, Math.max(slotFit, 28), Math.max(slotFit, 56), Math.max(slotFit, 96)];
+    const slot = steps[scaleIdx()];
+    let contentW = Math.round(PAD_L + PAD_R + nSlots * slot);
+    if (contentW - plotViewW < 3) contentW = plotViewW;
+    const realSlot = (contentW - PAD_L - PAD_R) / nSlots;
+    const ord = makeOrdinalScale(anchors, PAD_L, realSlot);
+    g = {
+      mainW, bodyW, plotViewW, start, end, days, fit: slotFit, steps, px: realSlot,
+      contentW, visits, ordinal: true, anchors,
+      maxScroll: Math.max(0, contentW - plotViewW),
+      padL: PAD_L, x: ord.x, msFromX: ord.msFromX,
+    };
+  } else {
+    const fit = Math.max(0.2, (plotViewW - PAD_L - PAD_R) / days);
+    const steps = [fit, Math.max(fit, 4), Math.max(fit, 14), Math.max(fit, 48)];
+    const px = steps[scaleIdx()];
+    let contentW = Math.round(PAD_L + PAD_R + days * px);
+    if (contentW - plotViewW < 3) contentW = plotViewW; // 반올림 오차 스크롤 제거
+    g = {
+      mainW, bodyW, plotViewW, start, end, days, fit, steps, px, contentW, visits,
+      maxScroll: Math.max(0, contentW - plotViewW),
+      padL: PAD_L,
+      x(ms) { return PAD_L + ((ms - start) / MS) * px; },
+    };
+  }
   // 축 표기 대상: 비교=공유(측정일+처방일) / 항목별 추이=처방일만.
   // 처방 접힘 시 — 리스트형은 축이 차트의 유일한 기준이므로 측정일로 전환해 유지,
   // 카드형은 개별 축이 있으므로 공유 축 자체를 숨김
+  g.mainWRaw = mainWRaw;
   g.axisHidden = S.rxCollapsed && S.mode === 'trend' && S.layout === 'card';
   const axisKind = S.mode === 'compare' ? 'mixed'
     : (S.rxCollapsed && S.layout === 'list' ? 'visits' : 'rx');
@@ -133,24 +210,31 @@ function computeGeometry() {
   g.axisKind = axisKind;
   g.yearSegs = computeYearSegs(g);
 
-  // 처방 목록 자체 스크롤 높이(뷰포트 ~26% 상한) — 항목이 많으면 목록만 스크롤
-  const rxListH = Math.min(PRESCRIPTIONS.length * 44, Math.max(132, Math.round(mainH * 0.26)));
+  // 처방 목록 높이: 자동(뷰포트 ~26%) 또는 스플리터 수동 조절값 — 노출 개수 가변
+  const rxMaxH = Math.max(44, PRESCRIPTIONS.length * 44);
+  const rxListH = S.rxListHUser != null
+    ? Math.max(88, Math.min(rxMaxH, S.rxListHUser))
+    : Math.min(rxMaxH, Math.max(132, Math.round(mainH * 0.26)));
   g.rxListH = rxListH;
+  g.rxMaxH = rxMaxH;
   // 하단 고정 블록 높이: 축(47, 카드형 접힘 시 0) + 슬림 타이틀(28) + 목록
   const rxH = (g.axisHidden ? 0 : 47) + 28 + (S.rxCollapsed ? 0 : rxListH);
 
   // 비교 차트 높이: 세로 반응형 — 가용 높이에서 헤더/스크롤바/처방 테이블을 뺀 값
   if (S.mode === 'compare') {
-    const overhead = 12 + 42 + 2 + 16 + rxH + 10; // 상단 패딩+헤드행+보더+스크롤바(16)+여유
+    const overhead = 12 + 42 + 2 + 16 + rxH + 22; // 상단 패딩+헤드행+보더+스크롤바(16)+하단 여백(12)+여유
     g.cmpH = Math.max(300, Math.min(1200, mainH - overhead + _cmpCorr));
   }
 
   // 항목별 추이 차트 높이: 세로 반응형 — 표시 지표 수/레이아웃 기준 배분
   if (S.mode === 'trend') {
     const nVis = Math.max(1, METRICS.filter((m) => S.visible.has(m.key)).length);
-    const rowsN = S.layout === 'card' ? Math.ceil(nVis / 2) : nVis;
-    // 36 = 섹션 헤더(area-head) — 예산 누락 시 맞는 해상도에서도 세로 스크롤바가 생김
-    const avail = mainH - rxH - 16 - 14 - 36 - rowsN * 10 - 12;
+    g.cardCols = S.cardColsUser || (mainW >= 1900 ? 3 : 2); // 단 수: 수동 선택 > 해상도 자동
+    const rowsN = S.layout === 'card' ? Math.ceil(nVis / g.cardCols) : nVis;
+    // 예산 정밀 산출 — 하단 잔여 여백 최소화:
+    // 63 = 블록 보더(1)+마스터 스트립(16)+헤더 행(42: 8+32+2)+그리드 상하 패딩(14)−갭 보정(10)
+    // rowsN*9 = 행 갭(10)+카드 보더(2)−카드 헤더 실측 보정(HEAD_H 30 대비 실제 27)
+    const avail = mainH - rxH - 63 - rowsN * 9;
     g.chartH = Math.max(150, Math.min(420, Math.floor(avail / rowsN) - HEAD_H));
   }
 
@@ -176,18 +260,35 @@ function computeGeometry() {
 
   // 카드형: 개별 X축 — 카드 뷰포트 폭 기준의 자체 지오메트리 (가이드-카드 2)
   if (S.mode === 'trend' && S.layout === 'card') {
-    const cardW = (bodyW - 28 - 10) / 2;               // grid padding 14*2, gap 10
+    const cols = g.cardCols || 2;
+    const cardW = (bodyW - 28 - 10 * (cols - 1)) / cols; // grid padding 14*2, gap 10
     const cardPlotW = Math.max(120, cardW - 2 * BRD - AXIS_W);
-    const fitC = Math.max(0.1, (cardPlotW - PAD * 2) / days);
-    const stepsC = [fitC, Math.max(fitC, 4), Math.max(fitC, 14), Math.max(fitC, 48)];
-    const pxC = stepsC[scaleIdx()];
-    const gc = {
-      start, end, days, visits, px: pxC, steps: stepsC,
-      plotViewW: cardPlotW,
-      contentW: Math.round(PAD * 2 + days * pxC),
-      padL: PAD,
-      x(ms) { return PAD + ((ms - start) / MS) * pxC; },
-    };
+    let gc;
+    if (gather) {
+      const anchors = g.anchors;
+      const nSlots = Math.max(1, anchors.length - 1);
+      const slotFitC = Math.max(3, (cardPlotW - PAD * 2) / nSlots);
+      const stepsC = [slotFitC, Math.max(slotFitC, 28), Math.max(slotFitC, 56), Math.max(slotFitC, 96)];
+      const slotC = stepsC[scaleIdx()];
+      const contentC = Math.round(PAD * 2 + nSlots * slotC);
+      const ordC = makeOrdinalScale(anchors, PAD, (contentC - PAD * 2) / nSlots);
+      gc = {
+        start, end, days, visits, px: (contentC - PAD * 2) / nSlots, steps: stepsC,
+        plotViewW: cardPlotW, contentW: contentC, ordinal: true, anchors,
+        padL: PAD, x: ordC.x, msFromX: ordC.msFromX,
+      };
+    } else {
+      const fitC = Math.max(0.1, (cardPlotW - PAD * 2) / days);
+      const stepsC = [fitC, Math.max(fitC, 4), Math.max(fitC, 14), Math.max(fitC, 48)];
+      const pxC = stepsC[scaleIdx()];
+      gc = {
+        start, end, days, visits, px: pxC, steps: stepsC,
+        plotViewW: cardPlotW,
+        contentW: Math.round(PAD * 2 + days * pxC),
+        padL: PAD,
+        x(ms) { return PAD + ((ms - start) / MS) * pxC; },
+      };
+    }
     gc.maxScroll = Math.max(0, gc.contentW - cardPlotW);
     // 카드 개별 축: 하단 처방항목 축과 동일한 날짜 체계(카드 폭 기준으로 단위 자동 조정)
     gc.axis = buildAxisLabels(gc, 'rx');
@@ -320,6 +421,34 @@ function computeColumns(g, kind) {
 // 순으로 시도해 무충돌인 첫 조합을 선택한다.
 function buildAxisLabels(g, kind) {
   const isTodayEnd = g.end === TODAY_MS;
+  // 결과모아보기(서수 축): 라벨 = 앵커(측정일 + 오늘) 한 줄, 충돌 시 생략 (달력 단위 사다리 미적용)
+  if (g.ordinal) {
+    const anchors = g.anchors || [];
+    const lblOf = (ms) => (ms === g.end && isTodayEnd && g.visits.indexOf(ms) < 0) ? '오늘' : fmtMD(ms);
+    let best = null;
+    for (let f = AXIS_FONT_MAX; f >= AXIS_FONT_MIN; f--) {
+      const wOf = (ms) => textWAt(lblOf(ms), f);
+      const gapOf = (a, b) => (wOf(a) + wOf(b)) / 2 + 6;
+      const placed = [];
+      anchors.forEach((ms, i) => {
+        const isEdge = i === 0 || i === anchors.length - 1;
+        const last = placed[placed.length - 1];
+        const lastAnchor = anchors[anchors.length - 1];
+        if (isEdge) { placed.push(ms); return; }
+        if (last != null && g.x(ms) - g.x(last) < gapOf(last, ms)) return;
+        if (g.x(lastAnchor) - g.x(ms) < gapOf(ms, lastAnchor)) return;
+        placed.push(ms);
+      });
+      const cand = { placed, font: f, complete: placed.length === anchors.length };
+      if (cand.complete) { best = cand; break; }
+      if (!best || cand.placed.length > best.placed.length) best = cand;
+    }
+    const labels = (best ? best.placed : []).map((ms) => ({
+      ms, x: g.x(ms), label: lblOf(ms),
+      isToday: ms === g.end && isTodayEnd,
+    }));
+    return { labels, font: best ? best.font : AXIS_FONT_MAX, level: 'gather' };
+  }
   const daySet = new Set();
   if (kind !== 'rx') g.visits.forEach((t) => daySet.add(t));
   if (kind !== 'visits') RX_DATE_SET.forEach((t) => { if (t >= g.start && t <= g.end) daySet.add(t); });
@@ -384,12 +513,6 @@ function computeYearSegs(g) {
   return segs;
 }
 
-const RX_DATE_SET = new Set();
-PRESCRIPTIONS.forEach((r) => r.events.forEach((e) => RX_DATE_SET.add(pms(e.date))));
-const RX_BY_KEY = {};
-PRESCRIPTIONS.forEach((r) => {
-  RX_BY_KEY[r.key] = { ...r, byDate: new Map(r.events.map((e) => [pms(e.date), e])) };
-});
 
 // ── SVG 차트 빌더 ───────────────────────────────────────────────
 function metricSeries(metric, g) {
@@ -577,7 +700,7 @@ function rxRowsHtml(g) {
 // 좌측 열 없이 전체 폭 사용 — 항목명은 행 좌측 오버레이
 function rxBlockHtml(g) {
   const collapsed = S.rxCollapsed ? ' collapsed' : '';
-  return `${masterHtml(g)}
+  return `<div id="rx-vsplitter" title="드래그하여 처방항목 영역 높이 조절"><span class="split-grip h"><svg width="12" height="16" viewBox="0 0 12 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5 L6 2 L10 5"/><path d="M2 11 L6 14 L10 11"/></svg></span></div>${masterHtml(g)}
   <div id="axis-sect"${g.axisHidden ? ' style="display:none"' : ''}>
     <div id="axis-body" class="pannable">${axisBodyHtml(g)}</div>
   </div>
@@ -594,6 +717,48 @@ function masterHtml(g) {
   // 스크롤바 영역(12px)은 항상 고정 확보 — 스크롤 유무와 무관하게 레이아웃 위치 불변.
   // 콘텐츠=뷰포트일 때는 트랙이 그려지지 않아 빈 여백으로만 남는다.
   return `<div style="background:#fff;padding:4px 0"><div id="master-scroll"><div class="spacer" style="width:${g.contentW + PLOT_OFF + PLOT_RIGHT}px"></div></div></div>`;
+}
+
+// ── 그래프 헤더 컨트롤 (줌 / 결과모아보기 / 정렬 방식) ─────────
+const ICON_ROWS = `<svg width="16" height="16" viewBox="0 0 18 18" fill="currentColor">
+  <rect x="2" y="3" width="14" height="3" rx="1"/><rect x="2" y="8" width="14" height="3" rx="1"/><rect x="2" y="13" width="14" height="3" rx="1"/></svg>`;
+const ICON_GRID = `<svg width="16" height="16" viewBox="0 0 18 18" fill="currentColor">
+  <rect x="2" y="2" width="6" height="6" rx="1"/><rect x="10" y="2" width="6" height="6" rx="1"/>
+  <rect x="2" y="10" width="6" height="6" rx="1"/><rect x="10" y="10" width="6" height="6" rx="1"/></svg>`;
+const DD_CARET = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5 L5 6.5 L8 3.5"/></svg>`;
+const DD_CHECK = `<svg class="dd-check" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6.5 L4.6 9 L10 3.5"/></svg>`;
+
+// 현재 정렬 단 수: 1단=리스트형(행), 2/3단=카드 그리드
+function currentSortCols(g) {
+  return S.layout === 'list' ? 1 : ((g && g.cardCols) || S.cardColsUser || 2);
+}
+
+function headControlsHtml(g, opts) {
+  opts = opts || {};
+  const zoom = `<div class="zoom-box">
+    <button id="zoom-out" title="축소">−</button>
+    <span class="pct" id="zoom-pct">${SCALES[scaleIdx()]}%</span>
+    <button id="zoom-in" title="확대">+</button>
+  </div>`;
+  const avLabel = S.axisView === 'gather' ? '결과모아보기' : '전체일자';
+  const avMenu = [['calendar', '전체일자'], ['gather', '결과모아보기']].map(([v, l]) =>
+    `<div class="dd-item${S.axisView === v ? ' sel' : ''}" data-av="${v}"><span>${l}</span>${S.axisView === v ? DD_CHECK : ''}</div>`).join('');
+  const avDd = `<div class="dd" id="axisview-dd" title="X축 표시 방식">
+    <button class="dd-btn"><span>${avLabel}</span>${DD_CARET}</button>
+    <div class="dd-menu"><div class="dd-box">${avMenu}</div></div>
+  </div>`;
+  let sortDd = '';
+  if (opts.sort) {
+    const cur = currentSortCols(g);
+    const icon = cur === 1 ? ICON_ROWS : ICON_GRID; // 1단=카드(행) 정렬 아이콘, 2/3단=대시보드 아이콘
+    const items = [1, 2, 3].map((n) =>
+      `<div class="dd-item${cur === n ? ' sel' : ''}" data-sort="${n}"><span>${n === 1 ? ICON_ROWS : ICON_GRID}</span><span>${n}단 정렬</span>${cur === n ? DD_CHECK : ''}</div>`).join('');
+    sortDd = `<div class="dd" id="sort-dd" title="정렬 방식">
+      <button class="dd-btn">${icon}<span>${cur}단 정렬</span>${DD_CARET}</button>
+      <div class="dd-menu"><div class="dd-box">${items}</div></div>
+    </div>`;
+  }
+  return `<div class="head-controls">${zoom}${avDd}${sortDd}</div>`;
 }
 
 // ── 항목별 추이 렌더 ────────────────────────────────────────────
@@ -635,11 +800,14 @@ function renderTrend(content, g) {
   }).join('');
 
   content.insertAdjacentHTML('beforeend', `
-    <div id="charts-sect">
-      <div class="area-head"><span class="t1">측정지표 추이</span><span class="t2">각 지표별 절대 값</span></div>
-      <div id="charts-body">
-        <div class="${isCard ? 'card-grid' : 'chart-rows'}" id="charts-area">
-          ${cards || '<div class="empty-hint">표시할 지표가 없습니다. 상단 설정에서 지표를 선택하세요.</div>'}
+    <div id="charts-vscroll">
+      <div id="charts-sect">
+        <div class="area-head"><span class="t1">측정지표 추이</span><span class="t2">각 지표별 절대 값</span>
+          <span class="spacer"></span>${headControlsHtml(g, { sort: true })}</div>
+        <div id="charts-body">
+          <div class="${isCard ? 'card-grid' : 'chart-rows'}" id="charts-area"${isCard ? ` style="grid-template-columns:repeat(${g.cardCols || 2},1fr)"` : ''}>
+            ${cards || '<div class="empty-hint">표시할 지표가 없습니다. 상단 설정에서 지표를 선택하세요.</div>'}
+          </div>
         </div>
       </div>
     </div>
@@ -695,7 +863,8 @@ function buildCompareSVG(g, vis) {
 
 function buildMiniSVG(metric, g) {
   // 우측 패널 스케일 잠금: 항상 전체 기간 Fit (가이드-비교 2)
-  const w = S.miniW - 20, plotW = w - MINI_PADL - MINI_PADR;
+  // 폭 = 패널 폭 − 세로 스크롤바 예약폭 − 카드 좌우 패딩(20) → 가로 스크롤 발생하지 않음(반응형)
+  const w = Math.max(120, S.miniW - SBW - 20), plotW = w - MINI_PADL - MINI_PADR;
   const pts = metricSeries(metric, g);
   const days = g.days;
   const xOf = (ms) => MINI_PADL + ((ms - g.start) / MS / days) * plotW;
@@ -719,7 +888,7 @@ function buildMiniSVG(metric, g) {
     out += `<text class="mini-tick" x="${(MINI_PADL + (plotW * i) / 3).toFixed(1)}" y="${MINI_H - 5}" text-anchor="middle">${fmtMD(ms)}</text>`;
   }
   out += '</svg>';
-  return { svg: out, xOf, sc, pts };
+  return { svg: out, xOf, sc, pts, plotW };
 }
 
 function renderCompare(content, g) {
@@ -743,17 +912,20 @@ function renderCompare(content, g) {
     `<div style="position:absolute;right:6px;top:${(cmp.yOf(tv) - 7).toFixed(1)}px;font-size:10px;color:#8b94a5">${tv.toFixed(0)}</div>`).join('');
 
   content.insertAdjacentHTML('beforeend', `
-    <div style="display:flex">
-      <div id="cmp-col" style="flex:1;min-width:0;position:relative">
-          <div style="border-bottom:1px solid var(--line)">
-            <div id="compare-center">
-              <div class="cmp-head">
-                <div><div class="t1">지표 변화 비교</div><div class="t2">Y축: Index (100 = 기준일)</div></div>
-                <div id="compare-legend">${legend}</div>
-              </div>
-              <div style="position:relative;margin:0 ${GUT}px;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden">
-                <div style="position:absolute;left:0;top:0;width:${AXIS_W}px;height:${g.cmpH || CMP_H}px;pointer-events:none;z-index:2">${yTicksHtml}</div>
-                <div id="compare-scroll" class="pannable" style="overflow:hidden;margin-left:${AXIS_W}px">${cmp.svg}</div>
+    <div style="display:flex;flex:1;min-height:0">
+      <div id="cmp-col" style="flex:1;min-width:0;position:relative;display:flex;flex-direction:column">
+          <div id="cmp-vscroll">
+            <div style="border-bottom:1px solid var(--line)">
+              <div id="compare-center">
+                <div class="cmp-head">
+                  <div><div class="t1">지표 변화 비교</div><div class="t2">Y축: Index (100 = 기준일)</div></div>
+                  <div id="compare-legend">${legend}</div>
+                  ${headControlsHtml(g, { sort: false })}
+                </div>
+                <div style="position:relative;margin:0 ${GUT}px;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden">
+                  <div style="position:absolute;left:0;top:0;width:${AXIS_W}px;height:${g.cmpH || CMP_H}px;pointer-events:none;z-index:2">${yTicksHtml}</div>
+                  <div id="compare-scroll" class="pannable" style="overflow:hidden;margin-left:${AXIS_W}px">${cmp.svg}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -777,10 +949,31 @@ function render() {
   REG.charts = {}; REG.minis = {}; REG.cmp = null;
 
   // 재렌더 중 콘텐츠 재구성으로 세로 스크롤이 순간 클램프되어 튀는 현상 방지
-  const scroller = $('#main-scroll');
-  const keepTop = scroller ? scroller.scrollTop : 0;
+  const oldVs = $('#charts-vscroll') || $('#cmp-vscroll');
+  const keepTop = oldVs ? oldVs.scrollTop : 0;
 
   const content = $('#content');
+
+  // 초기 Empty 화면: 측정·처방 데이터가 전혀 없는 환자
+  const noData = !VISIT_MS.length && PRESCRIPTIONS.every((r) => !r.events.length);
+  if (noData) {
+    content.innerHTML = `
+      <div class="empty-screen">
+        <svg width="72" height="56" viewBox="0 0 72 56" fill="none" stroke="#c3c9d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="68" height="44" rx="6"/>
+          <path d="M12 32 L26 22 L38 28 L58 14" stroke="#a7b0bf" stroke-dasharray="4 4"/>
+          <circle cx="58" cy="14" r="2.5" fill="#a7b0bf" stroke="none"/>
+          <line x1="24" y1="52" x2="48" y2="52"/>
+        </svg>
+        <div class="empty-title">아직 인바디 측정 데이터가 없습니다</div>
+        <div class="empty-desc">첫 인바디 측정을 진행하면 이 화면에서 측정지표 추이와<br/>처방 이력을 함께 확인할 수 있습니다.</div>
+      </div>`;
+    $('#floating').innerHTML = '';
+    REG.scrolls = []; REG.master = null; REG.rxRows = {}; REG.rxModes = {}; REG.charts = {}; REG.minis = {};
+    $$('#mode-toggle button').forEach((b) => b.classList.toggle('active', b.dataset.mode === S.mode));
+    return;
+  }
+
   content.innerHTML = '<div id="crosshair"></div>';
 
   if (S.mode === 'trend') renderTrend(content, G);
@@ -796,29 +989,30 @@ function render() {
   S.scroll = Math.max(0, Math.min(S.scroll, G.maxScroll));
   if (REG.master) REG.master.scrollLeft = S.scroll;
   syncScroll(S.scroll);
-  if (scroller && scroller.scrollTop !== keepTop) scroller.scrollTop = keepTop;
+  const newVs = $('#charts-vscroll') || $('#cmp-vscroll');
+  if (newVs && keepTop && newVs.scrollTop !== keepTop) newVs.scrollTop = keepTop;
 
-  // 컨트롤 상태 반영
-  $('#zoom-pct').textContent = SCALES[scaleIdx()] + '%';
-  const steps = G.steps;
-  $('#zoom-in').disabled = scaleIdx() >= 3 || steps[Math.min(3, scaleIdx() + 1)] === steps[scaleIdx()];
-  $('#zoom-out').disabled = scaleIdx() <= 0 || steps[Math.max(0, scaleIdx() - 1)] === steps[scaleIdx()];
-  updateLayoutToggle();
+  // 컨트롤 상태 반영 (줌/풀다운은 그래프 헤더 행에서 렌더마다 재생성)
+  const pctEl = $('#zoom-pct');
+  if (pctEl) {
+    pctEl.textContent = SCALES[scaleIdx()] + '%';
+    const steps = G.steps;
+    $('#zoom-in').disabled = scaleIdx() >= 3 || steps[Math.min(3, scaleIdx() + 1)] === steps[scaleIdx()];
+    $('#zoom-out').disabled = scaleIdx() <= 0 || steps[Math.max(0, scaleIdx() - 1)] === steps[scaleIdx()];
+  }
   $$('#mode-toggle button').forEach((b) => b.classList.toggle('active', b.dataset.mode === S.mode));
 
   // 비교 모드: 렌더 후 실측으로 하단 여백/넘침을 차트 높이에 흡수 (1회 보정 재렌더)
   if (S.mode === 'compare' && !_cmpCorrecting) {
-    const block = $('#bottom-block');
-    const mainEl = $('#main');
-    const sc = $('#main-scroll');
-    if (block && mainEl && sc) {
-      const mr = mainEl.getBoundingClientRect();
-      const overflowV = sc.scrollHeight - sc.clientHeight;
+    const vs = $('#cmp-vscroll');
+    const inner = vs && vs.firstElementChild;
+    if (vs && inner) {
+      const overflowV = vs.scrollHeight - vs.clientHeight;
       // 넘침은 1px라도 즉시 흡수(세로 스크롤바 생성 금지), 여백은 3px 초과 시 확장
       const slack = overflowV > 0 ? -overflowV
-        : Math.round(mr.bottom - block.getBoundingClientRect().bottom);
+        : Math.round(vs.getBoundingClientRect().bottom - inner.getBoundingClientRect().bottom);
       // 이미 최소 높이(300)에 닿아 더 줄일 수 없으면 보정 반복 금지
-      if (mr.height > 200 && Math.abs(slack) < 400 && (slack > 3 || (slack < 0 && G.cmpH > 300))) {
+      if (vs.clientHeight > 200 && Math.abs(slack) < 400 && (slack > 3 || (slack < 0 && G.cmpH > 300))) {
         _cmpCorr = Math.max(-600, Math.min(600, _cmpCorr + slack));
         _cmpCorrecting = true;
         render();
@@ -875,8 +1069,10 @@ function nearestVisit(ms) {
 function dateFromClientX(clientX, originX, scroll, g) {
   g = g || G;
   const contentX = clientX - originX + scroll;
-  const ms = g.start + ((contentX - (g.padL != null ? g.padL : PAD)) / g.px) * MS;
-  return nearestVisit(ms);
+  const ms = g.msFromX
+    ? g.msFromX(contentX)
+    : g.start + ((contentX - (g.padL != null ? g.padL : PAD)) / g.px) * MS;
+  return ms == null ? null : nearestVisit(ms);
 }
 
 function hideVlines() {
@@ -959,7 +1155,9 @@ function tipRxHtml(rx, e, dateMs, pinned, z, isTarget) {
     <div class="t-head"><span>${rx.name}</span><span class="code">${rx.code}</span>
       ${pinned ? '<button class="t-close" data-close>✕</button>' : ''}</div>
     <div class="t-row"><span>처방일자 :</span><span class="v">${fmtDot(dateMs)}</span></div>
-    <div class="t-row"><span>처방정보 :</span><span class="v">용량 ${e.dose} | 일투수 ${e.perDay} | 일수 ${e.days}</span></div>
+    ${e.detail
+      ? `<div class="t-row"><span>내용 :</span><span class="v">${e.detail}</span></div>`
+      : `<div class="t-row"><span>처방정보 :</span><span class="v">용량 ${e.dose} | 일투수 ${e.perDay} | 일수 ${e.days}</span></div>`}
     ${e.note ? `<div class="t-note">${e.note}</div>` : ''}
   </div>`;
 }
@@ -987,11 +1185,9 @@ function tipMiniHtml(metric, v, z, refMs) {
 // 노트 여부와 무관하게 호버 이벤트/팝업 없음.
 // 25~50%(용량 단독)·라벨 생략으로 미노출·접힘 상태에서만 툴팁 제공
 function rxTipNeeded(dateMs, rxKey) {
-  // 처방항목이 접혀(숨김) 있으면 처방 레이어 팝업도 표시하지 않음
-  if (S.rxCollapsed) return false;
-  // 전체 텍스트(용량|일투수|일수)로 보이는 셀만 호버 정보 불필요
-  const modes = REG.rxModes[rxKey];
-  return !modes || modes.get(dateMs) !== 'full';
+  // 툴팁 통일성(회의 확정): 최대 확대(전체 노출) 상태에서도 레이어 팝업 노출.
+  // 처방항목이 접혀(숨김) 있을 때만 미노출
+  return !S.rxCollapsed;
 }
 
 function showTips(dateMs, targetKey) {
@@ -1191,8 +1387,7 @@ function hoverFromEvent(e) {
     const b = REG.minis[mini.dataset.mini];
     const rect = mini.getBoundingClientRect();
     const px = (e.clientX - rect.left - 10 - MINI_PADL);
-    const plotW = S.miniW - 20 - MINI_PADL - MINI_PADR;
-    const ms = G.start + (px / plotW) * G.days * MS;
+    const ms = G.start + (px / b.plotW) * G.days * MS;
     dateMs = nearestVisit(ms);
   } else if (S.mode === 'trend' && S.layout === 'card' && cardWrap) {
     const rect = cardWrap.getBoundingClientRect();
@@ -1258,56 +1453,56 @@ function bindEvents() {
     if (e.target.closest('[data-close]')) unpin();
   });
 
-  // 휠 정책: ① 마우스 아래 목록(처방/미니 패널) 스크롤 → ② 차트 영역(페이지) 스크롤
-  //          → ③ 스크롤 경계에서 줌 전환 (상단에서 위로=확대, 하단에서 아래로=축소)
+  // 휠 정책: 세로 휠은 마우스 아래 영역만 스크롤 (차트/처방/미니 패널 독립 —
+  //          경계 도달 시에도 다른 영역으로 전파하지 않음, 네이티브+overscroll-behavior:contain)
   //          가로 휠·트랙패드 가로 제스처는 타임라인 팬
-  const canConsume = (el, dy) => !!el && (dy > 0
-    ? el.scrollTop + el.clientHeight < el.scrollHeight - 1
-    : el.scrollTop > 0);
+  //          휠 확대/축소 전환 제거(회의 확정)
   main.addEventListener('wheel', (e) => {
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
       const zone = e.target.closest && (e.target.closest('.chart-scroll') || e.target.closest('#rx-sect') || e.target.closest('#axis-body') || e.target.closest('#compare-scroll'));
       if (!zone) return;
       e.preventDefault();
       if (REG.master) REG.master.scrollLeft += e.deltaX;
-      return;
     }
-    const rxList = e.target.closest && e.target.closest('#rx-sect');
-    if (rxList && canConsume(rxList, e.deltaY)) return; // 처방 목록 자체 스크롤
-    const mini = e.target.closest && e.target.closest('#mini-panel');
-    if (mini && canConsume(mini, e.deltaY)) return;     // 미니 패널 자체 스크롤
-    const page = $('#main-scroll');
-    if (canConsume(page, e.deltaY)) {
-      // overscroll-behavior: contain 으로 전파가 막힌 경우 수동 스크롤
-      if (rxList || mini) { e.preventDefault(); page.scrollTop += e.deltaY; }
-      return; // 그 외에는 네이티브 세로 스크롤
-    }
-    e.preventDefault();
-    const now = Date.now();
-    if (now - wheelLock < 160) return;
-    wheelLock = now;
-    const dir = e.deltaY < 0 ? 1 : -1;
-    const anchor = hoverFromEvent(e);
-    applyZoom(scaleIdx() + dir, anchor != null ? anchor : undefined);
   }, { passive: false });
 
+  // 그래프 헤더 컨트롤 (렌더마다 재생성 → 위임 바인딩)
   // 줌 버튼: Snappy — 애니메이션 없이 즉시 전환 (가이드 3)
-  $('#zoom-in').addEventListener('click', () => applyZoom(scaleIdx() + 1));
-  $('#zoom-out').addEventListener('click', () => applyZoom(scaleIdx() - 1));
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest) return;
+    if (e.target.closest('#zoom-in')) { applyZoom(scaleIdx() + 1); return; }
+    if (e.target.closest('#zoom-out')) { applyZoom(scaleIdx() - 1); return; }
+    // 결과모아보기/전체일자 선택 (호버 메뉴 레이어)
+    const av = e.target.closest('.dd-item[data-av]');
+    if (av) {
+      if (S.axisView !== av.dataset.av) {
+        S.axisView = av.dataset.av;
+        S.pin = null; S.hover = null; S.scroll = 1e9;
+        render();
+      }
+      return;
+    }
+    // 정렬 방식 선택: 1단=리스트형(행), 2/3단=카드 그리드
+    const st = e.target.closest('.dd-item[data-sort]');
+    if (st) {
+      const n = +st.dataset.sort;
+      if (n !== currentSortCols(G)) {
+        if (n === 1) S.layout = 'list';
+        else { S.layout = 'card'; S.cardColsUser = n; }
+        S.pin = null;
+        render();
+      }
+      return;
+    }
+  });
 
-  // 모드/레이아웃
+  // 모드 전환
   $$('#mode-toggle button').forEach((b) => b.addEventListener('click', () => {
     if (S.mode === b.dataset.mode) return;
     S.mode = b.dataset.mode; S.pin = null; S.hover = null;
     S.scroll = 1e9; // 우측(최신) 정렬
     render();
   }));
-  // 레이아웃 토글: 단일 버튼 — 전환될 레이아웃의 아이콘 표시, 비교 모드에서는 비활성
-  $('#layout-toggle').addEventListener('click', () => {
-    if (S.mode === 'compare') return;
-    S.layout = S.layout === 'list' ? 'card' : 'list';
-    S.pin = null; render();
-  });
 
   // 기간 프리셋 / 직접 조회
   $$('#preset-group button').forEach((b) => b.addEventListener('click', () => {
@@ -1351,6 +1546,31 @@ function bindEvents() {
     document.body.style.userSelect = '';
   });
 
+  // 처방항목 상/하 스플리터: 드래그로 목록 높이(노출 개수) 조절
+  let rxSplitDrag = null;
+  document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest || !e.target.closest('#rx-vsplitter')) return;
+    if (S.rxCollapsed) return;
+    rxSplitDrag = { y: e.clientY, h: G.rxListH };
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!rxSplitDrag) return;
+    const h = Math.max(88, Math.min(G.rxMaxH || 400, rxSplitDrag.h + (rxSplitDrag.y - e.clientY)));
+    rxSplitDrag.cur = h;
+    const sect = $('#rx-sect');
+    if (sect) sect.style.maxHeight = h + 'px';
+  });
+  window.addEventListener('mouseup', () => {
+    if (!rxSplitDrag) return;
+    if (rxSplitDrag.cur != null && rxSplitDrag.cur !== G.rxListH) { S.rxListHUser = rxSplitDrag.cur; render(); }
+    rxSplitDrag = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+
   // '추가제안' 토글: Δ요약·목표선·구간 통계 일괄 표시/숨김
   const extrasBtn = $('#extras-toggle');
   if (extrasBtn) extrasBtn.addEventListener('click', () => {
@@ -1359,11 +1579,9 @@ function bindEvents() {
     render();
   });
 
-  // 지표 표시 설정 팝오버
+  // 지표 표시 설정 팝오버 (케이스 전환 시 재빌드)
   const pop = $('#metric-pop');
-  pop.innerHTML = `<div class="mp-title">표시 지표</div>` + METRICS.map((m) =>
-    `<label><input type="checkbox" data-mk="${m.key}" ${S.visible.has(m.key) ? 'checked' : ''}/>
-      <span class="dot" style="background:${m.color}"></span>${m.name}</label>`).join('');
+  refreshMetricPop();
   $('#metric-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     const r = $('#metric-btn').getBoundingClientRect();
@@ -1396,10 +1614,11 @@ function bindEvents() {
     render();
   });
 
-  // 마스터 스크롤 → 전체 동기화 / 세로 스크롤 시 툴팁 리포지셔닝
+  // 마스터 스크롤 → 전체 동기화 / 영역별 세로 스크롤 시 툴팁 리포지셔닝
+  const VSCROLL_IDS = new Set(['charts-vscroll', 'cmp-vscroll', 'rx-sect', 'mini-panel']);
   document.addEventListener('scroll', (e) => {
     if (e.target && e.target.id === 'master-scroll') syncScroll(e.target.scrollLeft);
-    else if (e.target && e.target.id === 'main-scroll') refreshHover();
+    else if (e.target && VSCROLL_IDS.has(e.target.id)) refreshHover();
   }, true);
 
   let resizeT = null;
@@ -1409,26 +1628,12 @@ function bindEvents() {
       // 유효한 크기로 실제 변화가 있을 때만 재렌더 (스크롤바 토글/숨김 상태 진동 방지)
       const scroller = $('#main-scroll');
       const w = scroller ? scroller.clientWidth : 0;
-      if (w >= 400 && (!G || w !== G.mainW)) render();
+      if (w >= 400 && (!G || w !== G.mainWRaw)) render();
     }, 120);
   };
   window.addEventListener('resize', maybeRerender);
   // 창 숨김→표시 복원 등 resize 이벤트 없는 크기 변화도 감지
   if (window.ResizeObserver) new ResizeObserver(maybeRerender).observe($('#main'));
-}
-
-const ICON_LIST = `<svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-  <rect x="2" y="3" width="14" height="3" rx="1"/><rect x="2" y="8" width="14" height="3" rx="1"/><rect x="2" y="13" width="14" height="3" rx="1"/></svg>`;
-const ICON_CARD = `<svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-  <rect x="2" y="2" width="6" height="6" rx="1"/><rect x="10" y="2" width="6" height="6" rx="1"/>
-  <rect x="2" y="10" width="6" height="6" rx="1"/><rect x="10" y="10" width="6" height="6" rx="1"/></svg>`;
-
-function updateLayoutToggle() {
-  const btn = $('#layout-toggle');
-  const toCard = S.layout === 'list';
-  btn.innerHTML = toCard ? ICON_CARD : ICON_LIST;
-  btn.title = toCard ? '카드형으로 보기' : '리스트형으로 보기';
-  btn.disabled = S.mode === 'compare'; // 지표 변화 비교에서는 레이아웃 개념 없음
 }
 
 // 줌 적용: 기준점(앵커) 화면 위치 유지 — 기본은 우측(최신) 고정
@@ -1444,7 +1649,46 @@ function applyZoom(newIdx, anchorMsOpt) {
   render();
 }
 
+// ── 케이스 전환 ────────────────────────────────────────────────
+function updatePatientBar() {
+  $('#p-name').childNodes[0].textContent = PATIENT.name + ' ';
+  $('#p-agesex').textContent = `(${PATIENT.ageSex})`;
+  $('#p-chart').textContent = PATIENT.chartNo;
+  $('#p-height').textContent = `${PATIENT.height}cm`;
+}
+
+function refreshMetricPop() {
+  const pop = $('#metric-pop');
+  pop.innerHTML = `<div class="mp-title">표시 지표</div>` + METRICS.map((m) =>
+    `<label><input type="checkbox" data-mk="${m.key}" ${S.visible.has(m.key) ? 'checked' : ''}/>
+      <span class="dot" style="background:${m.color}"></span>${m.name}</label>`).join('');
+}
+
+function applyCase(i) {
+  S.caseIdx = i;
+  const sel = $('#case-select');
+  if (sel && +sel.value !== i) sel.value = i;
+  applyCaseData(i);
+  rebuildDataIndexes();
+  S.visible = new Set(METRICS.map((m) => m.key));
+  S.pin = null; S.hover = null; S.anchorMs = null;
+  S.rxCollapsed = false; S.rxListHUser = null;
+  S.customFrom = S.customTo = null; S.presetDays = 0; // 기본 기간: 전체
+  $$('#preset-group button').forEach((b) => b.classList.toggle('active', +b.dataset.days === 0));
+  $('#date-from').value = ''; $('#date-to').value = '';
+  _cmpCorr = 0;
+  updatePatientBar();
+  refreshMetricPop();
+  S.scroll = 1e9;
+  render();
+}
+
 // ── 시작 ───────────────────────────────────────────────────────
+// 케이스 선택 옵션 구성
+{
+  const sel = $('#case-select');
+  sel.innerHTML = CASES.map((c, i) => `<option value="${i}">${c.label}</option>`).join('');
+  sel.addEventListener('change', () => applyCase(+sel.value));
+}
 bindEvents();
-S.scroll = 1e9; // 최초 진입: 우측(최신) 기준
-render();
+applyCase(0);
