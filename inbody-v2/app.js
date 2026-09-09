@@ -67,7 +67,7 @@ const S = {
   scroll: 0,
   rxCollapsed: false,       // 처방항목 전체 접기 (기본: 펼침)
   caseIdx: 0,               // 테스트 케이스 선택
-  axisView: 'calendar',     // 'calendar'(전체일자) | 'gather'(결과모아보기: 측정일 등간격)
+  axisView: 'calendar',     // 'calendar'(날짜 간격: 실제 기간대로) | 'gather'(측정일만: 등간격으로 모아서)
   rxListHUser: null,        // 처방 영역 높이 수동 조절값 (상/하 스플리터)
   cardColsUser: null,       // 카드 단 수: null=자동(해상도 기준) | 2 | 3
   extras: true,             // Δ요약·목표선·구간 통계 기본 제공 (사실·산술 표시만 — 토글 없음)
@@ -246,6 +246,9 @@ function computeGeometry() {
   if (S.mode === 'compare') {
     const overhead = 12 + 42 + 2 + 16 + rxH + 22; // 상단 패딩+헤드행+보더+스크롤바(16)+하단 여백(12)+여유
     g.cmpH = Math.max(300, Math.min(1200, mainH - overhead + _cmpCorr));
+    // 우측 미니 패널 카드 높이: 고정(76) 대신 패널 높이를 표시 지표 수로 배분 — 여유 시 내부 스크롤 없이 채움
+    const nVisM = Math.max(1, METRICS.filter((m) => S.visible.has(m.key)).length);
+    g.miniH = Math.max(60, Math.min(150, Math.floor((mainH - 44) / nVisM) - 30));
   }
 
   // 항목별 추이 차트 높이: 세로 반응형 — 표시 지표 수/레이아웃 기준 배분
@@ -789,9 +792,9 @@ function headControlsHtml(g, opts) {
     <span class="pct" id="zoom-pct">${SCALES[scaleIdx()]}%</span>
     <button id="zoom-in" title="확대">+</button>
   </div>`;
-  const avLabel = S.axisView === 'gather' ? '결과모아보기' : '전체일자';
-  const avMenu = [['calendar', '전체일자'], ['gather', '결과모아보기']].map(([v, l]) =>
-    `<div class="dd-item${S.axisView === v ? ' sel' : ''}" data-av="${v}"><span>${l}</span>${S.axisView === v ? DD_CHECK : ''}</div>`).join('');
+  const avLabel = S.axisView === 'gather' ? '측정일만' : '날짜 간격';
+  const avMenu = [['calendar', '날짜 간격', '실제 기간대로'], ['gather', '측정일만', '등간격으로 모아서']].map(([v, l, hint]) =>
+    `<div class="dd-item${S.axisView === v ? ' sel' : ''}" data-av="${v}"><span>${l}</span><small class="dd-hint">${hint}</small>${S.axisView === v ? DD_CHECK : ''}</div>`).join('');
   const avDd = `<div class="dd" id="axisview-dd" title="X축 표시 방식">
     <button class="dd-btn"><span>${avLabel}</span>${DD_CARET}</button>
     <div class="dd-menu"><div class="dd-box">${avMenu}</div></div>
@@ -828,7 +831,7 @@ function chartCardHtml(metric, g, h, opts) {
     const p = built.pts;
     const dPrev = p[p.length - 1].v - p[p.length - 2].v;
     const dFirst = p[p.length - 1].v - p[0].v;
-    deltaHtml = `<span class="head-delta">전회 ${fmtDelta(metric, dPrev)} · 시작 ${fmtDelta(metric, dFirst)}</span>`;
+    deltaHtml = `<span class="head-delta">지난번 ${fmtDelta(metric, dPrev)} · 처음 ${fmtDelta(metric, dFirst)}</span>`;
   }
   return {
     html: `<div class="chart-card" data-card="${metric.key}">
@@ -921,12 +924,14 @@ function buildCompareSVG(g, vis) {
 function buildMiniSVG(metric, g) {
   // 우측 패널 스케일 잠금: 항상 전체 기간 Fit (가이드-비교 2)
   // 폭 = 패널 폭 − 세로 스크롤바 예약폭 − 카드 좌우 패딩(20) → 가로 스크롤 발생하지 않음(반응형)
+  // 높이 = 패널 높이 / 표시 지표 수 (반응형, g.miniH)
   const w = Math.max(120, S.miniW - SBW - 20), plotW = w - MINI_PADL - MINI_PADR;
+  const h = g.miniH || MINI_H;
   const pts = metricSeries(metric, g);
   const days = g.days;
   const xOf = (ms) => MINI_PADL + ((ms - g.start) / MS / days) * plotW;
-  const sc = yScale(metric, pts, MINI_H, 8, 18);
-  let out = `<svg width="${w}" height="${MINI_H}">`;
+  const sc = yScale(metric, pts, h, 8, 18);
+  let out = `<svg width="${w}" height="${h}">`;
   if (pts.length > 1) {
     const dPath = pts.map((p, i) => `${i ? 'L' : 'M'}${xOf(p.ms).toFixed(1)},${sc.yOf(p.v).toFixed(1)}`).join('');
     out += `<path d="${dPath}" fill="none" stroke="${metric.color}" stroke-width="1.5"/>`;
@@ -937,12 +942,12 @@ function buildMiniSVG(metric, g) {
     const vmaxL = fmtVal(metric, +(Math.max(...pts.map((p) => p.v))).toFixed(metric.key === 'ecw' ? 3 : 1));
     const vminL = fmtVal(metric, +(Math.min(...pts.map((p) => p.v))).toFixed(metric.key === 'ecw' ? 3 : 1));
     out += `<text class="mini-tick" x="${MINI_PADL - 4}" y="12" text-anchor="end">${vmaxL}</text>`;
-    out += `<text class="mini-tick" x="${MINI_PADL - 4}" y="${MINI_H - 20}" text-anchor="end">${vminL}</text>`;
+    out += `<text class="mini-tick" x="${MINI_PADL - 4}" y="${h - 20}" text-anchor="end">${vminL}</text>`;
   }
   // x 라벨 4개
   for (let i = 0; i < 4; i++) {
     const ms = g.start + (days * MS * i) / 3;
-    out += `<text class="mini-tick" x="${(MINI_PADL + (plotW * i) / 3).toFixed(1)}" y="${MINI_H - 5}" text-anchor="middle">${fmtMD(ms)}</text>`;
+    out += `<text class="mini-tick" x="${(MINI_PADL + (plotW * i) / 3).toFixed(1)}" y="${h - 5}" text-anchor="middle">${fmtMD(ms)}</text>`;
   }
   out += '</svg>';
   return { svg: out, xOf, sc, pts, plotW };
@@ -1033,7 +1038,7 @@ function render() {
     if (S.mode === 'trend') {
       content.innerHTML = `
         <div id="charts-vscroll">
-          <div id="charts-sect">
+          <div id="charts-sect" style="border-bottom:0;display:flex;flex-direction:column;min-height:100%">
             <div class="area-head"><span class="t1">측정지표 추이</span><span class="t2">각 지표별 절대 값</span></div>
             <div class="empty-zone">
               ${emptyIcon}
@@ -1051,8 +1056,8 @@ function render() {
         <div style="display:flex;flex:1;min-height:0">
           <div id="cmp-col" style="flex:1;min-width:0;display:flex;flex-direction:column">
             <div id="cmp-vscroll">
-              <div style="border-bottom:1px solid var(--line)">
-                <div id="compare-center">
+              <div style="display:flex;flex-direction:column;min-height:100%">
+                <div id="compare-center" style="display:flex;flex-direction:column;flex:1">
                   <div class="cmp-head"><div><div class="t1">지표 변화 비교</div><div class="t2">Y축: Index (100 = 기준일)</div></div></div>
                   <div class="empty-zone">
                     ${emptyIcon}
@@ -1245,23 +1250,24 @@ function tipMetricHtml(metric, v, dateMs, pinned, z, isTarget, refDays, ext) {
   const refBadge = refDays > 0 ? `<span class="ref-badge">${refDays}일 전 측정</span>` : '';
   // '추가제안' ON: 전회/시작 대비 Δ·월평균 변화 (단순 산술 표시 — 판정·권고 없음)
   const extRows = ext ? `
-    <div class="t-row"><span>전회대비 :</span><span class="v">${fmtDelta(metric, ext.dPrev)}</span></div>
-    <div class="t-row"><span>시작대비 :</span><span class="v">${fmtDelta(metric, ext.dFirst)}</span>
+    <div class="t-row"><span>지난번 대비 :</span><span class="v">${fmtDelta(metric, ext.dPrev)}</span></div>
+    <div class="t-row"><span>처음 대비 :</span><span class="v">${fmtDelta(metric, ext.dFirst)}</span>
       <span style="color:#aab2c0">(월평균 ${fmtDelta(metric, ext.perMonth)})</span></div>` : '';
   return `<div class="tip${pinned ? ' pinned' : ''}${isTarget ? ' target' : ''}" data-anchor="m:${metric.key}" style="z-index:${z}">
     <div class="t-head"><span>${fmtDot(dateMs)}</span>${refBadge}
       ${pinned ? '<button class="t-close" data-close>✕</button>' : ''}</div>
     <div class="t-row"><span>항목명 :</span><span class="v"><span class="dot" style="background:${metric.color}"></span>${metric.name}</span></div>
-    <div class="t-row"><span>결과값 :</span><span class="v accent" style="color:${metric.color}">${fmtVal(metric, v)}</span></div>
+    <div class="t-row"><span>결과값 :</span><span class="v accent">${fmtVal(metric, v)}</span></div>
     <div class="t-row"><span>표준치 :</span><span class="v">${metric.std == null ? '-' : fmtVal(metric, metric.std)}</span></div>${extRows}
   </div>`;
 }
 
+// 처방 툴팁: 결과(지표) 툴팁과 동일한 구조 — 최상단 날짜, 본문에 처방명/내용
 function tipRxHtml(rx, e, dateMs, pinned, z, isTarget) {
   return `<div class="tip${pinned ? ' pinned' : ''}${isTarget ? ' target' : ''}" data-anchor="r:${rx.key}" style="z-index:${z}">
-    <div class="t-head"><span>${rx.name}</span><span class="code">${rx.code}</span>
+    <div class="t-head"><span>${fmtDot(dateMs)}</span><span class="code">${rx.code}</span>
       ${pinned ? '<button class="t-close" data-close>✕</button>' : ''}</div>
-    <div class="t-row"><span>처방일자 :</span><span class="v">${fmtDot(dateMs)}</span></div>
+    <div class="t-row"><span>처방명 :</span><span class="v">${rx.name}</span></div>
     ${e.detail
       ? `<div class="t-row"><span>내용 :</span><span class="v">${e.detail}</span></div>`
       : `<div class="t-row"><span>처방정보 :</span><span class="v">용량 ${e.dose} | 일투수 ${e.perDay} | 일수 ${e.days}</span></div>`}
@@ -1274,7 +1280,7 @@ function tipCompareHtml(dateMs, rows, pinned, targetKey) {
     <div class="t-head"><span>${fmtDot(dateMs)}</span>${pinned ? '<button class="t-close" data-close>✕</button>' : ''}</div>
     ${rows.map((r) => `<div class="t-row"><span class="dot" style="background:${r.m.color}"></span>
       <span style="${r.m.key === targetKey ? 'font-weight:700;color:#222834' : ''}">${r.m.name}</span>
-      <span class="v${r.m.key === targetKey ? ' accent' : ''}" style="margin-left:auto${r.m.key === targetKey ? `;color:${r.m.color}` : ''}">${fmtVal(r.m, r.v)} ${r.m.unit}</span>
+      <span class="v${r.m.key === targetKey ? ' accent' : ''}" style="margin-left:auto">${fmtVal(r.m, r.v)} ${r.m.unit}</span>
       <span style="color:#aab2c0">${r.refMs ? `(${fmtMD(r.refMs)} 측정)` : `(${r.idx.toFixed(1)})`}</span></div>`).join('')}
   </div>`;
 }
@@ -1282,7 +1288,7 @@ function tipCompareHtml(dateMs, rows, pinned, targetKey) {
 function tipMiniHtml(metric, v, z, refMs) {
   return `<div class="tip" data-anchor="mini:${metric.key}" style="z-index:${z};min-width:0;padding:6px 9px">
     <div class="t-row" style="line-height:1.4"><span class="dot" style="background:${metric.color}"></span>
-      <span class="v accent" style="color:${metric.color}">${fmtVal(metric, v)}</span>
+      <span class="v accent">${fmtVal(metric, v)}</span>
       <span style="color:#aab2c0">${metric.unit}</span>
       ${refMs ? `<span style="color:#aab2c0;font-size:10px">${fmtMD(refMs)}</span>` : ''}</div>
   </div>`;
@@ -1302,8 +1308,9 @@ function showTips(dateMs, targetKey) {
   layer.innerHTML = '';
   if (dateMs == null) return;
   const pinned = false; // 클릭 핀 고정 제거 — 툴팁은 호버 추적만
-  // 처방항목 영역 호버: 호버한 처방 행의 툴팁 하나만 노출
-  const rxOnly = (targetKey || '').indexOf('r:') === 0;
+  // 처방항목 영역 호버: 지표 툴팁은 이전처럼 모두 노출하되,
+  // 같은 날짜에 처방이 여러 개면 "호버한 행의 처방 툴팁 하나만" 노출
+  const rxHovered = (targetKey || '').indexOf('r:') === 0 ? targetKey : null;
   const x = G.x(dateMs);
   const lineScreenX = plotOriginScreenX() + (x - S.scroll) + (S.mode === 'compare' ? 0 : 0);
   const anchors = [];
@@ -1314,7 +1321,7 @@ function showTips(dateMs, targetKey) {
     const blockEl = $('#bottom-block');
     const blockTop = blockEl ? blockEl.getBoundingClientRect().top : Infinity;
     const mainTop = $('#main').getBoundingClientRect().top;
-    const vis = rxOnly ? [] : METRICS.filter((m) => S.visible.has(m.key));
+    const vis = METRICS.filter((m) => S.visible.has(m.key));
     vis.forEach((m, i) => {
       // LOCF: 해당 일자 측정이 없으면 직전(가장 가까운 이전) 측정값을 참조 표시
       const pts = metricSeries(m, G);
@@ -1357,7 +1364,7 @@ function showTips(dateMs, targetKey) {
     PRESCRIPTIONS.forEach((r, j) => {
       const e = RX_BY_KEY[r.key].byDate.get(dateMs);
       if (!e || !rxTipNeeded(dateMs, r.key)) return;
-      if (rxOnly && targetKey !== 'r:' + r.key) return; // 처방 영역: 호버한 행만
+      if (rxHovered && targetKey !== 'r:' + r.key) return; // 처방 영역 호버: 처방 툴팁은 호버한 행만
       const isT = targetKey === 'r:' + r.key;
       html += tipRxHtml(r, e, dateMs, pinned, isT ? 1500 : 300 + j, isT);
       const rowEl = REG.rxRows[r.key];
@@ -1366,7 +1373,7 @@ function showTips(dateMs, targetKey) {
     });
   } else {
     // 중앙 통합 툴팁 (타겟 지표 강조) + 우측 미니 툴팁 동시 렌더
-    const vis = rxOnly ? [] : METRICS.filter((m) => S.visible.has(m.key));
+    const vis = METRICS.filter((m) => S.visible.has(m.key));
     const rows = [];
     vis.forEach((m) => {
       const s = REG.cmp && REG.cmp.seriesIdx.find((si) => si.m.key === m.key);
@@ -1397,7 +1404,7 @@ function showTips(dateMs, targetKey) {
     PRESCRIPTIONS.forEach((r, j) => {
       const e = RX_BY_KEY[r.key].byDate.get(dateMs);
       if (!e || !rxTipNeeded(dateMs, r.key)) return;
-      if (rxOnly && targetKey !== 'r:' + r.key) return; // 처방 영역: 호버한 행만
+      if (rxHovered && targetKey !== 'r:' + r.key) return; // 처방 영역 호버: 처방 툴팁은 호버한 행만
       const isT = targetKey === 'r:' + r.key;
       html += tipRxHtml(r, e, dateMs, pinned, isT ? 1500 : 300 + j, isT);
       const rowEl = REG.rxRows[r.key];

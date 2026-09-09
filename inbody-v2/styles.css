@@ -200,6 +200,7 @@ body {
 .dd-item.sel { font-weight: 700; color: var(--blue); }
 .dd-item .dd-check { margin-left: auto; }
 .dd-item svg { flex: 0 0 auto; }
+.dd-item .dd-hint { font-size: 11px; color: var(--ink-3); font-weight: 400; }
 
 /* 차트 행(리스트형) */
 .chart-rows { padding: 10px 14px 4px; display: flex; flex-direction: column; gap: 10px; }
