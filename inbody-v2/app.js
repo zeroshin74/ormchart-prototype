@@ -1268,10 +1268,8 @@ function tipRxHtml(rx, e, dateMs, pinned, z, isTarget) {
     <div class="t-head"><span>${fmtDot(dateMs)}</span><span class="code">${rx.code}</span>
       ${pinned ? '<button class="t-close" data-close>✕</button>' : ''}</div>
     <div class="t-row"><span>처방명 :</span><span class="v">${rx.name}</span></div>
-    ${e.detail
-      ? `<div class="t-row"><span>내용 :</span><span class="v">${e.detail}</span></div>`
-      : `<div class="t-row"><span>처방정보 :</span><span class="v">용량 ${e.dose} | 일투수 ${e.perDay} | 일수 ${e.days}</span></div>`}
-    ${e.note ? `<div class="t-note">${e.note}</div>` : ''}
+    <div class="t-row"><span>처방정보 :</span><span class="v">용량 ${e.dose} | 일투수 ${e.perDay} | 일수 ${e.days}</span></div>
+    ${e.detail ? `<div class="t-row"><span>내용 :</span><span class="v">${e.detail}</span></div>` : ''}
   </div>`;
 }
 
