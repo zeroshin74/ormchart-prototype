@@ -792,9 +792,9 @@ function headControlsHtml(g, opts) {
     <span class="pct" id="zoom-pct">${SCALES[scaleIdx()]}%</span>
     <button id="zoom-in" title="확대">+</button>
   </div>`;
-  const avLabel = S.axisView === 'gather' ? '측정일만' : '날짜 간격';
-  const avMenu = [['calendar', '날짜 간격', '실제 기간대로'], ['gather', '측정일만', '등간격으로 모아서']].map(([v, l, hint]) =>
-    `<div class="dd-item${S.axisView === v ? ' sel' : ''}" data-av="${v}"><span>${l}</span><small class="dd-hint">${hint}</small>${S.axisView === v ? DD_CHECK : ''}</div>`).join('');
+  const avLabel = S.axisView === 'gather' ? '측정 기준' : '시간 기준';
+  const avMenu = [['calendar', '시간 기준'], ['gather', '측정 기준']].map(([v, l]) =>
+    `<div class="dd-item${S.axisView === v ? ' sel' : ''}" data-av="${v}"><span>${l}</span>${S.axisView === v ? DD_CHECK : ''}</div>`).join('');
   const avDd = `<div class="dd" id="axisview-dd" title="X축 표시 방식">
     <button class="dd-btn"><span>${avLabel}</span>${DD_CARET}</button>
     <div class="dd-menu"><div class="dd-box">${avMenu}</div></div>
