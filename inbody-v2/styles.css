@@ -451,14 +451,18 @@ body {
 
 /* 안내 배지(빈 상태 등) */
 .empty-hint { padding: 30px; color: var(--ink-3); text-align: center; }
-/* 초기 Empty 화면 */
-.empty-screen {
-  flex: 1; min-height: 70vh; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 8px;
-  background: #fff; text-align: center;
+/* 영역별 빈 상태: 레이아웃 골격은 유지하고 데이터 영역만 문구+CTA로 대체 */
+.empty-zone {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  padding: 56px 20px; background: #fff; text-align: center;
 }
-.empty-screen .empty-title { margin-top: 10px; font-size: 16px; font-weight: 700; color: var(--ink-2); }
-.empty-screen .empty-desc { font-size: 13px; color: var(--ink-3); line-height: 1.7; }
+.empty-zone.slim { flex: none; padding: 24px 20px; gap: 4px; }
+.empty-zone .ez-title { margin-top: 8px; font-size: 15px; font-weight: 700; color: var(--ink-2); }
+.empty-zone.slim .ez-title { margin-top: 0; font-size: 13px; }
+.empty-zone .ez-desc { font-size: 12.5px; color: var(--ink-3); line-height: 1.7; }
+.empty-zone .ez-actions { display: flex; gap: 8px; margin-top: 12px; }
+.empty-zone.slim .ez-actions { margin-top: 8px; }
 /* 처방항목 상/하 스플리터 (하단 블록 상단 경계) */
 #rx-vsplitter {
   position: absolute; top: -5px; left: 0; right: 0; height: 10px;

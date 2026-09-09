@@ -766,6 +766,14 @@ const ICON_ROWS = `<svg width="16" height="16" viewBox="0 0 18 18" fill="current
 const ICON_GRID = `<svg width="16" height="16" viewBox="0 0 18 18" fill="currentColor">
   <rect x="2" y="2" width="6" height="6" rx="1"/><rect x="10" y="2" width="6" height="6" rx="1"/>
   <rect x="2" y="10" width="6" height="6" rx="1"/><rect x="10" y="10" width="6" height="6" rx="1"/></svg>`;
+// 자동 정렬: 화면 맞춤(모서리 브래킷) + 그리드
+const ICON_AUTO = `<svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M2 6 V3.5 Q2 2 3.5 2 H6"/><path d="M12 2 H14.5 Q16 2 16 3.5 V6"/>
+  <path d="M16 12 V14.5 Q16 16 14.5 16 H12"/><path d="M6 16 H3.5 Q2 16 2 14.5 V12"/>
+  <rect x="5.6" y="5.6" width="3" height="3" rx="0.8" fill="currentColor" stroke="none"/>
+  <rect x="9.4" y="5.6" width="3" height="3" rx="0.8" fill="currentColor" stroke="none"/>
+  <rect x="5.6" y="9.4" width="3" height="3" rx="0.8" fill="currentColor" stroke="none"/>
+  <rect x="9.4" y="9.4" width="3" height="3" rx="0.8" fill="currentColor" stroke="none"/></svg>`;
 const DD_CARET = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5 L5 6.5 L8 3.5"/></svg>`;
 const DD_CHECK = `<svg class="dd-check" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6.5 L4.6 9 L10 3.5"/></svg>`;
 
@@ -795,15 +803,15 @@ function headControlsHtml(g, opts) {
     // 4단은 표시 지표 7개 이상일 때만 노출 — 6지표에서는 3단과 행 수가 같아 이점이 없음
     const nVis = METRICS.filter((m) => S.visible.has(m.key)).length;
     const colOpts = nVis >= 7 || cur === 4 ? [1, 2, 3, 4] : [1, 2, 3];
-    // '자동': 화면 크기에 맞춰 단 수 자동 결정 — 수동 선택 후 복귀 경로 제공
+    // '자동 정렬': 화면 크기에 맞춰 단 수 자동 결정 — 수동 선택 후 복귀 경로 제공
     const isAuto = S.layout === 'card' && S.cardColsUser == null;
-    const items = `<div class="dd-item${isAuto ? ' sel' : ''}" data-sort="0"><span>${ICON_GRID}</span><span>자동 (화면 맞춤)</span>${isAuto ? DD_CHECK : ''}</div>`
+    const items = `<div class="dd-item${isAuto ? ' sel' : ''}" data-sort="0"><span>${ICON_AUTO}</span><span>자동 정렬 (화면 맞춤)</span>${isAuto ? DD_CHECK : ''}</div>`
       + colOpts.map((n) => {
         const on = !isAuto && cur === n;
         return `<div class="dd-item${on ? ' sel' : ''}" data-sort="${n}"><span>${n === 1 ? ICON_ROWS : ICON_GRID}</span><span>${n}단 정렬</span>${on ? DD_CHECK : ''}</div>`;
       }).join('');
     sortDd = `<div class="dd" id="sort-dd" title="정렬 방식">
-      <button class="dd-btn">${icon}<span>${cur}단 정렬</span>${DD_CARET}</button>
+      <button class="dd-btn">${isAuto ? ICON_AUTO : icon}<span>${isAuto ? '자동 정렬' : cur + '단 정렬'}</span>${DD_CARET}</button>
       <div class="dd-menu"><div class="dd-box">${items}</div></div>
     </div>`;
   }
@@ -1003,20 +1011,70 @@ function render() {
 
   const content = $('#content');
 
-  // 초기 Empty 화면: 측정·처방 데이터가 전혀 없는 환자
+  // 초기 Empty: 화면 골격(측정지표/처방항목/비교/미니 패널)은 유지하고 데이터만 비움
+  //           + 각 영역에 빈 상태 문구와 다음 행동(CTA) 제공 (프로토타입 — 버튼은 표시용)
   const noData = !VISIT_MS.length && PRESCRIPTIONS.every((r) => !r.events.length);
   if (noData) {
-    content.innerHTML = `
-      <div class="empty-screen">
-        <svg width="72" height="56" viewBox="0 0 72 56" fill="none" stroke="#c3c9d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="2" width="68" height="44" rx="6"/>
-          <path d="M12 32 L26 22 L38 28 L58 14" stroke="#a7b0bf" stroke-dasharray="4 4"/>
-          <circle cx="58" cy="14" r="2.5" fill="#a7b0bf" stroke="none"/>
-          <line x1="24" y1="52" x2="48" y2="52"/>
-        </svg>
-        <div class="empty-title">아직 인바디 측정 데이터가 없습니다</div>
-        <div class="empty-desc">첫 인바디 측정을 진행하면 이 화면에서 측정지표 추이와<br/>처방 이력을 함께 확인할 수 있습니다.</div>
+    const emptyIcon = `<svg width="64" height="50" viewBox="0 0 72 56" fill="none" stroke="#c3c9d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="68" height="44" rx="6"/>
+        <path d="M12 32 L26 22 L38 28 L58 14" stroke="#a7b0bf" stroke-dasharray="4 4"/>
+        <circle cx="58" cy="14" r="2.5" fill="#a7b0bf" stroke="none"/>
+        <line x1="24" y1="52" x2="48" y2="52"/>
+      </svg>`;
+    const rxEmptyBlock = `
+      <div id="bottom-block">
+        <div id="rx-title-sect"><div class="rx-title" style="cursor:default"><span>처방항목</span><span class="rx-count">0</span></div></div>
+        <div class="empty-zone slim">
+          <div class="ez-title">처방 이력이 없습니다</div>
+          <div class="ez-desc">처방이 등록되면 측정 추이와 같은 시간축 위에 함께 표시됩니다.</div>
+          <div class="ez-actions"><button class="btn-outline" title="프로토타입 — 처방 화면 이동 미구현">처방 등록으로 이동</button></div>
+        </div>
       </div>`;
+    if (S.mode === 'trend') {
+      content.innerHTML = `
+        <div id="charts-vscroll">
+          <div id="charts-sect">
+            <div class="area-head"><span class="t1">측정지표 추이</span><span class="t2">각 지표별 절대 값</span></div>
+            <div class="empty-zone">
+              ${emptyIcon}
+              <div class="ez-title">아직 인바디 측정 데이터가 없습니다</div>
+              <div class="ez-desc">첫 측정을 진행하거나 기존 결과지를 불러오면<br/>측정지표 추이가 이 영역에 표시됩니다.</div>
+              <div class="ez-actions">
+                <button class="btn-primary" title="프로토타입 — 측정 등록 미구현">새 측정 등록</button>
+                <button class="btn-outline" title="프로토타입 — 결과지 연동 미구현">인바디 결과지 불러오기</button>
+              </div>
+            </div>
+          </div>
+        </div>${rxEmptyBlock}`;
+    } else {
+      content.innerHTML = `
+        <div style="display:flex;flex:1;min-height:0">
+          <div id="cmp-col" style="flex:1;min-width:0;display:flex;flex-direction:column">
+            <div id="cmp-vscroll">
+              <div style="border-bottom:1px solid var(--line)">
+                <div id="compare-center">
+                  <div class="cmp-head"><div><div class="t1">지표 변화 비교</div><div class="t2">Y축: Index (100 = 기준일)</div></div></div>
+                  <div class="empty-zone">
+                    ${emptyIcon}
+                    <div class="ez-title">비교할 측정 데이터가 없습니다</div>
+                    <div class="ez-desc">측정이 2회 이상 쌓이면 지표 간 변화율(Index 100 기준)을<br/>이 영역에서 비교할 수 있습니다.</div>
+                    <div class="ez-actions">
+                      <button class="btn-primary" title="프로토타입 — 측정 등록 미구현">새 측정 등록</button>
+                      <button class="btn-outline" title="프로토타입 — 결과지 연동 미구현">인바디 결과지 불러오기</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>${rxEmptyBlock}
+          </div>
+          <div id="mini-col" style="flex:0 0 ${S.miniW}px;width:${S.miniW}px">
+            <div id="mini-panel">
+              <div class="mini-title">측정 지표 추이</div>
+              <div class="empty-zone slim"><div class="ez-desc">측정 데이터가 없습니다.<br/>측정이 시작되면 지표별 미니 추이가 표시됩니다.</div></div>
+            </div>
+          </div>
+        </div>`;
+    }
     $('#floating').innerHTML = '';
     REG.scrolls = []; REG.master = null; REG.rxRows = {}; REG.rxModes = {}; REG.charts = {}; REG.minis = {};
     $$('#mode-toggle button').forEach((b) => b.classList.toggle('active', b.dataset.mode === S.mode));
@@ -1243,7 +1301,9 @@ function showTips(dateMs, targetKey) {
   const layer = $('#floating');
   layer.innerHTML = '';
   if (dateMs == null) return;
-  const pinned = !!S.pin;
+  const pinned = false; // 클릭 핀 고정 제거 — 툴팁은 호버 추적만
+  // 처방항목 영역 호버: 호버한 처방 행의 툴팁 하나만 노출
+  const rxOnly = (targetKey || '').indexOf('r:') === 0;
   const x = G.x(dateMs);
   const lineScreenX = plotOriginScreenX() + (x - S.scroll) + (S.mode === 'compare' ? 0 : 0);
   const anchors = [];
@@ -1254,7 +1314,7 @@ function showTips(dateMs, targetKey) {
     const blockEl = $('#bottom-block');
     const blockTop = blockEl ? blockEl.getBoundingClientRect().top : Infinity;
     const mainTop = $('#main').getBoundingClientRect().top;
-    const vis = METRICS.filter((m) => S.visible.has(m.key));
+    const vis = rxOnly ? [] : METRICS.filter((m) => S.visible.has(m.key));
     vis.forEach((m, i) => {
       // LOCF: 해당 일자 측정이 없으면 직전(가장 가까운 이전) 측정값을 참조 표시
       const pts = metricSeries(m, G);
@@ -1297,6 +1357,7 @@ function showTips(dateMs, targetKey) {
     PRESCRIPTIONS.forEach((r, j) => {
       const e = RX_BY_KEY[r.key].byDate.get(dateMs);
       if (!e || !rxTipNeeded(dateMs, r.key)) return;
+      if (rxOnly && targetKey !== 'r:' + r.key) return; // 처방 영역: 호버한 행만
       const isT = targetKey === 'r:' + r.key;
       html += tipRxHtml(r, e, dateMs, pinned, isT ? 1500 : 300 + j, isT);
       const rowEl = REG.rxRows[r.key];
@@ -1305,7 +1366,7 @@ function showTips(dateMs, targetKey) {
     });
   } else {
     // 중앙 통합 툴팁 (타겟 지표 강조) + 우측 미니 툴팁 동시 렌더
-    const vis = METRICS.filter((m) => S.visible.has(m.key));
+    const vis = rxOnly ? [] : METRICS.filter((m) => S.visible.has(m.key));
     const rows = [];
     vis.forEach((m) => {
       const s = REG.cmp && REG.cmp.seriesIdx.find((si) => si.m.key === m.key);
@@ -1336,6 +1397,7 @@ function showTips(dateMs, targetKey) {
     PRESCRIPTIONS.forEach((r, j) => {
       const e = RX_BY_KEY[r.key].byDate.get(dateMs);
       if (!e || !rxTipNeeded(dateMs, r.key)) return;
+      if (rxOnly && targetKey !== 'r:' + r.key) return; // 처방 영역: 호버한 행만
       const isT = targetKey === 'r:' + r.key;
       html += tipRxHtml(r, e, dateMs, pinned, isT ? 1500 : 300 + j, isT);
       const rowEl = REG.rxRows[r.key];
@@ -1388,7 +1450,7 @@ function showTips(dateMs, targetKey) {
 }
 
 function refreshHover() {
-  const st = S.pin || S.hover;
+  const st = S.hover;
   if (!st) { hideVlines(); $('#floating').innerHTML = ''; return; }
   updateLines(st.dateMs);
   showTips(st.dateMs, st.targetKey);
@@ -1455,7 +1517,6 @@ function bindEvents() {
 
   main.addEventListener('mousemove', (e) => {
     if (dragState && dragState.moved) return;
-    if (S.pin) return; // 핀 고정 중 호버로 상태 이동 금지
     const dateMs = hoverFromEvent(e);
     if (dateMs == null) { S.hover = null; refreshHover(); return; }
     S.hover = { dateMs, targetKey: targetKeyFromEvent(e) };
@@ -1463,11 +1524,10 @@ function bindEvents() {
   });
 
   main.addEventListener('mouseleave', () => {
-    if (S.pin) return;
     S.hover = null; refreshHover();
   });
 
-  // 클릭: 핀 고정/해제 + 줌 앵커 지정 (가이드 3 클릭 앵커링)
+  // 클릭 핀 고정 제거 — 클릭은 줌 앵커 지정만 유지 (가이드 3 클릭 앵커링)
   main.addEventListener('mousedown', (e) => {
     const pannable = e.target.closest && (e.target.closest('.chart-scroll') || e.target.closest('#rx-body') || e.target.closest('#compare-scroll'));
     dragState = { x: e.clientX, moved: false, pan: !!pannable, start: S.scroll };
@@ -1485,21 +1545,10 @@ function bindEvents() {
     const wasDrag = dragState.moved;
     dragState = null;
     if (wasDrag) return;
-    if (e.target.closest && e.target.closest('[data-close]')) { unpin(); return; }
     if (!e.target.closest || !$('#main').contains(e.target)) return;
     const dateMs = hoverFromEvent(e);
-    if (S.pin) { unpin(); return; }          // 핀 상태에서 클릭 → 해제
     if (dateMs == null) return;
-    S.pin = { dateMs, targetKey: targetKeyFromEvent(e) };
     S.anchorMs = dateMs;                      // 클릭 지점을 새로운 줌 기준점으로
-    refreshHover();
-  });
-
-  function unpin() { S.pin = null; S.hover = null; refreshHover(); }
-
-  // 핀 고정 툴팁의 ✕ 버튼 (플로팅 레이어는 #main 밖이므로 별도 바인딩)
-  $('#floating').addEventListener('click', (e) => {
-    if (e.target.closest('[data-close]')) unpin();
   });
 
   // 휠 정책: 세로 휠은 마우스 아래 영역만 스크롤 (차트/처방/미니 패널 독립 —
